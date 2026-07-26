@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { DpsLogFollower, DpsSessionLogFollower } from "@kar-mi/spirit-vale-tools-combat";
+import { DpsLogFollower, DpsSessionLogFollower, FishNetStatusTracker } from "@kar-mi/spirit-vale-tools-combat";
 import type { CharacterViewState } from "@kar-mi/spirit-vale-tools-character";
 import { SafeSaveQueue } from "@spiritvale/ui-core/safe-save";
 import { applyRoundedCorners, hideWindowFromTaskbar, setWindowClickThrough } from "@spiritvale/ui-core/win32";
@@ -44,6 +44,7 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
   if (options.lockOnCreate) settings.locked = true;
   let characterState = options.getCharacterState();
   let meter = createPersonalDpsMeter(characterState);
+  let statusTracker = new FishNetStatusTracker();
   const liveLogOverride = process.env.SPIRIT_VALE_COMBAT_LOG;
   const liveLog = liveLogOverride
     ? new DpsLogFollower(liveLogOverride)
@@ -215,9 +216,14 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     const snapshotNowMs = relativeNowMs();
     const snapshot = meter.getLatestSnapshot(snapshotNowMs);
     const resources = personalResources(characterState.records);
+    const personalName = detectedPersonalName(characterState);
+    // Statuses with no data-mine icon (a small upstream gap, e.g. SlowImmunity/BlindImmunity) are
+    // omitted entirely rather than shown as a text-initials placeholder.
+    const activeStatuses = statusTracker.getActiveStatusesForName(personalName, snapshotNowMs ?? 0)
+      .filter((activeStatus) => activeStatus.spriteId !== undefined);
     return {
       locked: settings.locked,
-      personalName: detectedPersonalName(characterState),
+      personalName,
       status,
       statusDetail,
       elements: settings.elements,
@@ -226,6 +232,8 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
       ...(snapshot ? { snapshot, snapshotNowMs: snapshotNowMs ?? snapshot.lastDamageAtMs } : {}),
       ...resources,
       ...(characterState.weight ? { weight: characterState.weight } : {}),
+      buffs: activeStatuses.filter((activeStatus) => !activeStatus.isDebuff),
+      debuffs: activeStatuses.filter((activeStatus) => activeStatus.isDebuff),
     };
   }
 
@@ -306,13 +314,19 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
       const batch = await liveLog.poll();
       if (batch.reset) {
         meter = createPersonalDpsMeter(characterState);
+        statusTracker = new FishNetStatusTracker();
         lastEventObservedAtMs = undefined;
         lastEventWallMs = undefined;
       }
       let batchLastObservedAtMs: number | undefined;
       for (const { event, observedAtMs } of batch.events) {
-        if (event.kind === "actorIdentity") meter.consumeIdentity(event, observedAtMs);
-        else meter.consumeCombat(event, observedAtMs);
+        if (event.kind === "actorIdentity") {
+          meter.consumeIdentity(event, observedAtMs);
+          statusTracker.consumeIdentity(event);
+        } else {
+          meter.consumeCombat(event, observedAtMs);
+          statusTracker.consume(event, observedAtMs);
+        }
         batchLastObservedAtMs = Math.max(batchLastObservedAtMs ?? observedAtMs, observedAtMs);
       }
       if (batchLastObservedAtMs !== undefined) {
@@ -320,7 +334,10 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
         lastEventWallMs = Date.now();
       }
       const nowMs = relativeNowMs();
-      if (nowMs !== undefined) meter.advance(nowMs);
+      if (nowMs !== undefined) {
+        meter.advance(nowMs);
+        statusTracker.advance(nowMs);
+      }
       const fileName = path.basename(batch.path ?? liveLogOverride ?? "combat.jsonl");
       if (batch.missing) {
         status = "waiting";
