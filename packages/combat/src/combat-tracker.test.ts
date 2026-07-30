@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import { FishNetCombatTracker } from "./combat-tracker.ts";
-import { LEGACY_GAME_BUILD_FINGERPRINT } from "@kar-mi/spirit-vale-tools-capture";
 import type { DecodedFishNetPacket, FishNetDecodedField, FishNetSemanticMap } from "@kar-mi/spirit-vale-tools-capture";
 import type { FishNetSkillCatalog } from "@kar-mi/spirit-vale-tools-skills";
 
@@ -96,10 +95,12 @@ function castTargeting(tick: number, actorId: number, sourceId: string, targetId
   ]);
 }
 
-function recover(tick: number, targetId: number, amount: number): DecodedFishNetPacket {
-  return packet(tick, targetId, "HealthComponent", "Recover_C", [
+function recover(tick: number, targetId: number, amount: number, settingsHex?: string): DecodedFishNetPacket {
+  const result = packet(tick, targetId, "HealthComponent", "Recover_C", [
     field("amount", amount),
   ]);
+  if (settingsHex) result.undecodedPayload = Buffer.from(settingsHex, "hex");
+  return result;
 }
 
 function statusEffect(
@@ -226,21 +227,19 @@ describe("FishNetCombatTracker", () => {
         confidence: "synthetic",
         repetitions: 2,
       }],
+      recoveryStyles: [],
     };
     const tracker = new FishNetCombatTracker({ skillCatalog, semanticMap });
     expect(tracker.consume(cast(1, 10, "SyntheticArc"))[0]).toMatchObject({ sourceLabel: "Override Arc" });
   });
 
-  test("rejects mismatched metadata builds and retains legacy semantic labels", () => {
+  test("rejects mismatched metadata builds", () => {
     const skillCatalog: FishNetSkillCatalog = {
       buildFingerprint: "synthetic-build",
       skills: [{ id: "SyntheticArc", displayName: "Catalog Arc", kinds: ["active"] }],
     };
     expect(() => new FishNetCombatTracker({ buildFingerprint: "other-build", skillCatalog }))
       .toThrow("skill catalog build");
-
-    const legacy = new FishNetCombatTracker({ buildFingerprint: LEGACY_GAME_BUILD_FINGERPRINT });
-    expect(legacy.consume(cast(1, 10, "AxeArc"))[0]).toMatchObject({ sourceLabel: "Twin Cleave" });
   });
 
   test("emits lethal damage as a death event and identifies a paired damage event", () => {
@@ -409,6 +408,62 @@ describe("FishNetCombatTracker", () => {
       attribution: "unattributed",
       actorId: undefined,
       sourceId: undefined,
+    });
+  });
+
+  test("identifies passive regeneration independently for every actor", () => {
+    const tracker = new FishNetCombatTracker();
+    const [heal] = tracker.consume(recover(1, 20, 25, "00010000000000"));
+
+    expect(heal).toMatchObject({
+      kind: "heal",
+      targetId: 20,
+      actorId: 20,
+      sourceId: "passive-regeneration",
+      sourceLabel: "Passive regeneration",
+      recoveryStyle: "passive-regeneration",
+      attribution: "inferred",
+      value: 25,
+    });
+  });
+
+  test.each([
+    [{ hasSiphonHealth: true, hasHealthLeech: false }, "siphon-health", "Siphon Health"],
+    [{ hasSiphonHealth: false, hasHealthLeech: true }, "health-leech", "Health Leech"],
+    [{ hasSiphonHealth: true, hasHealthLeech: true }, "siphon-health-leech", "Siphon / Health Leech"],
+    [undefined, "siphon-health-leech", "Siphon / Health Leech"],
+  ] as const)("labels drain recovery from visible traits %#", (traits, sourceId, sourceLabel) => {
+    const tracker = new FishNetCombatTracker({
+      healingTraitsResolver: (actorId) => actorId === 20 ? traits : undefined,
+    });
+    const [heal] = tracker.consume(recover(1, 20, 500, "0001ab020000403f"));
+
+    expect(heal).toMatchObject({
+      kind: "heal",
+      targetId: 20,
+      actorId: 20,
+      sourceId,
+      sourceLabel,
+      recoveryStyle: "drain",
+      attribution: "inferred",
+      value: 500,
+    });
+  });
+
+  test("does not split or relabel another actor's combined drain recovery", () => {
+    const tracker = new FishNetCombatTracker({
+      healingTraitsResolver: (actorId) => actorId === 10
+        ? { hasSiphonHealth: true, hasHealthLeech: false }
+        : undefined,
+    });
+    const events = tracker.consume(recover(1, 20, 600, "0001ab020000403f"));
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorId: 20,
+      sourceId: "siphon-health-leech",
+      sourceLabel: "Siphon / Health Leech",
+      value: 600,
     });
   });
 

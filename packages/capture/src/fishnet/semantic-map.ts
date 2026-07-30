@@ -1,4 +1,4 @@
-import { CURRENT_GAME_BUILD_FINGERPRINT, LEGACY_GAME_BUILD_FINGERPRINT } from "../game-build.ts";
+import { CURRENT_GAME_BUILD_FINGERPRINT } from "../game-build.ts";
 import { FishNetSemanticDefinitions } from "./semantic-definitions.ts";
 
 export interface FishNetSkillLabel {
@@ -11,17 +11,23 @@ export interface FishNetSkillLabel {
   readonly repetitions: number;
 }
 
+export type FishNetRecoveryStyle = "standard" | "passive-regeneration" | "drain" | "unknown";
+
+export interface FishNetRecoveryStyleDefinition {
+  readonly networkBehaviourType: string;
+  readonly rpcName: string;
+  readonly undecodedPayloadHex: string;
+  readonly style: Exclude<FishNetRecoveryStyle, "unknown">;
+}
+
 export interface FishNetSemanticMap {
   readonly buildFingerprint: string;
   readonly verifiedSkillLabels: readonly FishNetSkillLabel[];
+  readonly recoveryStyles?: readonly FishNetRecoveryStyleDefinition[];
 }
 
 const SEMANTIC_MAPS = {
-  [LEGACY_GAME_BUILD_FINGERPRINT]: FishNetSemanticDefinitions.map,
-  [CURRENT_GAME_BUILD_FINGERPRINT]: {
-    buildFingerprint: CURRENT_GAME_BUILD_FINGERPRINT,
-    verifiedSkillLabels: [],
-  },
+  [CURRENT_GAME_BUILD_FINGERPRINT]: FishNetSemanticDefinitions.currentMap,
 } as const;
 
 export function loadBundledFishNetSemanticMap(
