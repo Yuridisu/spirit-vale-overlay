@@ -5,6 +5,7 @@ import { decodeCharacterRecordSync } from "./record-decoder.ts";
 import type { CharacterRecordValues, CharacterSnapshot, CharacterStatBreakdown, CharacterViewState } from "./types.ts";
 
 const CHARACTER_RPCS = new Set(["LoadCharacter_T", "CharacterCallback_T"]);
+const MAX_PENDING_RECORD_OBJECTS = 4_096;
 /** Maps stat breakdown ids onto the server-synced record that verifies them. */
 const RECORDED_STATS: ReadonlyArray<[string, keyof CharacterRecordValues]> = [
   ["max-health", "maxHealth"],
@@ -18,6 +19,7 @@ export class FishNetCharacterTracker {
   private currentWeight?: number;
   private localObjectId?: number;
   private records: CharacterRecordValues = {};
+  private pendingRecords = new Map<number, CharacterRecordValues>();
   private listeners = new Set<(state: CharacterViewState) => void>();
 
   constructor(initial?: CharacterSnapshot) {
@@ -25,13 +27,31 @@ export class FishNetCharacterTracker {
   }
 
   consume(packet: CapturedFishNetPacket): boolean {
-    // Only the local player's client emits serverRpc packets, which pins their unit object.
-    if (packet.packetName === "serverRpc" && packet.objectId !== undefined) {
-      if (this.localObjectId !== undefined && this.localObjectId !== packet.objectId) {
+    if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
+      this.clearRecordTracking();
+      return false;
+    }
+    if (packet.packetName === "objectDespawn" && packet.objectId !== undefined) {
+      this.pendingRecords.delete(packet.objectId);
+      if (packet.objectId === this.localObjectId) this.clearRecordTracking();
+      return false;
+    }
+    if (packet.packetName === "objectSpawn" && packet.objectId !== undefined) {
+      this.pendingRecords.delete(packet.objectId);
+      if (packet.objectId === this.localObjectId) {
         this.records = {};
         this.publish();
       }
+    }
+    // Only the local player's client emits serverRpc packets, which pins their unit object.
+    if (packet.packetName === "serverRpc" && packet.objectId !== undefined) {
+      const objectChanged = this.localObjectId !== packet.objectId;
+      if (this.localObjectId !== undefined && objectChanged) this.records = {};
       this.localObjectId = packet.objectId;
+      const pending = this.pendingRecords.get(packet.objectId);
+      if (pending) this.records = pending;
+      this.pendingRecords.clear();
+      if (objectChanged || pending) this.publish();
       return false;
     }
     if (packet.packetName === "syncType") return this.consumeRecordSync(packet);
@@ -53,18 +73,46 @@ export class FishNetCharacterTracker {
   }
 
   private consumeRecordSync(packet: CapturedFishNetPacket): boolean {
-    if (packet.objectId === undefined || packet.objectId !== this.localObjectId) return false;
+    if (packet.objectId === undefined) return false;
     const update = decodeCharacterRecordSync(packet);
     if (!update) return false;
+    if (packet.objectId !== this.localObjectId) {
+      Object.assign(this.pendingRecordsFor(packet.objectId), update, { updatedAt: new Date().toISOString() });
+      return false;
+    }
     Object.assign(this.records, update, { updatedAt: new Date().toISOString() });
     this.publish();
     return true;
+  }
+
+  private pendingRecordsFor(objectId: number): CharacterRecordValues {
+    let records = this.pendingRecords.get(objectId);
+    if (!records) {
+      if (this.pendingRecords.size >= MAX_PENDING_RECORD_OBJECTS) {
+        const oldestObjectId = this.pendingRecords.keys().next().value;
+        if (oldestObjectId !== undefined) this.pendingRecords.delete(oldestObjectId);
+      }
+      records = {};
+      this.pendingRecords.set(objectId, records);
+    }
+    return records;
+  }
+
+  private clearRecordTracking(): void {
+    const changed = this.localObjectId !== undefined
+      || Object.keys(this.records).length > 0
+      || this.pendingRecords.size > 0;
+    this.localObjectId = undefined;
+    this.records = {};
+    this.pendingRecords.clear();
+    if (changed) this.publish();
   }
 
   setCached(snapshot: CharacterSnapshot | undefined): void {
     this.snapshot = snapshot ? { ...snapshot, source: "cached" } : undefined;
     this.currentWeight = undefined;
     this.records = {};
+    this.pendingRecords.clear();
     this.unsupportedDetail = undefined;
     this.publish();
   }

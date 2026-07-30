@@ -164,23 +164,26 @@ describe("FishNetCharacterTracker", () => {
     expect(state.stats.find((stat) => stat.id === "hit")?.value).toBe(147);
   });
 
-  test("records server-synced values for the local player and merges them onto stats", () => {
+  test("promotes server-synced values that arrive before the local player is pinned", () => {
     const tracker = new FishNetCharacterTracker();
     tracker.consume(characterPacket("CharacterCallback_T"));
 
-    // Ignored until a serverRpc pins the local player's object.
+    // The initial spawn sync may precede the first outbound RPC during a map change.
     expect(tracker.consume(syncPacket(47472, "HealthComponent", "01e8ce0100e8ce01"))).toBe(false);
+    expect(tracker.consume(resourcePacket(47472, "SkillsComponent", 321, 654))).toBe(false);
+    expect(tracker.state().records).toBeUndefined();
     tracker.consume({ ...syncPacket(47472, "HealthComponent", ""), packetName: "serverRpc", payload: Buffer.alloc(0) });
 
-    expect(tracker.consume(syncPacket(47472, "HealthComponent", "01e8ce0100e8ce01"))).toBe(true);
     expect(tracker.consume(syncPacket(47472, "MoveComponent", "01cdcc0e41"))).toBe(true);
     // Syncs for other objects never contribute records.
     expect(tracker.consume(syncPacket(99999, "HealthComponent", "00dcad01"))).toBe(false);
 
     const state = tracker.state();
     expect(state.records).toMatchObject({ currentHealth: 13_236, maxHealth: 13_236 });
+    expect(state.records).toMatchObject({ currentMana: 321, maxMana: 654 });
     expect(state.records?.moveSpeed).toBeCloseTo(8.925, 3);
     expect(state.stats.find((stat) => stat.id === "max-health")?.record).toBe(13_236);
+    expect(state.stats.find((stat) => stat.id === "max-mana")?.record).toBe(654);
     expect(state.stats.find((stat) => stat.id === "move-speed")?.record).toBeCloseTo(8.925, 3);
   });
 
@@ -200,6 +203,46 @@ describe("FishNetCharacterTracker", () => {
     tracker.consume(pinPacket(202));
 
     expect(tracker.state().records).toBeUndefined();
+  });
+
+  test("clears resource tracking at connection boundaries", () => {
+    for (const packetName of ["authenticated", "disconnect"] as const) {
+      const tracker = new FishNetCharacterTracker();
+      tracker.consume(resourcePacket(202, "SkillsComponent", 120, 240));
+      tracker.consume(pinPacket(202));
+      expect(tracker.state().records).toMatchObject({ currentMana: 120, maxMana: 240 });
+
+      tracker.consume({ ...syncPacket(0, "HealthComponent", ""), packetName });
+
+      expect(tracker.currentObjectId()).toBeUndefined();
+      expect(tracker.state().records).toBeUndefined();
+      // A later pin must not promote a candidate buffered before the boundary.
+      tracker.consume(pinPacket(202));
+      expect(tracker.state().records).toBeUndefined();
+    }
+  });
+
+  test("clears local resources when the player object despawns", () => {
+    const tracker = new FishNetCharacterTracker();
+    tracker.consume(resourcePacket(202, "HealthComponent", 750, 1_000));
+    tracker.consume(resourcePacket(202, "SkillsComponent", 120, 240));
+    tracker.consume(pinPacket(202));
+
+    tracker.consume({ ...syncPacket(202, "HealthComponent", ""), packetName: "objectDespawn" });
+
+    expect(tracker.currentObjectId()).toBeUndefined();
+    expect(tracker.state().records).toBeUndefined();
+  });
+
+  test("does not promote resource candidates belonging to other players", () => {
+    const tracker = new FishNetCharacterTracker();
+    tracker.consume(resourcePacket(101, "SkillsComponent", 999, 999));
+    tracker.consume(resourcePacket(202, "SkillsComponent", 120, 240));
+
+    tracker.consume(pinPacket(202));
+
+    expect(tracker.state().records).toMatchObject({ currentMana: 120, maxMana: 240 });
+    expect(tracker.state().records).not.toMatchObject({ currentMana: 999, maxMana: 999 });
   });
 });
 
