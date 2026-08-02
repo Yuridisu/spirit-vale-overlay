@@ -1,6 +1,6 @@
 import { FishNetCombatTracker } from "@kar-mi/spirit-vale-tools-combat";
-import type { DecodedFishNetPacket, FishNetDecodedValue } from "@kar-mi/spirit-vale-tools-capture";
-import { checkedEnd, readSignedPackedWhole } from "@kar-mi/spirit-vale-tools-capture/wire-reader";
+import type { DecodedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
+import { FishNetMonsterDirectory } from "@kar-mi/spirit-vale-tools-capture";
 import type { ExperienceCoinsState, RewardItem } from "./reward-decoder.ts";
 import { decodeFishNetRewardPacket } from "./reward-decoder.ts";
 import { loadBundledMobRewardCatalog } from "./catalog.ts";
@@ -24,6 +24,13 @@ export interface FishNetConfirmedMobKill {
   jobExperience: number;
   coins: bigint;
   drops: RewardItem[];
+  /**
+   * Whether a reward was pinned to this kill. Rewards arrive as coalesced state updates, so when
+   * several mobs die inside one correlation window none of them can claim it — the kill is still
+   * real and still counted, but its experience, coins and drops are zero and the reward is reported
+   * separately as an unmatched event.
+   */
+  attributed: boolean;
 }
 
 interface FishNetUnmatchedRewardEventBase {
@@ -60,62 +67,46 @@ interface PendingKill {
   gain?: { experience: number; jobExperience: number; coins: bigint };
   drops: RewardItem[];
   ambiguous: boolean;
+  /** Whether our side dealt damage to this target, which is what makes the death ours to report. */
+  damaged: boolean;
 }
 
+/**
+ * Targets our side has damaged, retained only until they die. Bounded because a session sees far
+ * more damaged targets than it kills — anything we damaged but never finished off would otherwise
+ * accumulate for the whole session.
+ */
+const MAX_DAMAGED_TARGETS = 4_096;
+
+/** Names the monsters {@link FishNetMonsterDirectory} identifies, using the bundled reward catalog. */
 export class FishNetMobDirectory {
-  private readonly objects = new Map<number, FishNetMobIdentity>();
   private readonly definitions: Map<string, MobRewardDefinition>;
+  private readonly monsters: FishNetMonsterDirectory;
 
   constructor(catalog: MobRewardCatalog = loadBundledMobRewardCatalog()) {
     this.definitions = new Map(catalog.mobs.map((mob) => [mob.id, mob]));
+    this.monsters = new FishNetMonsterDirectory(this.definitions);
   }
 
   consume(packet: DecodedFishNetPacket): void {
-    if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
-      this.objects.clear();
-      return;
-    }
-    if (packet.packetName === "objectDespawn" && packet.objectId !== undefined) {
-      this.objects.delete(packet.objectId);
-      return;
-    }
-    if (packet.packetName === "objectSpawn" && packet.objectId !== undefined) {
-      this.objects.delete(packet.objectId);
-      const spawned = packet.spawnSyncPayload ? decodeMonsterSpawn(packet.spawnSyncPayload, this.definitions) : undefined;
-      if (spawned) this.set(packet.objectId, spawned);
-      return;
-    }
-    if (packet.packetName !== "syncType" || packet.objectId === undefined
-      || (packet.networkBehaviourType !== undefined && packet.networkBehaviourType !== "MonsterController")) return;
-    const raw = decodeMonsterSync(packet.payload);
-    const mobId = stringField(packet, ["Data.Id", "Monster.Id", "Id"]) ?? raw?.mobId;
-    const level = numberField(packet, ["Data.Level", "Monster.Level", "Level"]) ?? raw?.level;
-    if (!mobId || level === undefined) return;
-    const definition = this.definitions.get(mobId);
-    if (!definition) return;
-    const rank = numberField(packet, ["Data.Rank", "Monster.Rank", "Rank"]) ?? raw?.rank;
-    this.set(packet.objectId, { mobId, level, ...(rank === undefined ? {} : { rank }) });
-  }
-
-  private set(objectId: number, value: { mobId: string; level: number; rank?: number }): void {
-    const definition = this.definitions.get(value.mobId);
-    if (!definition) return;
-    this.objects.set(objectId, {
-      objectId,
-      mobId: value.mobId,
-      displayName: definition.displayName,
-      level: value.level,
-      ...(value.rank === undefined ? {} : { rank: value.rank }),
-      boss: definition.boss,
-    });
+    this.monsters.consume(packet);
   }
 
   get(objectId: number): FishNetMobIdentity | undefined {
-    const value = this.objects.get(objectId);
-    return value ? { ...value } : undefined;
+    const spawn = this.monsters.get(objectId);
+    const definition = spawn && this.definitions.get(spawn.mobId);
+    if (!spawn || !definition) return undefined;
+    return {
+      objectId,
+      mobId: spawn.mobId,
+      displayName: definition.displayName,
+      level: spawn.level,
+      ...(spawn.rank === undefined ? {} : { rank: spawn.rank }),
+      boss: definition.boss,
+    };
   }
 
-  reset(): void { this.objects.clear(); }
+  reset(): void { this.monsters.reset(); }
 }
 
 export class FishNetMobRewardTracker {
@@ -124,6 +115,7 @@ export class FishNetMobRewardTracker {
   private readonly combat: FishNetCombatTracker;
   private readonly mobs: FishNetMobDirectory;
   private readonly pending: PendingKill[] = [];
+  private readonly damagedTargets = new Set<number>();
   private readonly queuedEvents: FishNetUnmatchedRewardEvent[] = [];
   private baseline?: ExperienceCoinsState;
   private nextKill = 1;
@@ -146,13 +138,22 @@ export class FishNetMobRewardTracker {
     const events = this.finalizeBefore(packet.tick - this.correlationWindowTicks);
     this.mobs.consume(packet);
     for (const event of this.combat.consume(packet)) {
+      // Team 0 is our side's outgoing damage. A mob dying nearby that we never hit is someone
+      // else's kill, and at max level no experience arrives to tell the two apart.
+      if (event.kind === "damage" && event.team === 0 && event.value > 0) {
+        this.rememberDamagedTarget(event.targetId);
+        continue;
+      }
       if (event.kind !== "death") continue;
+      // A mob killed outright may only ever produce the death event, so that counts as our damage.
+      const damaged = this.damagedTargets.delete(event.targetId) || (event.team === 0 && event.value > 0);
       this.pending.push({
         id: `kill-${this.nextKill++}`,
         tick: event.tick,
         mob: this.mobs.get(event.targetId),
         drops: [],
         ambiguous: false,
+        damaged,
       });
     }
     const reward = decodeFishNetRewardPacket(packet);
@@ -183,6 +184,18 @@ export class FishNetMobRewardTracker {
     this.baseline = undefined;
     this.combat.reset();
     this.mobs.reset();
+    this.damagedTargets.clear();
+  }
+
+  /** Re-inserting moves the entry to the end, so iteration order is least-recently-damaged first. */
+  private rememberDamagedTarget(targetId: number): void {
+    this.damagedTargets.delete(targetId);
+    this.damagedTargets.add(targetId);
+    while (this.damagedTargets.size > MAX_DAMAGED_TARGETS) {
+      const oldest = this.damagedTargets.values().next();
+      if (oldest.done) break;
+      this.damagedTargets.delete(oldest.value);
+    }
   }
 
   private consumeExperience(tick: number, next: ExperienceCoinsState): void {
@@ -237,9 +250,8 @@ export class FishNetMobRewardTracker {
       const kill = this.pending[index];
       if (!kill || kill.tick > maximumTick) continue;
       this.pending.splice(index, 1);
-      if (kill.ambiguous) {
-        continue;
-      } else if (!kill.mob) {
+      if (!kill.mob) {
+        // Nothing to show without an identity, so anything attached is reported on its own.
         if (kill.gain || kill.drops.length > 0) events.push({
           kind: "unmatched",
           tick: kill.tick,
@@ -249,17 +261,25 @@ export class FishNetMobRewardTracker {
             : { reward: "pickup" as const }),
           drops: kill.drops.map((item) => ({ ...item })),
         });
-      } else if (!kill.gain) {
-        if (kill.drops.length > 0) events.push({
-          kind: "unmatched",
-          tick: kill.tick,
-          reason: "expired",
-          reward: "pickup",
-          drops: kill.drops.map((item) => ({ ...item })),
-        });
-      } else {
-        events.push({ kind: "kill", id: kill.id, tick: kill.tick, mob: kill.mob, ...kill.gain, drops: kill.drops });
+        continue;
       }
+      // A mob that died without us hitting it and without paying out is someone else's kill.
+      // Experience alone cannot decide this: at max level a real kill pays nothing.
+      if (!kill.damaged && !kill.gain && kill.drops.length === 0) continue;
+      // Otherwise the kill is reported whether or not a reward could be pinned to it. An ambiguous
+      // reward was already emitted as an unmatched event when it arrived, so leaving this kill's
+      // totals at zero reports it once rather than twice.
+      events.push({
+        kind: "kill",
+        id: kill.id,
+        tick: kill.tick,
+        mob: kill.mob,
+        experience: kill.gain?.experience ?? 0,
+        jobExperience: kill.gain?.jobExperience ?? 0,
+        coins: kill.gain?.coins ?? 0n,
+        drops: kill.drops.map((item) => ({ ...item })),
+        attributed: kill.gain !== undefined || kill.drops.length > 0,
+      });
     }
     return events.sort((left, right) => left.tick - right.tick);
   }
@@ -289,76 +309,6 @@ function mergeItems(left: readonly RewardItem[], right: readonly RewardItem[]): 
     else merged.set(key, { ...item });
   }
   return [...merged.values()];
-}
-
-function field(packet: DecodedFishNetPacket, names: readonly string[]): FishNetDecodedValue | undefined {
-  for (const name of names) {
-    const value = packet.decodedFields?.find((candidate) => candidate.name === name)?.value;
-    if (value !== undefined) return value;
-  }
-  return undefined;
-}
-
-function stringField(packet: DecodedFishNetPacket, names: readonly string[]): string | undefined {
-  const value = field(packet, names);
-  return typeof value === "string" ? value : undefined;
-}
-
-function numberField(packet: DecodedFishNetPacket, names: readonly string[]): number | undefined {
-  const value = field(packet, names);
-  return typeof value === "number" && Number.isInteger(value) ? value : undefined;
-}
-
-function decodeMonsterSync(payload: Buffer): { mobId: string; level: number; rank: number } | undefined {
-  try {
-    if (payload.length < 2) return undefined;
-    let offset = 1; // SyncType index.
-    const length = readSignedPackedWhole(payload, offset);
-    if (length.value <= 0) return undefined;
-    const end = checkedEnd(payload, length.nextOffset, length.value);
-    const mobId = payload.toString("utf8", length.nextOffset, end);
-    offset = end;
-    const level = readSignedPackedWhole(payload, offset);
-    const rank = readSignedPackedWhole(payload, level.nextOffset);
-    const team = readSignedPackedWhole(payload, rank.nextOffset);
-    if (level.value < 1 || level.value > 1_000 || rank.value < 0 || team.value < 0) return undefined;
-    return { mobId, level: level.value, rank: rank.value };
-  } catch {
-    return undefined;
-  }
-}
-
-function decodeMonsterSpawn(
-  payload: Buffer,
-  definitions: ReadonlyMap<string, MobRewardDefinition>,
-): { mobId: string; level: number; rank: number } | undefined {
-  const matches = new Map<string, { mobId: string; level: number; rank: number; exactLevel: boolean }>();
-  for (let offset = 0; offset < payload.length; offset += 1) {
-    try {
-      const length = readSignedPackedWhole(payload, offset);
-      if (length.value < 1 || length.value > 200) continue;
-      const end = checkedEnd(payload, length.nextOffset, length.value);
-      const mobId = payload.toString("utf8", length.nextOffset, end);
-      const definition = definitions.get(mobId);
-      if (!definition) continue;
-      const level = readSignedPackedWhole(payload, end);
-      const rank = readSignedPackedWhole(payload, level.nextOffset);
-      const team = readSignedPackedWhole(payload, rank.nextOffset);
-      if (level.value < 1 || level.value > 1_000 || rank.value < 0 || rank.value > 100 || team.value < 0 || team.value > 100) continue;
-      matches.set(`${mobId}|${level.value}|${rank.value}`, {
-        mobId,
-        level: level.value,
-        rank: rank.value,
-        exactLevel: level.value === definition.level,
-      });
-    } catch {
-      // Arbitrary offsets are expected not to begin a packed string.
-    }
-  }
-  const values = [...matches.values()];
-  const exact = values.filter((value) => value.exactLevel);
-  const selected = exact.length === 1 ? exact[0] : values.length === 1 ? values[0] : undefined;
-  return selected ? { mobId: selected.mobId, level: selected.level, rank: selected.rank } : undefined;
 }
 
 export function catalogMob(catalog: MobRewardCatalog, id: string): MobRewardDefinition | undefined {

@@ -1,9 +1,10 @@
 import {
   classifyFishNetRecoveryStyle,
   CURRENT_GAME_BUILD_FINGERPRINT,
+  FishNetMonsterDirectory,
   loadBundledFishNetSemanticMap,
 } from "@kar-mi/spirit-vale-tools-capture";
-import type { DecodedFishNetPacket, FishNetDecodedValue, FishNetRecoveryStyle, FishNetSemanticMap } from "@kar-mi/spirit-vale-tools-capture";
+import type { DecodedFishNetPacket, FishNetDecodedValue, FishNetMonsterDirectoryChange, FishNetRecoveryStyle, FishNetSemanticMap } from "@kar-mi/spirit-vale-tools-capture";
 import { loadBundledSkillCatalog } from "@kar-mi/spirit-vale-tools-skills";
 import type { FishNetSkillCatalog } from "@kar-mi/spirit-vale-tools-skills";
 import { decodeSummonCalibration } from "./summon-calibration.ts";
@@ -20,6 +21,16 @@ export interface FishNetCombatActorIdentity {
   readonly uid?: string;
 }
 
+/**
+ * Names a monster type. Injected rather than imported because the mob catalog lives in the rewards
+ * package, which already depends on this one.
+ *
+ * `level` disambiguates the spawn payload, which is scanned at arbitrary offsets.
+ */
+export interface FishNetMonsterCatalog {
+  get(mobId: string): { readonly level: number; readonly displayName: string } | undefined;
+}
+
 export interface FishNetCombatTrackerOptions {
   /** Ticks to retain a completed activation for trailing hits. Defaults to 30. */
   hitGraceTicks?: number;
@@ -34,7 +45,34 @@ export interface FishNetCombatTrackerOptions {
   actorIdentityResolver?: (actorId: number) => FishNetCombatActorIdentity | undefined;
   /** Resolves healing mechanics for actors whose local character build is visible. */
   healingTraitsResolver?: (actorId: number) => FishNetHealingTraits | undefined;
+  /** Names monsters seen spawning, emitting identity lifecycle events keyed by network object id. */
+  monsterCatalog?: FishNetMonsterCatalog;
 }
+
+export type FishNetCombatMonsterIdentityEvent =
+  | {
+      kind: "monsterIdentity";
+      operation: "upsert";
+      tick: number;
+      actorId: number;
+      mobId: string;
+      displayName: string;
+      actorIdentity?: never;
+    }
+  | {
+      kind: "monsterIdentity";
+      operation: "remove";
+      tick: number;
+      actorId: number;
+      actorIdentity?: never;
+    }
+  | {
+      kind: "monsterIdentity";
+      operation: "reset";
+      tick: number;
+      actorId?: never;
+      actorIdentity?: never;
+    };
 
 export interface FishNetHealingTraits {
   readonly hasSiphonHealth: boolean;
@@ -165,6 +203,7 @@ export interface FishNetCombatHealEvent {
 }
 
 export type FishNetCombatEvent =
+  | FishNetCombatMonsterIdentityEvent
   | FishNetCombatActivationEvent
   | FishNetCombatDamageEvent
   | FishNetCombatDeathEvent
@@ -220,6 +259,8 @@ export class FishNetCombatTracker {
   private readonly skillLabels: Map<string, string>;
   private readonly actorIdentityResolver?: (actorId: number) => FishNetCombatActorIdentity | undefined;
   private readonly healingTraitsResolver?: (actorId: number) => FishNetHealingTraits | undefined;
+  private readonly monsterCatalog?: FishNetMonsterCatalog;
+  private readonly monsters?: FishNetMonsterDirectory;
   private readonly semanticMap?: FishNetSemanticMap;
   private readonly activations = new Map<string, ActivationState>();
   private readonly activeRegenSources = new Map<number, RegenSourceState>();
@@ -250,19 +291,23 @@ export class FishNetCombatTracker {
     for (const { value, label } of semanticMap?.verifiedSkillLabels ?? []) this.skillLabels.set(value, label);
     this.actorIdentityResolver = options.actorIdentityResolver;
     this.healingTraitsResolver = options.healingTraitsResolver;
+    this.monsterCatalog = options.monsterCatalog;
+    if (options.monsterCatalog) this.monsters = new FishNetMonsterDirectory(options.monsterCatalog);
   }
 
   consume(packet: DecodedFishNetPacket): FishNetCombatEvent[] {
+    // Spawn and sync packets carry no RPC, so this has to run before the early return below.
+    const monsterIdentity = this.monsterIdentity(packet.tick, this.monsters?.consume(packet));
     if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
       this.reset();
-      return [];
+      return monsterIdentity ? [monsterIdentity] : [];
     }
     this.pruneExpired(packet.tick);
     if (this.recentDamageTick !== packet.tick) {
       this.recentDamageTick = packet.tick;
       this.recentDamageSignatures.clear();
     }
-    const events: FishNetCombatEvent[] = [];
+    const events: FishNetCombatEvent[] = monsterIdentity ? [monsterIdentity] : [];
     if (packet.objectId === undefined || !packet.rpcName) return events;
 
     if (SKILL_RPC_NAMES.has(packet.rpcName) && matchesBehaviour(packet, "SkillsComponent")) {
@@ -305,6 +350,27 @@ export class FishNetCombatTracker {
     this.summonStacks.clear();
     this.recentDamageSignatures.clear();
     this.recentDamageTick = undefined;
+    this.monsters?.reset();
+  }
+
+  private monsterIdentity(
+    tick: number,
+    change: FishNetMonsterDirectoryChange | undefined,
+  ): FishNetCombatMonsterIdentityEvent | undefined {
+    if (!change) return undefined;
+    if (change.operation === "reset") return { kind: "monsterIdentity", operation: "reset", tick };
+    if (change.operation === "remove") {
+      return { kind: "monsterIdentity", operation: "remove", tick, actorId: change.objectId };
+    }
+    const definition = this.monsterCatalog?.get(change.spawn.mobId);
+    return definition ? {
+      kind: "monsterIdentity",
+      operation: "upsert",
+      tick,
+      actorId: change.objectId,
+      mobId: change.spawn.mobId,
+      displayName: definition.displayName,
+    } : undefined;
   }
 
   private consumeSummonCalibration(packet: DecodedFishNetPacket): FishNetCombatSummonEvent[] {
