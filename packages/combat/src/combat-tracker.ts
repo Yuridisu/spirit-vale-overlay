@@ -7,6 +7,7 @@ import {
 import type { DecodedFishNetPacket, FishNetDecodedValue, FishNetMonsterDirectoryChange, FishNetRecoveryStyle, FishNetSemanticMap } from "@kar-mi/spirit-vale-tools-capture";
 import { loadBundledSkillCatalog } from "@kar-mi/spirit-vale-tools-skills";
 import type { FishNetSkillCatalog } from "@kar-mi/spirit-vale-tools-skills";
+import { decodeEffectDisplays } from "./effect-display.ts";
 import { decodeSummonCalibration } from "./summon-calibration.ts";
 
 export type FishNetCombatActionKind = "skill" | "basicAttack" | "inferred";
@@ -45,6 +46,12 @@ export interface FishNetCombatTrackerOptions {
   actorIdentityResolver?: (actorId: number) => FishNetCombatActorIdentity | undefined;
   /** Resolves healing mechanics for actors whose local character build is visible. */
   healingTraitsResolver?: (actorId: number) => FishNetHealingTraits | undefined;
+  /**
+   * The local player's network object id, when known. Only used to attribute a summon calibration
+   * recovered from an unnamed packet, which carries no object id of its own. Omit it and that
+   * recovery is skipped.
+   */
+  localActorIdResolver?: () => number | undefined;
   /** Names monsters seen spawning, emitting identity lifecycle events keyed by network object id. */
   monsterCatalog?: FishNetMonsterCatalog;
 }
@@ -156,14 +163,22 @@ export interface FishNetCombatDeathEvent {
 
 export interface FishNetCombatStatusEvent {
   kind: "status";
-  rpc: "ApplyEffect_T" | "RemoveEffect_T";
+  rpc: "ApplyEffect_T" | "RemoveEffect_T" | "ApplyEffectDisplays_O" | "ApplySkillDisplay_O" | "RemoveSkillDisplay_O";
   tick: number;
   payloadBytes: number;
   fields: Record<string, FishNetDecodedValue>;
   actorId: number;
   statusId: string;
-  level: number;
+  /** Absent on `ApplyEffectDisplays_O`, which carries no level; consumers keep the last known one. */
+  level?: number;
   action: "applied" | "removed";
+  /**
+   * Server-reported time left, from `ApplyEffectDisplays_O` only. Authoritative where present:
+   * the catalog's nominal duration is a guess at what the server is already telling us here.
+   * Absent for a status with no expiry.
+   */
+  remainingSeconds?: number;
+  stacks?: number;
   actorIdentity?: FishNetCombatActorIdentity;
 }
 
@@ -176,6 +191,30 @@ export interface FishNetCombatSummonEvent {
   actorId: number;
   skillId: string;
   stacks: number;
+  /** True when the packet arrived unnamed and was recovered heuristically. See `recoverSummons`. */
+  recovered?: boolean;
+  actorIdentity?: FishNetCombatActorIdentity;
+}
+
+/**
+ * A `PlayerController.FullHeal_C`, which restores an actor outright.
+ *
+ * Kept off the `heal` kind on purpose. The wire carries no amount — the RPC declares no arguments at
+ * all — and the in-game source is a town NPC service rather than combat healing, so folding it into
+ * HPS would spike the meter by a full health bar for something no one healed. `reducers/meter.ts`
+ * only counts `kind: "heal"`, so a separate kind keeps it out structurally instead of by a flag
+ * somebody has to remember.
+ */
+export interface FishNetCombatFullHealEvent {
+  kind: "fullHeal";
+  rpc: "FullHeal_C";
+  tick: number;
+  payloadBytes: number;
+  fields: Record<string, FishNetDecodedValue>;
+  /** The restored actor: the RPC's own object. There is no healer on the wire. */
+  targetId: number;
+  /** No one performed this heal, so no actor may be credited for it. */
+  actorId?: never;
   actorIdentity?: FishNetCombatActorIdentity;
 }
 
@@ -209,7 +248,8 @@ export type FishNetCombatEvent =
   | FishNetCombatDeathEvent
   | FishNetCombatStatusEvent
   | FishNetCombatSummonEvent
-  | FishNetCombatHealEvent;
+  | FishNetCombatHealEvent
+  | FishNetCombatFullHealEvent;
 
 interface ActivationState {
   id: string;
@@ -243,7 +283,13 @@ const HIT_RESULTS: Readonly<Record<number, Exclude<FishNetHitResult, number>>> =
   3: "blocked",
   4: "dodged",
 };
-const SKILL_RPC_NAMES = new Set(["CastBegin_C", "AutoCast_C", "CastComplete_C", "CastInterrupt_C", "CastCancel_C"]);
+const SKILL_RPC_NAMES = new Set(["CastBegin_C", "AutoCast_C", "ToggleBegin_C", "CastComplete_C", "CastInterrupt_C", "CastCancel_C"]);
+/**
+ * Upper bound on a payload `recoverSummons` will even attempt. A calibration is 13 bytes per summon
+ * and no build fields more than a handful, so this only exists to keep the heuristic away from the
+ * multi-kilobyte character dumps that also travel on unresolved links.
+ */
+const MAX_RECOVERED_SUMMON_BYTES = 256;
 /** Known healing skill ids, from observed CastBegin_C/AutoCast_C activations. Extend as more
  * are confirmed in captures — this is a best-effort allowlist, not derived from game data. */
 const HEALING_SKILL_IDS = new Set(["Heal", "HighHeal", "FieldHealing"]);
@@ -259,6 +305,7 @@ export class FishNetCombatTracker {
   private readonly skillLabels: Map<string, string>;
   private readonly actorIdentityResolver?: (actorId: number) => FishNetCombatActorIdentity | undefined;
   private readonly healingTraitsResolver?: (actorId: number) => FishNetHealingTraits | undefined;
+  private readonly localActorIdResolver?: () => number | undefined;
   private readonly monsterCatalog?: FishNetMonsterCatalog;
   private readonly monsters?: FishNetMonsterDirectory;
   private readonly semanticMap?: FishNetSemanticMap;
@@ -291,6 +338,7 @@ export class FishNetCombatTracker {
     for (const { value, label } of semanticMap?.verifiedSkillLabels ?? []) this.skillLabels.set(value, label);
     this.actorIdentityResolver = options.actorIdentityResolver;
     this.healingTraitsResolver = options.healingTraitsResolver;
+    this.localActorIdResolver = options.localActorIdResolver;
     this.monsterCatalog = options.monsterCatalog;
     if (options.monsterCatalog) this.monsters = new FishNetMonsterDirectory(options.monsterCatalog);
   }
@@ -308,7 +356,10 @@ export class FishNetCombatTracker {
       this.recentDamageSignatures.clear();
     }
     const events: FishNetCombatEvent[] = monsterIdentity ? [monsterIdentity] : [];
-    if (packet.objectId === undefined || !packet.rpcName) return events;
+    if (packet.objectId === undefined || !packet.rpcName) {
+      events.push(...this.recoverSummons(packet));
+      return events;
+    }
 
     if (SKILL_RPC_NAMES.has(packet.rpcName) && matchesBehaviour(packet, "SkillsComponent")) {
       const skillEvent = this.consumeSkill(packet);
@@ -335,6 +386,32 @@ export class FishNetCombatTracker {
       && matchesBehaviour(packet, "StatusComponent")) {
       const statusEvent = this.consumeStatus(packet);
       if (statusEvent) events.push(statusEvent);
+      return events;
+    }
+    if (packet.rpcName === "ApplyEffectDisplays_O" && matchesBehaviour(packet, "StatusComponent")) {
+      events.push(...this.consumeEffectDisplays(packet));
+      return events;
+    }
+    if ((packet.rpcName === "ApplySkillDisplay_O" || packet.rpcName === "RemoveSkillDisplay_O")
+      && matchesBehaviour(packet, "StatusComponent")) {
+      const skillDisplay = this.consumeSkillDisplay(packet);
+      if (skillDisplay) events.push(skillDisplay);
+      return events;
+    }
+    if (packet.rpcName === "FullHeal_C" && matchesBehaviour(packet, "PlayerController")) {
+      // Declares no arguments, so anything on the wire means the hash was misread - the decoder
+      // refuses those, and this is a second belt for a packet arriving pre-resolved.
+      if (packet.payload.length === 0) {
+        events.push({
+          kind: "fullHeal",
+          rpc: "FullHeal_C",
+          tick: packet.tick,
+          payloadBytes: 0,
+          fields: {},
+          targetId: packet.objectId,
+          actorIdentity: this.actorIdentityResolver?.(packet.objectId),
+        });
+      }
       return events;
     }
     if (packet.rpcName === "CalibrateSummons_T" && matchesBehaviour(packet, "SummoningComponent")) {
@@ -373,6 +450,109 @@ export class FishNetCombatTracker {
     } : undefined;
   }
 
+  /**
+   * Turns the observers-facing status broadcast into the same status events as the owner-only
+   * `ApplyEffect_T`/`RemoveEffect_T` pair.
+   *
+   * This feed reports every actor in range rather than just the local player, and it repeats
+   * periodically instead of only on change, so it both widens coverage and self-heals after a
+   * dropped packet. It reports real remaining time, which the owner-only path can only approximate
+   * from the catalog. It carries no level, so the events omit one and consumers keep whatever the
+   * owner-only feed last reported.
+   */
+  private consumeEffectDisplays(packet: DecodedFishNetPacket): FishNetCombatStatusEvent[] {
+    let batch: ReturnType<typeof decodeEffectDisplays>;
+    try {
+      batch = decodeEffectDisplays(packet.payload);
+    } catch {
+      return [];
+    }
+    const actorId = packet.objectId!;
+    const base = {
+      kind: "status",
+      rpc: "ApplyEffectDisplays_O",
+      tick: packet.tick,
+      payloadBytes: packet.payload.length,
+      fields: {},
+      actorId,
+      actorIdentity: this.actorIdentityResolver?.(actorId),
+    } as const;
+    return [
+      ...batch.applies.map((display): FishNetCombatStatusEvent => ({
+        ...base,
+        statusId: display.statusId,
+        action: "applied",
+        ...(display.remainingSeconds === undefined ? {} : { remainingSeconds: display.remainingSeconds }),
+        stacks: display.stacks,
+      })),
+      ...batch.removes.map((statusId): FishNetCombatStatusEvent => ({ ...base, statusId, action: "removed" })),
+    ];
+  }
+
+  /**
+   * Turns the skill-icon display feed into status events.
+   *
+   * `ApplySkillDisplay_O`/`RemoveSkillDisplay_O` announce a *skill* shown on an actor - stances and
+   * auras such as `SilentEdge` that the effect feed does not report. Ids do overlap it in places
+   * (`FlowState`, `AngelicBlessing` appear on both), and this feed carries no timing at all, so it
+   * must never overwrite an expiry the effect feed established. `consumeStatus` enforces that by
+   * keeping a known expiry when an event brings none.
+   */
+  private consumeSkillDisplay(packet: DecodedFishNetPacket): FishNetCombatStatusEvent | undefined {
+    const statusId = stringField(packet, "id");
+    if (!statusId) return undefined;
+    const actorId = packet.objectId!;
+    const level = numberField(packet, "lv");
+    return {
+      kind: "status",
+      rpc: packet.rpcName as "ApplySkillDisplay_O" | "RemoveSkillDisplay_O",
+      tick: packet.tick,
+      payloadBytes: packet.payload.length,
+      fields: decodedFieldRecord(packet),
+      actorId,
+      statusId,
+      action: packet.rpcName === "ApplySkillDisplay_O" ? "applied" : "removed",
+      ...(level === undefined ? {} : { level }),
+      actorIdentity: this.actorIdentityResolver?.(actorId),
+    };
+  }
+
+  /**
+   * Last-resort recovery for a `CalibrateSummons_T` the capture layer could not name. Two paths lose
+   * it. An rpcLink whose registration never arrived carries no object id, no hash and no name at all
+   * - links are only ever learned from an `objectSpawn`, so if the player object's spawn is missed on
+   * a connection, every link on that object is dead for the connection's whole life. A plain
+   * targetRpc on an object with no bound components fares little better: wire hash 0 is shared by
+   * several behaviours, and with nothing bound there is nothing to eliminate against. Either way the
+   * summon tile stays blank until a map change respawns the player object and re-registers its links.
+   *
+   * This is a heuristic and deliberately narrow. `decodeSummonCalibration` must consume the payload
+   * exactly, at least one entry must decode, every skill id must be one the catalog knows, and the
+   * result is attributed to the local player because `CalibrateSummons_T` is a targetRpc no other
+   * client receives. An empty calibration - the "all summons gone" snapshot - is *not* recovered: it
+   * encodes as a single 0x01 byte, which carries no signature worth trusting.
+   */
+  private recoverSummons(packet: DecodedFishNetPacket): FishNetCombatSummonEvent[] {
+    // `recovered` counts as named: the decoder already corroborated a quarantined registration, so
+    // the normal path handles it and guessing again here would double count.
+    if (packet.rpcName || packet.rpcResolution === "verified" || packet.rpcResolution === "recovered") return [];
+    if (packet.payload.length < 2 || packet.payload.length > MAX_RECOVERED_SUMMON_BYTES) return [];
+    if (this.skillLabels.size === 0) return [];
+    const actorId = packet.objectId ?? this.localActorIdResolver?.();
+    if (actorId === undefined) return [];
+
+    let entries: ReturnType<typeof decodeSummonCalibration>;
+    try {
+      entries = decodeSummonCalibration(packet.payload);
+    } catch {
+      return [];
+    }
+    if (entries.length === 0) return [];
+    if (!entries.every(({ skillId }) => this.skillLabels.has(skillId))) return [];
+
+    return this.applySummonSnapshot(actorId, packet, entries).map((event) => ({ ...event, recovered: true }));
+  }
+
   private consumeSummonCalibration(packet: DecodedFishNetPacket): FishNetCombatSummonEvent[] {
     let entries: ReturnType<typeof decodeSummonCalibration>;
     try {
@@ -380,8 +560,15 @@ export class FishNetCombatTracker {
     } catch {
       return [];
     }
+    return this.applySummonSnapshot(packet.objectId!, packet, entries);
+  }
 
-    const actorId = packet.objectId!;
+  /** Diffs one summon snapshot against the actor's last known stacks and emits only the changes. */
+  private applySummonSnapshot(
+    actorId: number,
+    packet: DecodedFishNetPacket,
+    entries: ReturnType<typeof decodeSummonCalibration>,
+  ): FishNetCombatSummonEvent[] {
     const previous = this.summonStacks.get(actorId) ?? new Map<string, number>();
     const current = new Map<string, number>();
     for (const { skillId } of entries) current.set(skillId, (current.get(skillId) ?? 0) + 1);
@@ -411,8 +598,9 @@ export class FishNetCombatTracker {
     const actorId = packet.objectId!;
     const rpcName = packet.rpcName;
     if (!rpcName) return undefined;
-    if (rpcName === "CastBegin_C" || rpcName === "AutoCast_C") {
-      const sourceId = stringField(packet, "dto.Id");
+    if (rpcName === "CastBegin_C" || rpcName === "AutoCast_C" || rpcName === "ToggleBegin_C") {
+      // A toggle names its skill in a bare `id`; a cast carries the whole SkillStateDto.
+      const sourceId = rpcName === "ToggleBegin_C" ? stringField(packet, "id") : stringField(packet, "dto.Id");
       if (!sourceId) return undefined;
       const activation = this.createActivation(actorId, "skill", packet.tick, sourceId, false);
       activation.targetId = numberField(packet, "targetId");

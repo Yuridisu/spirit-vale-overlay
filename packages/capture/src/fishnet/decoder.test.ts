@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { loadBundledFishNetRpcMap } from "./builtin-maps.ts";
 import {
   decodeFishNetBundle,
   FishNetSessionDecoder,
@@ -61,15 +62,41 @@ function linked(id: number, payload: Buffer): Buffer {
   return message(id, Buffer.concat([packed(payload.length), payload]));
 }
 
-function fixedServerRpc(objectId: number, componentIndex: number, hash: number, payload = Buffer.alloc(0)): Buffer {
+function fixedRpc(
+  messageId: number,
+  objectId: number,
+  componentIndex: number,
+  hash: number,
+  payload: Uint8Array,
+): Buffer {
   const wireHash = hash > 0xff ? u16(hash) : Buffer.from([hash]);
-  return message(8, Buffer.concat([
+  return message(messageId, Buffer.concat([
     packed(objectId),
     Buffer.from([1, componentIndex]),
     packed(wireHash.length + payload.length),
     wireHash,
     payload,
   ]));
+}
+
+function fixedServerRpc(objectId: number, componentIndex: number, hash: number, payload: Uint8Array = Buffer.alloc(0)): Buffer {
+  return fixedRpc(8, objectId, componentIndex, hash, payload);
+}
+
+function observersRpc(objectId: number, componentIndex: number, hash: number, payload: Uint8Array = Buffer.alloc(0)): Buffer {
+  return fixedRpc(9, objectId, componentIndex, hash, payload);
+}
+
+function targetRpc(objectId: number, componentIndex: number, hash: number, payload: Uint8Array = Buffer.alloc(0)): Buffer {
+  return fixedRpc(10, objectId, componentIndex, hash, payload);
+}
+
+function authenticated(): Buffer {
+  return message(1, packed(1));
+}
+
+function objectDespawn(objectId: number): Buffer {
+  return message(4, Buffer.concat([packed(objectId), Buffer.from([0])]));
 }
 
 function spawnWithLink(
@@ -151,6 +178,9 @@ describe("FishNet bundles and sessions", () => {
           methodName: "RpcSyntheticNotice",
           wireHash: 0x1234,
           packetKind: "observersRpc",
+          // The generator records parameters even for types it cannot break down, so an entry with
+          // none genuinely takes none — and a match claiming one is refused when bytes are present.
+          parameters: [{ name: "value", typeName: "System.UInt16", codec: "uint16" as const }],
         }],
       }],
     };
@@ -420,6 +450,372 @@ describe("FishNet bundles and sessions", () => {
     // guesses when there is nothing to eliminate against.
     const unrelated = decoder.decode(tick(44, fixedServerRpc(61, 3, 1)), context);
     expect(unrelated[0]).toMatchObject({ rpcResolution: "ambiguous", networkBehaviourType: undefined });
+  });
+
+  describe("link table quarantine across re-authentication", () => {
+    // One behaviour whose observersRpc hash 3 has a checkable signature, and one whose array
+    // parameter cannot be evaluated - the CalibrateSummons_T shape.
+    const map: FishNetRpcMap = {
+      buildFingerprint: "synthetic-quarantine",
+      metadataVersion: 31,
+      behaviours: [{
+        typeName: "SyntheticHealth",
+        rpcs: [{
+          wireHash: 3,
+          packetKind: "observersRpc",
+          methodName: "SyntheticApplyDamage",
+          parameters: [{ name: "source", typeName: "System.String", codec: "stringUtf8Packed" as const }],
+        }],
+      }, {
+        typeName: "SyntheticSummoning",
+        rpcs: [{ wireHash: 4, packetKind: "observersRpc", methodName: "SyntheticCalibrate", parameters: [{ name: "data", typeName: "SyntheticSummonData[]" }] }],
+      }],
+    };
+    const source = Buffer.concat([packed(5), Buffer.from("Smite")]);
+
+    function decoderWithLink(connectionId: string, rpcHash = 3) {
+      const decoder = new FishNetSessionDecoder(map);
+      const context = { reliable: true, connectionId };
+      decoder.decode(tick(1, spawnWithLink(80, 2, 900, rpcHash)), context);
+      return { decoder, context };
+    }
+
+    test("keeps resolving a link the server never re-registers after re-authentication", () => {
+      const { decoder, context } = decoderWithLink("quarantine-basic");
+      const before = decoder.decode(tick(2, linked(900, source)), context);
+      expect(before[0]).toMatchObject({ rpcName: "SyntheticApplyDamage", rpcResolution: "verified" });
+
+      // A channel switch on the same socket: the client re-authenticates but the server does not
+      // re-spawn object 80, so no fresh registration for link 900 is ever sent again.
+      decoder.decode(tick(3, authenticated()), context);
+      const after = decoder.decode(tick(4, linked(900, source)), context);
+      expect(after[0]).toMatchObject({
+        linkResolved: true,
+        objectId: 80,
+        rpcName: "SyntheticApplyDamage",
+        rpcResolution: "recovered",
+      });
+
+      // Promoted on first use, so it is a plain hit from here on.
+      const later = decoder.decode(tick(5, linked(900, source)), context);
+      expect(later[0]).toMatchObject({ rpcName: "SyntheticApplyDamage", rpcResolution: "verified" });
+    });
+
+    test("rejects a quarantined link whose payload does not fit the signature", () => {
+      const { decoder, context } = decoderWithLink("quarantine-misfit");
+      decoder.decode(tick(3, authenticated()), context);
+      // Trailing byte the string parameter does not account for: consistent with the link id having
+      // been reallocated to some other method, so the registration is not believed.
+      const after = decoder.decode(tick(4, linked(900, Buffer.concat([source, Buffer.from([0xff])]))), context);
+      expect(after[0]).toMatchObject({ linkResolved: false });
+      expect(after[0]?.rpcName).toBeUndefined();
+    });
+
+    test("falls back to object liveness when the signature cannot be evaluated", () => {
+      const { decoder, context } = decoderWithLink("quarantine-liveness", 4);
+      decoder.decode(tick(3, authenticated()), context);
+      // Nothing has re-established object 80 since the quarantine, so an unevaluable signature has
+      // no corroboration at all.
+      expect(decoder.decode(tick(4, linked(900, source)), context)[0]).toMatchObject({ linkResolved: false });
+
+      // Ordinary traffic on object 80 rebinds a component, proving the object outlived the re-auth
+      // and so was not replaced by whatever might have taken over link 900.
+      decoder.decode(tick(5, observersRpc(80, 2, 4, source)), context);
+      expect(decoder.decode(tick(6, linked(900, source)), context)[0]).toMatchObject({
+        objectId: 80,
+        rpcName: "SyntheticCalibrate",
+        rpcResolution: "recovered",
+      });
+    });
+
+    test("drops a quarantined link when its object respawns with a fresh link set", () => {
+      const { decoder, context } = decoderWithLink("quarantine-respawn");
+      decoder.decode(tick(3, authenticated()), context);
+      // A respawn re-issues the object's links from scratch, so the pre-auth set is stale by
+      // definition - link 900 must not survive on the strength of the old registration.
+      decoder.decode(tick(4, spawnWithLink(80, 2, 901, 3)), context);
+      expect(decoder.decode(tick(5, linked(900, source)), context)[0]).toMatchObject({ linkResolved: false });
+      expect(decoder.decode(tick(6, linked(901, source)), context)[0]).toMatchObject({
+        objectId: 80,
+        rpcResolution: "verified",
+      });
+    });
+
+    test("drops a quarantined link once its object despawns", () => {
+      const { decoder, context } = decoderWithLink("quarantine-despawn");
+      decoder.decode(tick(3, authenticated()), context);
+      decoder.decode(tick(4, objectDespawn(80)), context);
+      expect(decoder.decode(tick(5, linked(900, source)), context)[0]).toMatchObject({ linkResolved: false });
+    });
+
+    test("lets a fresh registration win over the quarantined one", () => {
+      const { decoder, context } = decoderWithLink("quarantine-reregister");
+      decoder.decode(tick(3, authenticated()), context);
+      decoder.decode(tick(4, spawnWithLink(81, 6, 900, 3)), context);
+      expect(decoder.decode(tick(5, linked(900, source)), context)[0]).toMatchObject({
+        objectId: 81,
+        networkBehaviourIndex: 6,
+        rpcResolution: "verified",
+      });
+    });
+
+    test("retains only one generation across successive re-authentications", () => {
+      const { decoder, context } = decoderWithLink("quarantine-generations");
+      decoder.decode(tick(3, authenticated()), context);
+      decoder.decode(tick(4, authenticated()), context);
+      // The first re-auth quarantined link 900; the second retired that empty generation over the
+      // top of it, so the original suspects are gone rather than accumulating forever.
+      expect(decoder.decode(tick(5, linked(900, source)), context)[0]).toMatchObject({ linkResolved: false });
+    });
+
+    test("keeps connections isolated - quarantine never leaks across sockets", () => {
+      const { decoder } = decoderWithLink("quarantine-isolation");
+      const other = decoder.decode(tick(2, linked(900, source)), { reliable: true, connectionId: "different-socket" });
+      expect(other[0]).toMatchObject({ linkResolved: false });
+    });
+  });
+
+  describe("decoding parameters the scraper left uncoded", () => {
+    test("falls back to the codec implied by a BCL type name", () => {
+      const map: FishNetRpcMap = {
+        buildFingerprint: "synthetic-fallback",
+        metadataVersion: 31,
+        behaviours: [{
+          typeName: "SyntheticToggles",
+          rpcs: [{
+            wireHash: 3,
+            packetKind: "serverRpc",
+            methodName: "SyntheticToggleBegin",
+            // No codec, exactly as the scraper emits for 130 string parameters. Without the
+            // fallback the decode stops here and every later field is lost with it.
+            parameters: [
+              { name: "id", typeName: "System.String" },
+              { name: "level", typeName: "System.Int32" },
+            ],
+          }],
+        }],
+      };
+      const decoder = new FishNetSessionDecoder(map);
+      const payload = Buffer.concat([packed(6), Buffer.from("Stance"), packed(4)]);
+      const [packet] = decoder.decode(
+        tick(1, fixedServerRpc(70, 1, 3, payload)),
+        { reliable: true, connectionId: "codec-fallback" },
+      );
+      expect(packet?.decodedFields).toEqual([
+        { name: "id", typeName: "System.String", codec: "stringUtf8Packed", value: "Stance" },
+        { name: "level", typeName: "System.Int32", codec: "packedInt32", value: 4 },
+      ]);
+    });
+
+    test("leaves a game struct unresolved rather than guessing", () => {
+      const map: FishNetRpcMap = {
+        buildFingerprint: "synthetic-opaque",
+        metadataVersion: 31,
+        behaviours: [{
+          typeName: "SyntheticOpaque",
+          rpcs: [{ wireHash: 3, packetKind: "serverRpc", methodName: "SyntheticOpaqueCall", parameters: [{ name: "data", typeName: "SomeGameStruct" }] }],
+        }],
+      };
+      const decoder = new FishNetSessionDecoder(map);
+      const [packet] = decoder.decode(
+        tick(1, fixedServerRpc(71, 1, 3, Buffer.from("aabb", "hex"))),
+        { reliable: true, connectionId: "opaque" },
+      );
+      expect(packet?.decodedFields).toBeUndefined();
+      expect(packet?.undecodedPayload).toEqual(Buffer.from("aabb", "hex"));
+    });
+  });
+
+  describe("refusing a match the payload contradicts", () => {
+    // PlayerController.FullHeal_C takes no arguments and sits at 8-bit hash 30. A behaviour with
+    // many RPCs can use a 16-bit hash whose low byte is also 30 - here 0x661e - and the 8-bit
+    // reading then claims a full heal that never happened.
+    const COLLIDING_HASH_TAIL = Buffer.from([0x66]);
+
+    test("does not claim a parameterless method for a packet carrying bytes", () => {
+      const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
+      const [packet] = decoder.decode(
+        tick(1, observersRpc(4801, 1, 30, COLLIDING_HASH_TAIL)),
+        { reliable: true, connectionId: "hash-collision" },
+      );
+      expect(packet).toMatchObject({ rpcHash16Candidate: 0x661e, rpcResolution: "unresolved" });
+      expect(packet?.rpcName).toBeUndefined();
+    });
+
+    test("still accepts a parameterless method when the packet is empty", () => {
+      // A genuine FullHeal_C carries nothing at all, which is exactly what distinguishes it.
+      const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
+      const [packet] = decoder.decode(
+        tick(1, observersRpc(4801, 0, 30)),
+        { reliable: true, connectionId: "hash-collision-genuine" },
+      );
+      expect(packet).toMatchObject({ rpcName: "FullHeal_C", rpcResolution: "verified" });
+    });
+
+    test("does not teach the connection a binding from a refused match", () => {
+      const map: FishNetRpcMap = {
+        buildFingerprint: "synthetic-refusal",
+        metadataVersion: 31,
+        behaviours: [
+          { typeName: "SyntheticEmotes", rpcs: [{ wireHash: 9, packetKind: "serverRpc", methodName: "SyntheticStopEmote" }] },
+          {
+            typeName: "SyntheticHealth",
+            rpcs: [{
+              wireHash: 40,
+              packetKind: "serverRpc",
+              methodName: "SyntheticApplyDamage",
+              parameters: [{ name: "value", typeName: "System.Int32", codec: "packedInt32" as const }],
+            }],
+          },
+        ],
+      };
+      const decoder = new FishNetSessionDecoder(map);
+      const context = { reliable: true, connectionId: "refusal-binding" };
+      // Hash 9 matches the parameterless SyntheticStopEmote, but bytes are present, so the match is
+      // refused - and index 4 must NOT be remembered as SyntheticEmotes.
+      const [refused] = decoder.decode(tick(1, fixedServerRpc(90, 4, 9, Buffer.from("aabb", "hex"))), context);
+      expect(refused?.rpcResolution).toBe("unresolved");
+      expect(refused?.networkBehaviourType).toBeUndefined();
+
+      // The same component later carries a hash only SyntheticHealth declares; a poisoned binding
+      // would have prevented this from resolving.
+      const [later] = decoder.decode(tick(2, fixedServerRpc(90, 4, 40, Buffer.from([14]))), context);
+      expect(later).toMatchObject({ networkBehaviourType: "SyntheticHealth", rpcName: "SyntheticApplyDamage" });
+    });
+  });
+
+  describe("payload-shape elimination", () => {
+    // Two behaviours share serverRpc hash 0 with signatures of different lengths, plus a third whose
+    // array parameter this decoder cannot evaluate at all.
+    const map: FishNetRpcMap = {
+      buildFingerprint: "synthetic-shape",
+      metadataVersion: 31,
+      behaviours: [{
+        typeName: "SyntheticHealth",
+        rpcs: [{
+          wireHash: 0,
+          packetKind: "serverRpc",
+          methodName: "SyntheticApplyDamage",
+          parameters: [
+            { name: "value", typeName: "System.Int32", codec: "packedInt32" as const },
+            { name: "source", typeName: "System.String", codec: "stringUtf8Packed" as const },
+          ],
+        }],
+      }, {
+        typeName: "SyntheticCombat",
+        rpcs: [{
+          wireHash: 0,
+          packetKind: "serverRpc",
+          methodName: "SyntheticAttack",
+          parameters: [{ name: "position", typeName: "UnityEngine.Vector3", codec: "vector3" as const }],
+        }],
+      }, {
+        typeName: "SyntheticSummoning",
+        rpcs: [{
+          wireHash: 0,
+          packetKind: "serverRpc",
+          methodName: "SyntheticCalibrate",
+          parameters: [{ name: "data", typeName: "SyntheticSummonData[]" }],
+        }],
+      }],
+    };
+    const damagePayload = Buffer.concat([packed(42), packed(5), Buffer.from("Smite")]);
+    const vector3Payload = Buffer.concat([f32(1), f32(2), f32(3)]);
+
+    test("picks the only candidate whose signature consumes the payload exactly", () => {
+      const decoder = new FishNetSessionDecoder({ ...map, behaviours: map.behaviours.slice(0, 2) });
+      const [packet] = decoder.decode(
+        tick(50, fixedServerRpc(70, 3, 0, damagePayload)),
+        { reliable: true, connectionId: "shape-fit" },
+      );
+      expect(packet).toMatchObject({
+        networkBehaviourType: "SyntheticHealth",
+        rpcName: "SyntheticApplyDamage",
+        rpcResolution: "verified",
+      });
+    });
+
+    test("binds the component so later packets resolve without re-running elimination", () => {
+      const decoder = new FishNetSessionDecoder({ ...map, behaviours: map.behaviours.slice(0, 2) });
+      const context = { reliable: true, connectionId: "shape-binding" };
+      decoder.decode(tick(51, fixedServerRpc(70, 3, 0, damagePayload)), context);
+
+      // This payload would fit SyntheticAttack on its own, but index 3 is bound now.
+      const [packet] = decoder.decode(tick(52, fixedServerRpc(70, 3, 0, vector3Payload)), context);
+      expect(packet).toMatchObject({ networkBehaviourType: "SyntheticHealth" });
+    });
+
+    test("refuses to guess when a candidate's signature cannot be evaluated", () => {
+      const decoder = new FishNetSessionDecoder(map);
+      const [packet] = decoder.decode(
+        tick(53, fixedServerRpc(71, 3, 0, damagePayload)),
+        { reliable: true, connectionId: "shape-undecodable" },
+      );
+      // SyntheticSummoning's array parameter might fit these bytes for all this decoder knows, so
+      // dropping it to crown SyntheticHealth would be a guess dressed up as a deduction.
+      expect(packet).toMatchObject({ rpcResolution: "ambiguous", networkBehaviourType: undefined });
+    });
+
+    test("refuses to guess when the payload fits more than one candidate", () => {
+      const decoder = new FishNetSessionDecoder({
+        ...map,
+        behaviours: [map.behaviours[1]!, {
+          typeName: "SyntheticMovement",
+          rpcs: [{
+            wireHash: 0,
+            packetKind: "serverRpc",
+            methodName: "SyntheticTeleport",
+            parameters: [{ name: "destination", typeName: "UnityEngine.Vector3", codec: "vector3" as const }],
+          }],
+        }],
+      });
+      const [packet] = decoder.decode(
+        tick(54, fixedServerRpc(72, 3, 0, vector3Payload)),
+        { reliable: true, connectionId: "shape-tie" },
+      );
+      expect(packet).toMatchObject({ rpcResolution: "ambiguous", networkBehaviourType: undefined });
+    });
+
+    /** HealthComponent's `Damage` struct, which is what tells ApplyDamage_C apart from Attack_C. */
+    function damageStruct(sourceId: string): Buffer {
+      return Buffer.concat([
+        packed(0), packed(1440), packed(0), packed(0), packed(1),      // Team, Value, Type, Hit, Hits
+        packed(Buffer.byteLength(sourceId)), Buffer.from(sourceId),     // DamageSourceId
+        packed(4802), Buffer.from([0, 0]),                              // AttackerId, IsClone, IsSummon
+        packed(0), packed(0), packed(1),                                // Element, WeaponType, Range
+      ]);
+    }
+
+    test("resolves damage and death on an unbound object against the bundled map", () => {
+      // An ApplyDamage_C/Death_C pair on an object whose spawn was never seen. Both used to stay
+      // ambiguous, and every domain tracker then dropped them.
+      const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
+      const context = { reliable: true, connectionId: "bundled-shape" };
+      const struct = damageStruct("SyntheticBolt");
+      const vector3 = Buffer.concat([f32(1), f32(2), f32(3)]);
+
+      const [damage] = decoder.decode(
+        tick(1, observersRpc(4803, 3, 0, Buffer.concat([struct, vector3, vector3]))),
+        context,
+      );
+      expect(damage).toMatchObject({ networkBehaviourType: "HealthComponent", rpcName: "ApplyDamage_C" });
+
+      const [death] = decoder.decode(tick(2, observersRpc(4803, 3, 2, struct)), context);
+      expect(death).toMatchObject({ networkBehaviourType: "HealthComponent", rpcName: "Death_C" });
+    });
+
+    test("leaves CalibrateSummons_T ambiguous - its array parameter is unevaluable", () => {
+      // Shape elimination cannot claim this one; FishNetCombatTracker recovers it instead.
+      const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
+      const summons = Buffer.concat([
+        packed(2),
+        ...["SyntheticClone", "SyntheticClone"].map((id) =>
+          Buffer.concat([packed(Buffer.byteLength(id)), Buffer.from(id), Buffer.from([1, 0])])),
+      ]);
+      const [packet] = decoder.decode(tick(3, targetRpc(4804, 6, 0, summons)), { reliable: true, connectionId: "bundled-summons" });
+      expect(packet).toMatchObject({ rpcResolution: "ambiguous" });
+      expect(packet?.rpcName).toBeUndefined();
+    });
   });
 
   test("decodes ordered nested parameters and preserves a truncated remainder", () => {

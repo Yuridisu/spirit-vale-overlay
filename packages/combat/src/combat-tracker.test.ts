@@ -196,6 +196,177 @@ describe("FishNetCombatTracker", () => {
     expect(tracker.consume({ ...twoClones, tick: 3 })).toEqual([]);
   });
 
+  describe("toggled skills", () => {
+    test("emits an activation naming the toggled skill", () => {
+      const tracker = new FishNetCombatTracker();
+      // A toggle names its skill in a bare `id`, not in the SkillStateDto a cast carries.
+      const events = tracker.consume(packet(1, 50, "SkillsComponent", "ToggleBegin_C", [field("id", "SilentEdge")]));
+      expect(events).toEqual([
+        expect.objectContaining({ kind: "activation", rpc: "ToggleBegin_C", actorId: 50, sourceId: "SilentEdge", phase: "begin" }),
+      ]);
+    });
+
+    test("ignores a toggle whose skill id did not decode", () => {
+      const tracker = new FishNetCombatTracker();
+      expect(tracker.consume(packet(1, 50, "SkillsComponent", "ToggleBegin_C"))).toEqual([]);
+    });
+  });
+
+  describe("skill display feed", () => {
+    test("maps applies and removes onto status events", () => {
+      const tracker = new FishNetCombatTracker();
+      expect(tracker.consume(packet(1, 60, "StatusComponent", "ApplySkillDisplay_O", [
+        field("id", "SilentEdge"),
+        field("lv", 3),
+      ]))).toEqual([
+        expect.objectContaining({ kind: "status", rpc: "ApplySkillDisplay_O", actorId: 60, statusId: "SilentEdge", level: 3, action: "applied" }),
+      ]);
+      expect(tracker.consume(packet(2, 60, "StatusComponent", "RemoveSkillDisplay_O", [field("id", "SilentEdge")]))).toEqual([
+        expect.objectContaining({ kind: "status", rpc: "RemoveSkillDisplay_O", statusId: "SilentEdge", action: "removed" }),
+      ]);
+    });
+
+    test("carries no timing, so no remainingSeconds is invented", () => {
+      const tracker = new FishNetCombatTracker();
+      const [event] = tracker.consume(packet(1, 60, "StatusComponent", "ApplySkillDisplay_O", [field("id", "FlowState")]));
+      expect(event).not.toHaveProperty("remainingSeconds");
+    });
+
+    test("skips an entry whose id did not decode", () => {
+      const tracker = new FishNetCombatTracker();
+      expect(tracker.consume(packet(1, 60, "StatusComponent", "ApplySkillDisplay_O"))).toEqual([]);
+    });
+  });
+
+  describe("full heals", () => {
+    test("emits a fullHeal for an empty FullHeal_C", () => {
+      const tracker = new FishNetCombatTracker();
+      expect(tracker.consume(packet(1, 8100, "PlayerController", "FullHeal_C"))).toEqual([
+        expect.objectContaining({ kind: "fullHeal", rpc: "FullHeal_C", targetId: 8100 }),
+      ]);
+    });
+
+    test("credits no actor, so no meter can attribute it", () => {
+      const tracker = new FishNetCombatTracker();
+      const [event] = tracker.consume(packet(1, 8100, "PlayerController", "FullHeal_C"));
+      expect(event).not.toHaveProperty("actorId");
+      expect(event).not.toHaveProperty("value");
+    });
+
+    test("ignores a FullHeal_C carrying a payload", () => {
+      // FullHeal_C declares no arguments, so bytes on the wire mean the hash was misread: the low
+      // byte of a 16-bit hash can collide with it.
+      const tracker = new FishNetCombatTracker();
+      const misread = packet(1, 8101, "PlayerController", "FullHeal_C");
+      misread.payload = Buffer.from([0x66]);
+      expect(tracker.consume(misread)).toEqual([]);
+    });
+  });
+
+  describe("recovering unnamed summon calibrations", () => {
+    const SUMMON_CATALOG: FishNetSkillCatalog = {
+      buildFingerprint: "synthetic-build",
+      skills: [{ id: "SyntheticClone", displayName: "Synthetic Clone", kinds: ["active"] }],
+    };
+    const LOCAL_ACTOR = 8200;
+
+    function calibrationPayload(...skillIds: readonly string[]): Buffer {
+      return Buffer.concat([
+        packed(skillIds.length),
+        ...skillIds.map((id) => Buffer.concat([packed(Buffer.byteLength(id)), Buffer.from(id), Buffer.from([1, 0])])),
+      ]);
+    }
+
+    /** An rpcLink whose registration never arrived: no object id, no hash, no name - just bytes. */
+    function orphanLink(tick: number, payload: Buffer): DecodedFishNetPacket {
+      return {
+        tick,
+        packetId: 4100,
+        packetName: "rpcLink",
+        linkId: 4100,
+        linkResolved: false,
+        raw: Buffer.alloc(0),
+        payload,
+      };
+    }
+
+    // `null` means the tracker is given no local actor at all; passing `undefined` would re-apply
+    // the default parameter instead.
+    function recoveringTracker(localActorId: number | null = LOCAL_ACTOR): FishNetCombatTracker {
+      return new FishNetCombatTracker({
+        skillCatalog: SUMMON_CATALOG,
+        buildFingerprint: "synthetic-build",
+        ...(localActorId === null ? {} : { localActorIdResolver: () => localActorId }),
+      });
+    }
+
+    test("recovers a calibration from an rpcLink whose registration never arrived", () => {
+      const tracker = recoveringTracker();
+      expect(tracker.consume(orphanLink(1, calibrationPayload("SyntheticClone")))).toEqual([
+        expect.objectContaining({ kind: "summon", actorId: LOCAL_ACTOR, skillId: "SyntheticClone", stacks: 1, recovered: true }),
+      ]);
+      expect(tracker.consume(orphanLink(2, calibrationPayload("SyntheticClone", "SyntheticClone")))).toEqual([
+        expect.objectContaining({ skillId: "SyntheticClone", stacks: 2, recovered: true }),
+      ]);
+    });
+
+    test("recovers an ambiguous targetRpc and attributes it to the packet's own object", () => {
+      // Resolved far enough to carry an object id, but the wire hash is shared and nothing on the
+      // object was bound, so it arrived unnamed.
+      const tracker = recoveringTracker(9999);
+      expect(tracker.consume({
+        tick: 3,
+        packetId: 10,
+        packetName: "targetRpc",
+        objectId: 8201,
+        networkBehaviourIndex: 6,
+        rpcHash: 0,
+        rpcResolution: "ambiguous",
+        raw: Buffer.alloc(0),
+        payload: calibrationPayload("SyntheticClone", "SyntheticClone"),
+      })).toEqual([
+        expect.objectContaining({ actorId: 8201, skillId: "SyntheticClone", stacks: 2, recovered: true }),
+      ]);
+    });
+
+    test("shares stack state with named calibrations rather than double counting", () => {
+      const tracker = recoveringTracker();
+      tracker.consume(orphanLink(1, calibrationPayload("SyntheticClone", "SyntheticClone")));
+      // The same snapshot arriving named once links recover is not a change, so it emits nothing.
+      expect(tracker.consume(summonCalibration(2, LOCAL_ACTOR, ["SyntheticClone", "SyntheticClone"]))).toEqual([]);
+      expect(tracker.consume(summonCalibration(3, LOCAL_ACTOR, ["SyntheticClone"]))).toEqual([
+        expect.objectContaining({ skillId: "SyntheticClone", stacks: 1 }),
+      ]);
+    });
+
+    test("declines payloads it cannot vouch for", () => {
+      const tracker = recoveringTracker();
+      // Bulk character/inventory data, which also travels on unresolved links.
+      expect(tracker.consume(orphanLink(1, Buffer.alloc(64, 0x41)))).toEqual([]);
+      // An empty snapshot: one byte carries no signature worth trusting.
+      expect(tracker.consume(orphanLink(2, Buffer.from([0x01])))).toEqual([]);
+      // Well-formed, but naming a skill no catalog knows.
+      expect(tracker.consume(orphanLink(3, calibrationPayload("SyntheticUnknown")))).toEqual([]);
+      // Trailing bytes the summon grammar does not account for.
+      expect(tracker.consume(orphanLink(4, Buffer.concat([calibrationPayload("SyntheticClone"), Buffer.from([0xff])])))).toEqual([]);
+    });
+
+    test("skips recovery when the local actor is unknown", () => {
+      const tracker = recoveringTracker(null);
+      expect(tracker.consume(orphanLink(1, calibrationPayload("SyntheticClone")))).toEqual([]);
+    });
+
+    test("leaves named packets to the normal path", () => {
+      const tracker = recoveringTracker();
+      expect(tracker.consume({
+        ...orphanLink(1, calibrationPayload("SyntheticClone")),
+        rpcName: "SomeOtherRpc",
+        rpcResolution: "verified",
+        objectId: LOCAL_ACTOR,
+      })).toEqual([]);
+    });
+  });
+
   test("treats a null summon array as an empty authoritative snapshot", () => {
     const tracker = new FishNetCombatTracker();
     tracker.consume(summonCalibration(1, 10, ["FictionalClone"]));

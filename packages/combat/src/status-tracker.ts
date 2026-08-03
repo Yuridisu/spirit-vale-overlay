@@ -40,6 +40,12 @@ interface TrackedStatus {
   stacks?: number;
 }
 
+/**
+ * Feeds that repeat while a status is merely still active, rather than firing once when it starts.
+ * Their repeats must not restart `appliedAtMs`, or it would creep forward for the whole duration.
+ */
+const REFRESHING_FEEDS = new Set<FishNetCombatStatusEvent["rpc"]>(["ApplyEffectDisplays_O", "ApplySkillDisplay_O"]);
+
 /** Tracks per-actor active buffs/debuffs from FishNet status apply/remove events. */
 export class FishNetStatusTracker {
   private readonly directory: FishNetStatusDirectory;
@@ -115,14 +121,46 @@ export class FishNetStatusTracker {
       else this.active.set(event.actorId, statuses);
       return;
     }
-    const definition = this.directory.resolve(event.statusId);
-    const durationSeconds = statusDurationSeconds(definition, event.level);
+    const previous = statuses.get(event.statusId);
+    // The display feed reports no level, so keep whatever the owner-only feed last established
+    // rather than resetting to 1 and mis-deriving every level-scaled duration from then on.
+    const level = event.level ?? previous?.level ?? 1;
+    const expiresAtMs = this.resolveExpiry(event, level, observedAtMs, previous);
     statuses.set(event.statusId, {
-      level: event.level,
-      appliedAtMs: observedAtMs,
-      ...(durationSeconds === undefined ? {} : { expiresAtMs: observedAtMs + durationSeconds * 1_000 }),
+      level,
+      // The display feed repeats while a status is merely still active, so treating every packet as
+      // a fresh application would make "applied at" drift forward for the whole duration.
+      appliedAtMs: REFRESHING_FEEDS.has(event.rpc) ? previous?.appliedAtMs ?? observedAtMs : observedAtMs,
+      ...(expiresAtMs === undefined ? {} : { expiresAtMs }),
+      ...(event.stacks === undefined ? {} : { stacks: event.stacks }),
     });
     this.active.set(event.actorId, statuses);
+  }
+
+  /**
+   * Picks the expiry to trust.
+   *
+   * A server-reported remaining time always wins - the catalog's nominal duration is only ever an
+   * estimate of the number the server is already sending. The subtlety is what *absence* means: on
+   * the display feed the server states remaining time for every status it reports, so nothing there
+   * means the status genuinely has no expiry, and falling back to the catalog would expire a
+   * permanent buff on a timer it never had. On the owner-only feed absence just means the wire never
+   * carried a duration, and the catalog is the best available answer.
+   */
+  private resolveExpiry(
+    event: FishNetCombatStatusEvent,
+    level: number,
+    observedAtMs: number,
+    previous: TrackedStatus | undefined,
+  ): number | undefined {
+    if (event.remainingSeconds !== undefined) return observedAtMs + event.remainingSeconds * 1_000;
+    if (event.rpc === "ApplyEffectDisplays_O") return undefined;
+    // The skill-icon feed carries no timing whatsoever, so it can only ever confirm that something
+    // is still on. Letting it answer here would erase a countdown the effect feed already reported
+    // for the same id - they overlap on statuses like FlowState.
+    if (event.rpc === "ApplySkillDisplay_O") return previous?.expiresAtMs;
+    const durationSeconds = statusDurationSeconds(this.directory.resolve(event.statusId), level);
+    return durationSeconds === undefined ? undefined : observedAtMs + durationSeconds * 1_000;
   }
 
   consumeSummon(event: FishNetCombatSummonEvent, observedAtMs: number): void {
@@ -230,3 +268,4 @@ export class FishNetStatusTracker {
     this.actorIdByUid.clear();
   }
 }
+
