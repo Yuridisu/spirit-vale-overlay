@@ -16,3 +16,4 @@ scrape/*
 AGENTS.md
 planning/*
 data/*
+!LICENSE.txt
