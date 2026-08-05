@@ -84,6 +84,7 @@ export function decodeCharacterRpcPayload(payload: Buffer, includesUpdateType: b
       activeLoadout: LOADOUTS[activeIndex] ?? "Normal",
       equipment,
       artifacts,
+      ...(loadouts.some((set) => set.length) ? { loadouts } : {}),
       skills,
       ...history,
       updatedAt: now.toISOString(),
@@ -101,17 +102,22 @@ function readEquipmentSlot(reader: CharacterReader): CharacterEquipment | undefi
 function readEquipmentData(reader: CharacterReader, slotIndex: number): CharacterEquipment | undefined {
   if (!reader.object()) return undefined;
   const rawStats = reader.list(() => readRawSubstat(reader));
-  const cards = reader.list(() => reader.string(256)).filter((value): value is string => Boolean(value));
-  reader.packed();
-  reader.packed();
-  reader.packed();
+  // Kept positional: an empty socket in the middle is not the same as a trailing one, and the
+  // dense `cards` list below cannot express the difference.
+  const cardsBySlot = reader.list(() => reader.string(256)).map((value) => value || null);
+  const cards = cardsBySlot.filter((value): value is string => Boolean(value));
+  reader.packed(); // EquipData.StartingPotential
+  reader.packed(); // EquipData.SpentPotential
+  const chaosType = reader.packed(); // EquipData.ChaosType — an EquipType; -1 = no chaos substat
   reader.string(80);
   const refine = reader.packed();
   const itemId = reader.string(256) ?? "Unknown equipment";
   reader.boolean();
   const substatGroup = resolveFishNetItem(2, itemId)?.substatGroup;
-  const substats = rawStats.flatMap((stat) => stat ? [convertSubstat(stat.type, stat.roll, slotIndex, false, substatGroup)] : []);
-  return { slot: EQUIP_SLOTS[slotIndex] ?? `Slot ${slotIndex}`, itemId, refine, cards, substats };
+  const substats = rawStats.flatMap((stat, index) => stat
+    ? [convertSubstat(stat.type, stat.roll, slotIndex, false, substatGroup, { index, qualifier: stat.valueStr })]
+    : []);
+  return { slot: EQUIP_SLOTS[slotIndex] ?? `Slot ${slotIndex}`, itemId, refine, cards, substats, chaosType, cardsBySlot };
 }
 
 function readArtifact(reader: CharacterReader): CharacterArtifact | undefined {
@@ -120,14 +126,16 @@ function readArtifact(reader: CharacterReader): CharacterArtifact | undefined {
 
 function readArtifactData(reader: CharacterReader): CharacterArtifact | undefined {
   if (!reader.object()) return undefined;
-  const rawStats: Array<{ type: number; roll: number } | undefined> = reader.list(() => readRawSubstat(reader));
+  const rawStats = reader.list(() => readRawSubstat(reader));
   const slotIndex = reader.packed();
   const gems = reader.list(() => readRefinableItem(reader)).filter((value): value is { id: string; refine: number } => value !== undefined);
   reader.string(80);
   const refine = reader.packed();
   const itemId = reader.string(256) ?? "Unknown artifact";
   reader.boolean();
-  const substats = rawStats.flatMap((stat) => stat ? [convertSubstat(stat.type, stat.roll, slotIndex, true)] : []);
+  const substats = rawStats.flatMap((stat, index) => stat
+    ? [convertSubstat(stat.type, stat.roll, slotIndex, true, undefined, { index, qualifier: stat.valueStr })]
+    : []);
   return { slot: ARTIFACT_SLOTS[slotIndex] ?? `Artifact ${slotIndex}`, itemId, refine, gems, substats };
 }
 
@@ -137,12 +145,18 @@ function readCharacterHistory(
   artifacts: readonly CharacterArtifact[],
 ): Partial<Pick<CharacterSnapshot, "playtimeSeconds" | "monsterKills" | "bossKills" | "deaths">> & {
   skills: CharacterSkill[];
+  assignedSkills?: CharacterSkill[];
+  grimoires?: CharacterEquipment[];
   currentWeight?: number;
 } {
   const equippedWeight = equipped.reduce((total, item) => total + equipmentWeight(item.itemId), 0) + artifacts.length * 10;
   try {
-    const skills = readSkillSystem(reader);
-    reader.list(() => readEquipmentData(reader, -1));
+    const { skills, assigned } = readSkillSystem(reader);
+    // Equipped grimoires. Read positionally, then labelled by slot so filtering empties cannot
+    // silently promote the second book into the first slot.
+    const grimoires = reader.list(() => readEquipmentData(reader, -1))
+      .map((item, index) => (item ? { ...item, slot: `Grimoire ${index + 1}` } : undefined))
+      .filter((item): item is CharacterEquipment => item !== undefined);
     let inventoryWeight = 0;
     if (reader.object()) {
       reader.dictionary(() => {
@@ -166,29 +180,50 @@ function readCharacterHistory(
     const monsterKills = reader.packed();
     const bossKills = reader.packed();
     const deaths = reader.packed();
-    return { skills, currentWeight: equippedWeight + inventoryWeight, playtimeSeconds, monsterKills, bossKills, deaths };
+    return {
+      skills,
+      ...(assigned.length ? { assignedSkills: assigned } : {}),
+      grimoires,
+      currentWeight: equippedWeight + inventoryWeight,
+      playtimeSeconds,
+      monsterKills,
+      bossKills,
+      deaths,
+    };
   } catch {
     // A partial callback may end after build data. The already-decoded snapshot remains useful.
     return { skills: [] };
   }
 }
 
-function readSkillSystem(reader: CharacterReader): CharacterSkill[] {
-  if (!reader.object()) return [];
-  const skills = [
-    ...reader.list(() => readSkill(reader)),
-    ...reader.list(() => readSkill(reader)),
-  ];
-  const selected = readSkill(reader);
-  if (selected) skills.push(selected);
-  reader.list(() => reader.string(256));
+/**
+ * `SkillSystemData { Skills, Assigned, SkillCopy, Reanimations }`.
+ *
+ * `Skills` is the skill-TREE allocation. `Assigned` is the 40-slot action bar, which restates
+ * skills at levels that do not match the allocation. Merging the two (as this did until the
+ * positional-fields change) inflates levels and invents skills the player never spent a point on:
+ * on a recorded level-121 job-70 Gunslinger the merge produced 146 points against a legal budget
+ * of 120 (50 base + 70 job), adding Force Shot, Piercing Shot and Sniper Shot at full level and
+ * doubling Panic Burst. They are kept apart, and only `SkillCopy` — which legitimately restates a
+ * learned skill — is folded into the allocation.
+ */
+function readSkillSystem(reader: CharacterReader): { skills: CharacterSkill[]; assigned: CharacterSkill[] } {
+  if (!reader.object()) return { skills: [], assigned: [] };
+  const allocated = reader.list(() => readSkill(reader));
+  const assigned = reader.list(() => readSkill(reader));
+  const copy = readSkill(reader);
+  if (copy) allocated.push(copy);
+  reader.list(() => reader.string(256)); // Reanimations.
   const unique = new Map<string, CharacterSkill>();
-  for (const skill of skills) {
+  for (const skill of allocated) {
     if (!skill) continue;
     const existing = unique.get(skill.id);
     if (!existing || skill.level > existing.level) unique.set(skill.id, skill);
   }
-  return [...unique.values()].sort((left, right) => left.displayName.localeCompare(right.displayName));
+  return {
+    skills: [...unique.values()].sort((left, right) => left.displayName.localeCompare(right.displayName)),
+    assigned: assigned.filter((skill): skill is CharacterSkill => skill !== undefined),
+  };
 }
 function readSkill(reader: CharacterReader): CharacterSkill | undefined {
   if (!reader.object()) return undefined;
@@ -232,12 +267,12 @@ function equipmentWeight(itemId: string): number {
   return resolveFishNetItem(2, itemId)?.weight ?? 10;
 }
 
-function readRawSubstat(reader: CharacterReader): { type: number; roll: number } | undefined {
+function readRawSubstat(reader: CharacterReader): { type: number; roll: number; valueStr: string } | undefined {
   if (!reader.object()) return undefined;
   const type = reader.packed();
   const roll = reader.packed();
-  reader.string(256);
-  return { type, roll };
+  const valueStr = reader.string(256) ?? ""; // StatData.ValueStr — the skill/element this stat is scoped to
+  return { type, roll, valueStr };
 }
 
 /**
@@ -251,11 +286,11 @@ export function rescaleSubstats(snapshot: CharacterSnapshot, resolveItem: typeof
     equipment: snapshot.equipment.map((item) => {
       const substatGroup = resolveItem(2, item.itemId)?.substatGroup;
       const slotIndex = equipSlotIndex(item.slot);
-      return { ...item, substats: item.substats.map((stat) => convertSubstat(stat.type, stat.roll, slotIndex, false, substatGroup)) };
+      return { ...item, substats: item.substats.map((stat) => convertSubstat(stat.type, stat.roll, slotIndex, false, substatGroup, stat)) };
     }),
     artifacts: snapshot.artifacts.map((item) => ({
       ...item,
-      substats: item.substats.map((stat) => convertSubstat(stat.type, stat.roll, ARTIFACT_SLOTS.indexOf(item.slot), true)),
+      substats: item.substats.map((stat) => convertSubstat(stat.type, stat.roll, ARTIFACT_SLOTS.indexOf(item.slot), true, undefined, stat)),
     })),
   };
 }
@@ -267,11 +302,26 @@ function equipSlotIndex(slot: string): number {
   return parsed ? Number(parsed[1]) : -1;
 }
 
-function convertSubstat(type: number, roll: number, slot: number, artifact: boolean, substatGroup?: string): CharacterSubstat {
+function convertSubstat(
+  type: number,
+  roll: number,
+  slot: number,
+  artifact: boolean,
+  substatGroup?: string,
+  positional?: { index?: number; qualifier?: string },
+): CharacterSubstat {
   const name = STAT_NAMES[type] ?? `Stat ${type}`;
   const cap = substatCap(type, slot, artifact, substatGroup);
   const value = cap === undefined ? undefined : roundAwayFromZero(cap * (2 / 3 + roll / 300));
-  return { type, name, roll, ...(value === undefined ? {} : { value }), percent: PERCENT_STATS.has(type) };
+  return {
+    type,
+    name,
+    roll,
+    ...(value === undefined ? {} : { value }),
+    percent: PERCENT_STATS.has(type),
+    ...(positional?.qualifier ? { qualifier: positional.qualifier } : {}),
+    ...(positional?.index === undefined ? {} : { index: positional.index }),
+  };
 }
 
 function substatCap(type: number, slot: number, artifact: boolean, substatGroup?: string): number | undefined {
