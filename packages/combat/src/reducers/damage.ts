@@ -1,3 +1,4 @@
+import { EwmaRate } from "@kar-mi/spirit-vale-tools-metrics";
 import type { FishNetActorIdentityEvent } from "../actor-directory.ts";
 import type { FishNetCombatDamageEvent, FishNetCombatDeathEvent, FishNetCombatEvent } from "../combat-tracker.ts";
 import { ANALYSIS_BUCKET_MS, addToSeries, createSeries } from "./timeline.ts";
@@ -5,7 +6,13 @@ import type { BucketSeries } from "./timeline.ts";
 
 export const DEFAULT_IDLE_GAP_MS = 30_000;
 export const DEFAULT_MINIMUM_DURATION_MS = 1_000;
-export const DEFAULT_CURRENT_WINDOW_MS = 5_000;
+/**
+ * Current DPS is an exponentially-weighted rate rather than a flat window of recent hits. A window
+ * of width `W` and an EWMA of time constant `tau` have equal estimator variance when `W = 2 * tau`
+ * and equal mean lag, so 2.5 seconds reproduces the smoothing and responsiveness of the 5-second
+ * window this replaced — without its discontinuities, and in O(1) state per actor.
+ */
+export const DEFAULT_CURRENT_TAU_SECONDS = 2.5;
 
 export interface CombatIdentity {
   displayName: string;
@@ -26,7 +33,7 @@ export interface SkillAggregate {
  * Per-actor totals for one encounter.
  *
  * Where the legacy meter kept every hit in `damagePoints`, this keeps two incremental bucket series
- * plus a short window of recent hits. `encounterSeries` is aligned to the encounter start (what the
+ * plus an O(1) rate estimator. `encounterSeries` is aligned to the encounter start (what the
  * actor rows and the party chart use); `actorSeries` is aligned to this actor's own first damage,
  * which is the alignment the legacy meter uses for the `personal` row.
  */
@@ -49,8 +56,8 @@ export interface ActorAggregate {
   skills: Map<string, SkillAggregate>;
   encounterSeries: BucketSeries;
   actorSeries: BucketSeries;
-  /** Recent hits, trimmed to the current-DPS window. Bounded by time, not by encounter length. */
-  window: { atMs: number; damage: number }[];
+  /** Exponentially-weighted recent rate behind `currentDps`. Two numbers, whatever the encounter length. */
+  currentRate: EwmaRate;
 }
 
 export interface EnemySkillStats {
@@ -101,7 +108,8 @@ export interface EncounterAggregate {
 
 export interface DamageReducerOptions {
   idleGapMs?: number;
-  currentWindowMs?: number;
+  /** Decay constant for `currentDps`. Defaults to {@link DEFAULT_CURRENT_TAU_SECONDS}. */
+  currentTauSeconds?: number;
   /** Caps buckets per series; the read model leaves this unbounded to keep full resolution. */
   maxTimelineBuckets?: number;
   /** Supplies the encounter id when one begins. Defaults to a sequential counter. */
@@ -136,7 +144,7 @@ export class DamageReducer {
   readonly recentHits = new Map<number, { atMs: number; hit: DeathHitRecord }[]>();
   private lastSweepAtMs?: number;
   private readonly idleGapMs: number;
-  private readonly currentWindowMs: number;
+  private readonly currentTauSeconds: number;
   private readonly maxTimelineBuckets: number;
   private readonly createEncounterId: (startedAtMs: number) => string;
   private readonly onEncounterFinished?: (encounter: EncounterAggregate) => void;
@@ -144,7 +152,7 @@ export class DamageReducer {
 
   constructor(options: DamageReducerOptions = {}) {
     this.idleGapMs = options.idleGapMs ?? DEFAULT_IDLE_GAP_MS;
-    this.currentWindowMs = options.currentWindowMs ?? DEFAULT_CURRENT_WINDOW_MS;
+    this.currentTauSeconds = positiveTau(options.currentTauSeconds ?? DEFAULT_CURRENT_TAU_SECONDS);
     this.maxTimelineBuckets = options.maxTimelineBuckets ?? Number.POSITIVE_INFINITY;
     this.createEncounterId = options.createEncounterId ?? (() => `encounter-${this.nextEncounter++}`);
     if (options.onEncounterFinished) this.onEncounterFinished = options.onEncounterFinished;
@@ -268,31 +276,17 @@ export class DamageReducer {
       actor.activeIdentity = true;
     }
     if (countedDamage) {
-      actor.damage += event.value;
-      if (actor.firstDamageAtMs === undefined) {
-        actor.firstDamageAtMs = observedAtMs;
-        actor.actorSeries.originMs = observedAtMs;
-      }
-      actor.lastDamageAtMs = observedAtMs;
-      actor.hits += 1;
-      if (event.hitResult === "critical") actor.criticalHits += 1;
-      addToSeries(actor.encounterSeries, observedAtMs, event.value, this.maxTimelineBuckets);
-      addToSeries(actor.actorSeries, observedAtMs, event.value, this.maxTimelineBuckets);
-      actor.window.push({ atMs: observedAtMs, damage: event.value });
-      trimWindow(actor, observedAtMs - this.currentWindowMs);
+      recordHit(actor, {
+        value: event.value,
+        atMs: observedAtMs,
+        critical: event.hitResult === "critical",
+        sourceId: event.sourceId,
+        sourceLabel: event.sourceLabel,
+      }, this.maxTimelineBuckets);
       if (isMobTarget(this.identities, event.actorId, event.targetId)) {
         actor.targetIds.add(event.targetId);
         actor.targetDamage.set(event.targetId, (actor.targetDamage.get(event.targetId) ?? 0) + event.value);
       }
-      let skill = actor.skills.get(event.sourceId);
-      if (!skill) {
-        skill = { sourceId: event.sourceId, sourceLabel: event.sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
-        actor.skills.set(event.sourceId, skill);
-      }
-      skill.sourceLabel = event.sourceLabel;
-      skill.damage += event.value;
-      skill.hits += 1;
-      if (event.hitResult === "critical") skill.criticalHits += 1;
     }
     if (countedKill) actor.kills += 1;
   }
@@ -439,7 +433,7 @@ export class DamageReducer {
     const encounter = this.current!;
     let actor = encounter.activeActors.get(actorId);
     if (!actor) {
-      actor = createActor(actorId, encounter.startedAtMs);
+      actor = createActor(actorId, encounter.startedAtMs, this.currentTauSeconds);
       encounter.actors.push(actor);
       encounter.activeActors.set(actorId, actor);
     }
@@ -447,7 +441,55 @@ export class DamageReducer {
   }
 }
 
-export function createActor(actorId: number, encounterStartedAtMs: number): ActorAggregate {
+/** One positive hit's contribution to a row, shared by the damage reducer and the tanked/healing meters. */
+export interface RecordedHit {
+  value: number;
+  atMs: number;
+  critical: boolean;
+  sourceId: string;
+  sourceLabel: string;
+}
+
+/**
+ * Folds one hit into an actor's totals, both bucket series, its current-rate estimator and its
+ * per-skill row. Target attribution stays with the caller: the damage reducer counts enemies it can
+ * distinguish from party members, while the meters count their hit's counterpart unconditionally.
+ */
+export function recordHit(actor: ActorAggregate, hit: RecordedHit, maxTimelineBuckets: number): void {
+  actor.damage += hit.value;
+  if (actor.firstDamageAtMs === undefined) {
+    actor.firstDamageAtMs = hit.atMs;
+    actor.actorSeries.originMs = hit.atMs;
+  }
+  actor.lastDamageAtMs = hit.atMs;
+  actor.hits += 1;
+  if (hit.critical) actor.criticalHits += 1;
+  addToSeries(actor.encounterSeries, hit.atMs, hit.value, maxTimelineBuckets);
+  addToSeries(actor.actorSeries, hit.atMs, hit.value, maxTimelineBuckets);
+  actor.currentRate.record(hit.value, hit.atMs);
+
+  let skill = actor.skills.get(hit.sourceId);
+  if (!skill) {
+    skill = { sourceId: hit.sourceId, sourceLabel: hit.sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
+    actor.skills.set(hit.sourceId, skill);
+  }
+  skill.sourceLabel = hit.sourceLabel;
+  skill.damage += hit.value;
+  skill.hits += 1;
+  if (hit.critical) skill.criticalHits += 1;
+}
+
+/** Rejected at construction rather than when the first actor is created, so a bad value fails fast. */
+export function positiveTau(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) throw new Error("currentTauSeconds must be a positive finite number");
+  return value;
+}
+
+export function createActor(
+  actorId: number,
+  encounterStartedAtMs: number,
+  currentRate: number | EwmaRate = DEFAULT_CURRENT_TAU_SECONDS,
+): ActorAggregate {
   return {
     actorId,
     actorIds: [actorId],
@@ -461,14 +503,8 @@ export function createActor(actorId: number, encounterStartedAtMs: number): Acto
     skills: new Map(),
     encounterSeries: createSeries(encounterStartedAtMs, ANALYSIS_BUCKET_MS),
     actorSeries: createSeries(encounterStartedAtMs, ANALYSIS_BUCKET_MS),
-    window: [],
+    currentRate: typeof currentRate === "number" ? new EwmaRate({ tauSeconds: currentRate }) : currentRate,
   };
-}
-
-function trimWindow(actor: ActorAggregate, cutoffMs: number): void {
-  let retained = 0;
-  while (retained < actor.window.length && actor.window[retained]!.atMs <= cutoffMs) retained += 1;
-  if (retained > 0) actor.window.splice(0, retained);
 }
 
 export function isCountedDamage(event: FishNetCombatEvent): event is FishNetCombatDamageEvent | FishNetCombatDeathEvent {

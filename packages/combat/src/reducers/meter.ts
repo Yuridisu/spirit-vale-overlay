@@ -1,7 +1,6 @@
 import type { FishNetActorIdentityEvent } from "../actor-directory.ts";
 import type { FishNetCombatEvent } from "../combat-tracker.ts";
-import { addToSeries } from "./timeline.ts";
-import { DEFAULT_CURRENT_WINDOW_MS, createActor, isPositiveHit } from "./damage.ts";
+import { DEFAULT_CURRENT_TAU_SECONDS, createActor, isPositiveHit, positiveTau, recordHit } from "./damage.ts";
 import type { ActorAggregate, CombatIdentity, EncounterAggregate } from "./damage.ts";
 
 /**
@@ -14,7 +13,8 @@ export type MeterKind = "tanked" | "healing";
 
 export interface MeterReducerOptions {
   kind: MeterKind;
-  currentWindowMs?: number;
+  /** Decay constant for the meter's current rate. Defaults to {@link DEFAULT_CURRENT_TAU_SECONDS}. */
+  currentTauSeconds?: number;
   maxTimelineBuckets?: number;
 }
 
@@ -25,18 +25,18 @@ export interface MeterReducerOptions {
  *
  * Encounter boundaries stay owned by `DamageReducer`: outgoing party damage is what defines an
  * encounter, and this only follows the encounter it is told about. Like the damage reducer it keeps
- * bucket series and a short current-rate window rather than individual hits, so retention is bounded
- * by the bucket cap rather than by how long the fight runs.
+ * bucket series and an O(1) current-rate estimator rather than individual hits, so retention is
+ * bounded by the bucket cap rather than by how long the fight runs.
  */
 export class MeterReducer {
   readonly kind: MeterKind;
   current?: EncounterAggregate;
-  private readonly currentWindowMs: number;
+  private readonly currentTauSeconds: number;
   private readonly maxTimelineBuckets: number;
 
   constructor(options: MeterReducerOptions) {
     this.kind = options.kind;
-    this.currentWindowMs = options.currentWindowMs ?? DEFAULT_CURRENT_WINDOW_MS;
+    this.currentTauSeconds = positiveTau(options.currentTauSeconds ?? DEFAULT_CURRENT_TAU_SECONDS);
     this.maxTimelineBuckets = options.maxTimelineBuckets ?? Number.POSITIVE_INFINITY;
   }
 
@@ -104,7 +104,7 @@ export class MeterReducer {
 
     let actor = encounter.activeActors.get(hit.actorId);
     if (!actor) {
-      actor = createActor(hit.actorId, encounter.startedAtMs);
+      actor = createActor(hit.actorId, encounter.startedAtMs, this.currentTauSeconds);
       encounter.actors.push(actor);
       encounter.activeActors.set(hit.actorId, actor);
     }
@@ -114,30 +114,9 @@ export class MeterReducer {
       actor.activeIdentity = true;
     }
 
-    actor.damage += hit.value;
-    if (actor.firstDamageAtMs === undefined) {
-      actor.firstDamageAtMs = observedAtMs;
-      actor.actorSeries.originMs = observedAtMs;
-    }
-    actor.lastDamageAtMs = observedAtMs;
-    actor.hits += 1;
-    if (hit.critical) actor.criticalHits += 1;
-    addToSeries(actor.encounterSeries, observedAtMs, hit.value, this.maxTimelineBuckets);
-    addToSeries(actor.actorSeries, observedAtMs, hit.value, this.maxTimelineBuckets);
-    actor.window.push({ atMs: observedAtMs, damage: hit.value });
-    trimWindow(actor, observedAtMs - this.currentWindowMs);
+    recordHit(actor, { ...hit, atMs: observedAtMs }, this.maxTimelineBuckets);
     // `mobsHit` renders as the count of these: attackers for tanked damage, recipients for healing.
     if (hit.counterpartId !== undefined) actor.targetIds.add(hit.counterpartId);
-
-    let skill = actor.skills.get(hit.sourceId);
-    if (!skill) {
-      skill = { sourceId: hit.sourceId, sourceLabel: hit.sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
-      actor.skills.set(hit.sourceId, skill);
-    }
-    skill.sourceLabel = hit.sourceLabel;
-    skill.damage += hit.value;
-    skill.hits += 1;
-    if (hit.critical) skill.criticalHits += 1;
   }
 }
 
@@ -204,10 +183,4 @@ function healingHit(
     sourceLabel: event.sourceLabel ?? "Healing",
     critical: false,
   };
-}
-
-function trimWindow(actor: ActorAggregate, cutoffMs: number): void {
-  let retained = 0;
-  while (retained < actor.window.length && actor.window[retained]!.atMs <= cutoffMs) retained += 1;
-  if (retained > 0) actor.window.splice(0, retained);
 }

@@ -1,11 +1,10 @@
-import type { FishNetDpsActorRow, FishNetDpsEncounterSnapshot, FishNetDpsSkillRow, FishNetPersonalMatch } from "../dps-meter.ts";
-import { DEFAULT_CURRENT_WINDOW_MS, DEFAULT_MINIMUM_DURATION_MS, createActor } from "./damage.ts";
+import type { FishNetDpsActorRow, FishNetDpsEncounterSnapshot, FishNetDpsSkillRow, FishNetPersonalMatch } from "../snapshot.ts";
+import { DEFAULT_CURRENT_TAU_SECONDS, DEFAULT_MINIMUM_DURATION_MS, createActor } from "./damage.ts";
 import type { ActorAggregate, EncounterAggregate } from "./damage.ts";
 import { addSeries, seriesPoints } from "./timeline.ts";
 
 export interface RenderOptions {
   nowMs?: number;
-  currentWindowMs?: number;
   minimumDurationMs?: number;
   anonymousIdentityGraceMs?: number;
   personalName?: string;
@@ -15,14 +14,14 @@ export interface RenderOptions {
 const DEFAULT_ANONYMOUS_IDENTITY_GRACE_MS = 10_000;
 
 /**
- * Renders an aggregate into the same snapshot shape the legacy meter produces, so the read model and
- * the live service can be diffed against `FishNetDpsMeter` field for field.
+ * Renders an aggregate into an encounter snapshot. Every derived figure lives here — per-skill rows,
+ * timeline buckets, crit rates, contribution shares, the personal row — so the live service, the
+ * history read model and a whole-log replay all report identically from the same aggregates.
  */
 export function renderEncounter(
   encounter: EncounterAggregate,
   options: RenderOptions = {},
 ): FishNetDpsEncounterSnapshot {
-  const currentWindowMs = options.currentWindowMs ?? DEFAULT_CURRENT_WINDOW_MS;
   const minimumDurationMs = options.minimumDurationMs ?? DEFAULT_MINIMUM_DURATION_MS;
   const anonymousIdentityGraceMs = options.anonymousIdentityGraceMs ?? DEFAULT_ANONYMOUS_IDENTITY_GRACE_MS;
   const personalName = options.personalName ?? "";
@@ -38,7 +37,6 @@ export function renderEncounter(
     durationMs,
     totalDamage,
     snapshotNowMs,
-    currentWindowMs,
     minimumDurationMs,
     actor.displayName === undefined,
     "encounter",
@@ -83,7 +81,6 @@ export function renderEncounter(
       personalDurationMs,
       totalDamage,
       snapshotNowMs,
-      currentWindowMs,
       minimumDurationMs,
       personalActor.displayName === undefined,
       "actor",
@@ -110,17 +107,10 @@ function actorRow(
   durationMs: number,
   partyDamage: number,
   nowMs: number,
-  currentWindowMs: number,
   minimumDurationMs: number,
   isUnidentified: boolean,
   alignment: "encounter" | "actor",
 ): FishNetDpsActorRow {
-  const currentCutoffMs = nowMs - currentWindowMs;
-  const windowDamage = actor.window.reduce(
-    (sum, point) => point.atMs > currentCutoffMs ? sum + point.damage : sum,
-    0,
-  );
-  const currentDurationMs = Math.max(minimumDurationMs, Math.min(currentWindowMs, nowMs - startedAtMs));
   const skills = [...actor.skills.values()]
     .map((skill): FishNetDpsSkillRow => ({
       ...skill,
@@ -138,7 +128,7 @@ function actorRow(
     ...(actor.lastDamageAtMs === undefined ? {} : { lastDamageAtMs: actor.lastDamageAtMs }),
     damage: actor.damage,
     dps: perSecond(actor.damage, durationMs),
-    currentDps: perSecond(windowDamage, currentDurationMs),
+    currentDps: actor.currentRate.rateAt(nowMs, { fromMs: startedAtMs, minimumMs: minimumDurationMs }),
     contribution: partyDamage === 0 ? 0 : actor.damage / partyDamage,
     hits: actor.hits,
     criticalHits: actor.criticalHits,
@@ -166,7 +156,7 @@ export function mergeActors(actors: readonly ActorAggregate[]): ActorAggregate[]
     let target = merged.get(key);
     if (!target) {
       target = {
-        ...createActor(actor.actorId, actor.encounterSeries.originMs),
+        ...createActor(actor.actorId, actor.encounterSeries.originMs, actor.currentRate.emptyLike()),
         ...(displayName === undefined ? {} : { displayName }),
         activeIdentity: actor.activeIdentity,
         ...(actor.archetype === undefined ? {} : { archetype: actor.archetype }),
@@ -187,7 +177,11 @@ export function mergeActors(actors: readonly ActorAggregate[]): ActorAggregate[]
 }
 
 export function combineActors(actors: readonly ActorAggregate[]): ActorAggregate {
-  const combined = createActor(actors[0]?.actorId ?? -1, actors[0]?.encounterSeries.originMs ?? 0);
+  const combined = createActor(
+    actors[0]?.actorId ?? -1,
+    actors[0]?.encounterSeries.originMs ?? 0,
+    actors[0]?.currentRate.emptyLike() ?? DEFAULT_CURRENT_TAU_SECONDS,
+  );
   combined.actorIds = [];
   for (const actor of actors) {
     combined.actorIds.push(...actor.actorIds);
@@ -210,7 +204,7 @@ function accumulate(target: ActorAggregate, actor: ActorAggregate, mergeIds = tr
   for (const [targetId, damage] of actor.targetDamage) {
     target.targetDamage.set(targetId, (target.targetDamage.get(targetId) ?? 0) + damage);
   }
-  target.window.push(...actor.window);
+  target.currentRate.add(actor.currentRate);
   addSeries(target.encounterSeries, actor.encounterSeries);
   // The merged row's own-origin timeline starts at the earliest component's first damage.
   if (target.actorSeries.buckets.length === 0) {
