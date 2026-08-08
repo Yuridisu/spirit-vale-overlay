@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { loadBundledFishNetRpcMap } from "./builtin-maps.ts";
 import {
   decodeFishNetBundle,
+  decodeFishNetPayload,
   FishNetSessionDecoder,
 } from "./decoder.ts";
 import type { FishNetBehaviourDefinition, FishNetRpcMap } from "./types.ts";
@@ -181,6 +182,36 @@ function semanticMap(): FishNetRpcMap {
 }
 
 describe("FishNet bundles and sessions", () => {
+  test("decodes a packed Int32 array before a following channel index", () => {
+    const map: FishNetRpcMap = {
+      buildFingerprint: "synthetic-channel-list",
+      metadataVersion: 31,
+      behaviours: [{
+        typeName: "SyntheticChannels",
+        rpcs: [{
+          wireHash: 6,
+          packetKind: "targetRpc",
+          methodName: "SyntheticChannelList",
+          parameters: [
+            { name: "playerCounts", typeName: "System.Int32[]" },
+            { name: "currentIndex", typeName: "System.Int32" },
+          ],
+        }],
+      }],
+      broadcasts: [],
+    };
+    const payload = Buffer.concat([packed(2), packed(12), packed(18), packed(1)]);
+    const packet = decodeFishNetPayload(
+      tick(1, fixedRpc(10, 1, 0, 6, payload)),
+      { reliable: true, rpcMap: map },
+    );
+
+    expect(packet.decodedFields).toMatchObject([
+      { name: "playerCounts", codec: "packedInt32Array", value: [12, 18] },
+      { name: "currentIndex", codec: "packedInt32", value: 1 },
+    ]);
+  });
+
   test("classifies runtime packet ids as RPC Links", () => {
     const [result] = decodeFishNetBundle(tick(3, linked(900, Buffer.from([0xaa]))), { reliable: true });
     expect(result).toMatchObject({ packetId: 900, packetName: "rpcLink", linkId: 900, linkResolved: false });
@@ -1057,6 +1088,32 @@ describe("FishNet bundles and sessions", () => {
       ],
     });
     expect(result?.undecodedPayload).toBeUndefined();
+  });
+
+  test("shows the Eternal Tower floor, absent run, or NA for ETUpdateRun", () => {
+    const map: FishNetRpcMap = {
+      buildFingerprint: "synthetic-et-floor",
+      metadataVersion: 31,
+      behaviours: [{
+        typeName: "SyntheticEternalTower",
+        rpcs: [{
+          wireHash: 93,
+          packetKind: "targetRpc",
+          methodName: "ETUpdateRun",
+          parameters: [{ name: "match", typeName: "EternalTowerRun" }],
+        }],
+      }],
+    };
+    const decoder = new FishNetSessionDecoder(map);
+    const decode = (payload: Buffer, tickValue: number) => decoder.decode(
+      tick(tickValue, targetRpc(17, 0, 93, payload)),
+      { reliable: true, connectionId: "synthetic-et" },
+    )[0];
+
+    expect(decode(Buffer.concat([Buffer.from([0]), packed(7), packed(11), packed(2), packed(42)]), 40)?.decodedFields)
+      .toEqual([{ name: "floor", typeName: "System.Int32", codec: "packedInt32", value: 42 }]);
+    expect(decode(Buffer.from([1]), 41)?.decodedFields?.[0]?.value).toBe("-");
+    expect(decode(Buffer.from([0, 2]), 42)?.decodedFields?.[0]?.value).toBe("NA");
   });
 
   test("emits multiple fixed messages from one reliable bundle in order", () => {
