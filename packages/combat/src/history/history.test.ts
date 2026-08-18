@@ -304,21 +304,56 @@ describe("combat read model", () => {
     }
   });
 
-  test("keeps a player's aggregates separate when an actor id is reused", async () => {
+  test("keeps a still-anonymous attacker in the breakdown of an open encounter", async () => {
+    const context = await fixture();
+    try {
+      // Never finalized, and the only hit lands at `lastDamageAtMs`, so this actor sits inside the
+      // grace period the live meter uses to hide rows whose identity has not arrived yet.
+      await appendFile(context.logPath, [
+        mobIdentity(90, "Training Construct", 0),
+        damage(1, 90, 100, 1_000),
+      ].join(""));
+      const model = await context.open();
+      await indexCombatStream(model, { sessionId: SESSION, sourcePath: context.logPath });
+
+      const store = new CombatHistoryStore(model);
+      const encounterId = store.listEncounters({ sessionId: SESSION }).items[0]!.encounterId;
+      const breakdown = store.getEnemyBreakdown(SESSION, encounterId);
+      // The picker offers the mob, so the skills table must not come back empty for it.
+      expect(breakdown.enemies.map((enemy) => enemy.targetId)).toEqual([90]);
+      expect(breakdown.skills.map((row) => [row.attackerRowId, row.targetId, row.damage]))
+        .toEqual([["actor:1", 90, 100]]);
+    } finally {
+      await context.cleanup();
+    }
+  });
+
+  test("keeps enemy damage with the correct actor lifetime when an id is reused", async () => {
     const context = await fixture();
     try {
       await appendFile(context.logPath, [
-        identity(1, "Aurora", 0),
+        mobIdentity(90, "Training Construct", 0),
         damage(1, 90, 100, 1_000),
+      ].join(""));
+      const model = await context.open();
+      await indexCombatStream(model, { sessionId: SESSION, sourcePath: context.logPath });
+
+      await appendFile(context.logPath, [
         record(2_000, { kind: "actorIdentity", operation: "remove", tick: 2_000, actorId: 1 }, "combat.actorIdentity"),
         identity(1, "Bramble", 3_000),
-        damage(1, 90, 400, 4_000),
+        damage(1, 91, 400, 4_000),
       ].join(""));
 
-      const model = await context.open();
       await indexCombatStream(model, { sessionId: SESSION, sourcePath: context.logPath, finalize: true });
       // Two distinct aggregates share actor id 1; a key on actor_id alone would collapse them.
       expect((model.statement("select count(*) as n from combat_actors where actor_id = 1").get() as { n: number }).n).toBe(2);
+      const store = new CombatHistoryStore(model);
+      const encounterId = store.listEncounters({ sessionId: SESSION }).items[0]!.encounterId;
+      expect(store.getEncounter(SESSION, encounterId)!.actors.map((actor) => [actor.rowId, actor.damage]))
+        .toEqual([["name:bramble", 400], ["actor:1", 100]]);
+      expect(store.getEnemyBreakdown(SESSION, encounterId).skills
+        .map((row) => [row.attackerRowId, row.targetId, row.damage]))
+        .toEqual([["name:bramble", 91, 400], ["actor:1", 90, 100]]);
       await expectParity(context, model);
     } finally {
       await context.cleanup();
@@ -361,9 +396,9 @@ describe("combat read model", () => {
       expect(death.hits.every((hit) => hit.attackerIsMonster && hit.attackerLabel === "Cave Warden")).toBe(true);
 
       const breakdown = store.getEnemyBreakdown(SESSION, encounterId);
-      // Aurora's outgoing targets plus the monster's target, since every positive hit is counted.
-      expect(breakdown.enemies.map((enemy) => enemy.targetId).sort()).toEqual([1, 90, 91]);
-      const auroraOnNinety = breakdown.skills.filter((row) => row.attackerActorId === 1 && row.targetId === 90);
+      // The enemy filter contains outgoing party targets, not incoming attackers or party victims.
+      expect(breakdown.enemies.map((enemy) => enemy.targetId).sort()).toEqual([90, 91]);
+      const auroraOnNinety = breakdown.skills.filter((row) => row.attackerRowId === "name:aurora" && row.targetId === 90);
       expect(auroraOnNinety.map((row) => [row.sourceId, row.damage]).sort()).toEqual([["skill:ember", 50], ["skill:strike", 100]]);
     } finally {
       await context.cleanup();

@@ -1,6 +1,6 @@
 import type { FishNetDpsActorRow, FishNetDpsEncounterSnapshot, FishNetDpsSkillRow, FishNetPersonalMatch } from "../snapshot.ts";
-import { DEFAULT_CURRENT_TAU_SECONDS, DEFAULT_MINIMUM_DURATION_MS, createActor } from "./damage.ts";
-import type { ActorAggregate, EncounterAggregate } from "./damage.ts";
+import { DEFAULT_MINIMUM_DURATION_MS, createActor } from "./damage.ts";
+import type { ActorAggregate, EncounterAggregate, EnemySkillStats } from "./damage.ts";
 import { addSeries, seriesPoints } from "./timeline.ts";
 
 export interface RenderOptions {
@@ -31,8 +31,9 @@ export function renderEncounter(
   const durationMs = Math.max(minimumDurationMs, encounter.lastDamageAtMs - encounter.startedAtMs);
   const mergedActors = mergeActors(encounter.actors);
   const totalDamage = mergedActors.reduce((sum, actor) => sum + actor.damage, 0);
-  const rowForActor = (actor: ActorAggregate): FishNetDpsActorRow => actorRow(
+  const rowForActor = (actor: ActorAggregate, rowId: string): FishNetDpsActorRow => actorRow(
     actor,
+    rowId,
     encounter.startedAtMs,
     durationMs,
     totalDamage,
@@ -41,17 +42,20 @@ export function renderEncounter(
     actor.displayName === undefined,
     "encounter",
   );
+  const displayed = visibleDisplayGroups(mergedActors, encounter, {
+    snapshotNowMs,
+    anonymousIdentityGraceMs,
+    personalActorId,
+  });
+  const actors = displayed.map(({ actor, rowId }) => rowForActor(actor, rowId)).sort(compareRows);
+  const partyCurrentDps = mergedActors.reduce(
+    (sum, actor) => sum + rowForActor(actor, actorRowId(actor)).currentDps,
+    0,
+  );
   const namedActors = mergedActors.filter((actor) => actor.displayName !== undefined);
-  const anonymousActors = mergedActors.filter((actor) => actor.displayName === undefined);
-  const visibleAnonymousActors = anonymousActors.filter((actor) => encounter.endedAtMs !== undefined
-    || (personalActorId !== undefined && actor.actorIds.includes(personalActorId))
-    || actor.firstDamageAtMs === undefined
-    || snapshotNowMs - actor.firstDamageAtMs >= anonymousIdentityGraceMs);
-  const displayActors = visibleAnonymousActors.length === 0
-    ? namedActors
-    : [...namedActors, combineActors(visibleAnonymousActors)];
-  const actors = displayActors.map(rowForActor).sort(compareRows);
-  const partyCurrentDps = mergedActors.reduce((sum, actor) => sum + rowForActor(actor).currentDps, 0);
+  const unidentifiedActorIds = displayed
+    .filter(({ actor }) => actor.displayName === undefined)
+    .flatMap(({ actor }) => actor.actorIds);
   const normalizedPersonalName = normalizeName(personalName);
   const selectedPersonalActor = personalActorId === undefined
     ? undefined
@@ -77,6 +81,7 @@ export function renderEncounter(
     ? undefined
     : actorRow(
       personalActor,
+      actorRowId(personalActor),
       personalStartMs,
       personalDurationMs,
       totalDamage,
@@ -95,7 +100,7 @@ export function renderEncounter(
     partyDps: perSecond(totalDamage, durationMs),
     partyCurrentDps,
     actors,
-    unidentifiedActorIds: visibleAnonymousActors.flatMap((actor) => actor.actorIds),
+    unidentifiedActorIds,
     personalName,
     personalMatch,
     ...(personalMatch === "matched" && personal ? { personal } : {}),
@@ -104,6 +109,7 @@ export function renderEncounter(
 
 function actorRow(
   actor: ActorAggregate,
+  rowId: string,
   startedAtMs: number,
   durationMs: number,
   partyDamage: number,
@@ -122,8 +128,9 @@ function actorRow(
     .sort(compareRows);
   const series = alignment === "actor" ? actor.actorSeries : actor.encounterSeries;
   return {
+    rowId,
     actorIds: [...actor.actorIds],
-    displayName: actor.displayName ?? (isUnidentified ? "Unidentified" : "Unknown"),
+    displayName: actor.displayName ?? (isUnidentified ? unidentifiedLabel(actor) : "Unknown"),
     ...(actor.archetype === undefined ? {} : { archetype: actor.archetype }),
     durationMs,
     ...(actor.lastDamageAtMs === undefined ? {} : { lastDamageAtMs: actor.lastDamageAtMs }),
@@ -142,18 +149,75 @@ function actorRow(
   };
 }
 
+/**
+ * Every unidentified actor renders as its own row, so they would otherwise share one label. The
+ * lowest actor id is stable across snapshots, unlike a position in the damage-sorted list.
+ */
+function unidentifiedLabel(actor: ActorAggregate): string {
+  return `Unidentified (${Math.min(...actor.actorIds)})`;
+}
+
+export interface DisplayActorAggregate {
+  rowId: string;
+  actor: ActorAggregate;
+}
+
+export interface DisplayActorOptions {
+  snapshotNowMs?: number;
+  anonymousIdentityGraceMs?: number;
+  personalActorId?: number;
+  /**
+   * Keeps every anonymous actor regardless of the grace period. The grace period stops a row
+   * flickering into the live meter before its identity arrives, which is a rendering concern; a
+   * caller reading totals wants the damage either way.
+   */
+  includeAllAnonymous?: boolean;
+}
+
+/** Applies the same identity merging and row visibility used by the rendered encounter. */
+export function displayActorAggregates(
+  encounter: EncounterAggregate,
+  options: DisplayActorOptions = {},
+): DisplayActorAggregate[] {
+  return visibleDisplayGroups(mergeActors(encounter.actors), encounter, options);
+}
+
+/** The same folding for a caller that has already paid for `mergeActors`. */
+function visibleDisplayGroups(
+  mergedActors: readonly ActorAggregate[],
+  encounter: EncounterAggregate,
+  options: DisplayActorOptions,
+): DisplayActorAggregate[] {
+  const snapshotNowMs = Math.max(options.snapshotNowMs ?? encounter.lastDamageAtMs, encounter.lastDamageAtMs);
+  const anonymousIdentityGraceMs = options.anonymousIdentityGraceMs ?? DEFAULT_ANONYMOUS_IDENTITY_GRACE_MS;
+  // Anonymous actors are not folded together: `mergeActors` has already separated them by uid,
+  // owner connection or actor id, and combining them would discard exactly that distinction.
+  return mergedActors
+    .filter((actor) => actor.displayName !== undefined
+      || options.includeAllAnonymous === true
+      || encounter.endedAtMs !== undefined
+      || (options.personalActorId !== undefined && actor.actorIds.includes(options.personalActorId))
+      || actor.firstDamageAtMs === undefined
+      || snapshotNowMs - actor.firstDamageAtMs >= anonymousIdentityGraceMs)
+    .map((actor) => ({ rowId: actorRowId(actor), actor }));
+}
+
+export function actorRowId(actor: ActorAggregate): string {
+  const displayName = actor.displayName?.trim();
+  if (displayName) return `name:${normalizeName(displayName)}`;
+  if (actor.uid !== undefined) return `uid:${actor.uid}`;
+  if (actor.ownerConnectionId !== undefined) return `owner:${actor.ownerConnectionId}`;
+  return `actor:${actor.actorId}`;
+}
+
 export function mergeActors(actors: readonly ActorAggregate[]): ActorAggregate[] {
   const merged = new Map<string, ActorAggregate>();
   for (const actor of actors) {
     if (actor.damage <= 0) continue;
     const displayName = actor.displayName?.trim() || undefined;
-    const key = displayName !== undefined
-      ? `name:${normalizeName(displayName)}`
-      : actor.uid !== undefined
-        ? `uid:${actor.uid}`
-        : actor.ownerConnectionId !== undefined
-          ? `owner:${actor.ownerConnectionId}`
-          : `actor:${actor.actorId}`;
+    // The merge key is the row id by construction: a row is exactly one merged aggregate, so the
+    // two must never drift apart or stored `rowId`s stop matching the rows they name.
+    const key = actorRowId(actor);
     let target = merged.get(key);
     if (!target) {
       target = {
@@ -177,33 +241,31 @@ export function mergeActors(actors: readonly ActorAggregate[]): ActorAggregate[]
   return [...merged.values()];
 }
 
-export function combineActors(actors: readonly ActorAggregate[]): ActorAggregate {
-  const combined = createActor(
-    actors[0]?.actorId ?? -1,
-    actors[0]?.encounterSeries.originMs ?? 0,
-    actors[0]?.currentRate.emptyLike() ?? DEFAULT_CURRENT_TAU_SECONDS,
-  );
-  combined.actorIds = [];
-  for (const actor of actors) {
-    combined.actorIds.push(...actor.actorIds);
-    accumulate(combined, actor, false);
-  }
-  combined.actorIds = [...new Set(combined.actorIds)];
-  return combined;
-}
-
 /** Folds one aggregate into another, keeping both bucket alignments consistent. */
-function accumulate(target: ActorAggregate, actor: ActorAggregate, mergeIds = true): void {
+function accumulate(target: ActorAggregate, actor: ActorAggregate): void {
   target.damage += actor.damage;
   target.firstDamageAtMs = minDefined(target.firstDamageAtMs, actor.firstDamageAtMs);
   target.lastDamageAtMs = maxDefined(target.lastDamageAtMs, actor.lastDamageAtMs);
   target.hits += actor.hits;
   target.criticalHits += actor.criticalHits;
   target.kills += actor.kills;
-  if (mergeIds) target.actorIds = [...new Set([...target.actorIds, ...actor.actorIds])];
+  target.actorIds = [...new Set([...target.actorIds, ...actor.actorIds])];
   for (const targetId of actor.targetIds) target.targetIds.add(targetId);
   for (const [targetId, damage] of actor.targetDamage) {
     target.targetDamage.set(targetId, (target.targetDamage.get(targetId) ?? 0) + damage);
+  }
+  for (const [targetId, skills] of actor.enemySkills) {
+    const targetSkills = target.enemySkills.get(targetId) ?? new Map<string, EnemySkillStats>();
+    target.enemySkills.set(targetId, targetSkills);
+    for (const [sourceId, stats] of skills) {
+      const current = targetSkills.get(sourceId)
+        ?? { sourceLabel: stats.sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
+      current.sourceLabel = stats.sourceLabel;
+      current.damage += stats.damage;
+      current.hits += stats.hits;
+      current.criticalHits += stats.criticalHits;
+      targetSkills.set(sourceId, current);
+    }
   }
   target.currentRate.add(actor.currentRate);
   addSeries(target.encounterSeries, actor.encounterSeries);

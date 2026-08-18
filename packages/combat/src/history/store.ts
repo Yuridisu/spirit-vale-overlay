@@ -4,7 +4,7 @@ import type { ReadModel } from "@kar-mi/spirit-vale-tools-sqlite";
 import type { FishNetDpsEncounterSnapshot } from "../snapshot.ts";
 import { createActor } from "../reducers/damage.ts";
 import type { ActorAggregate, EncounterAggregate } from "../reducers/damage.ts";
-import { renderEncounter } from "../reducers/rows.ts";
+import { displayActorAggregates, renderEncounter } from "../reducers/rows.ts";
 import type { RenderOptions } from "../reducers/rows.ts";
 
 export interface Page<T> {
@@ -51,7 +51,7 @@ export interface CombatEnemyOption {
 }
 
 export interface CombatEnemySkillRow {
-  attackerActorId: number;
+  attackerRowId: string;
   targetId: number;
   sourceId: string;
   sourceLabel: string;
@@ -178,20 +178,23 @@ export class CombatHistoryStore {
       return { targetId: enemy.target_id, label: `${name} (${index})` };
     });
 
-    const skills = this.model.database
-      .query<{ attacker_actor_id: number; target_id: number; source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }, [string, string]>(
-        "select * from combat_enemy_skills where session_id = ? and encounter_id = ? order by damage desc",
-      )
-      .all(sessionId, encounterId)
-      .map((row) => ({
-        attackerActorId: row.attacker_actor_id,
-        targetId: row.target_id,
-        sourceId: row.source_id,
-        sourceLabel: row.source_label,
-        damage: row.damage,
-        hits: row.hits,
-        criticalHits: row.critical_hits,
-      }));
+    // Timelines are the bulk of an encounter load and nothing below reads one. `includeAllAnonymous`
+    // keeps a row that is still inside the live meter's grace period: hiding it here would drop its
+    // damage from the breakdown while the enemy picker, fed by the same hits, still lists its target.
+    const encounter = this.loadEncounter(sessionId, encounterId, "dps", { withTimeline: false });
+    const skills: CombatEnemySkillRow[] = encounter
+      ? displayActorAggregates(encounter, { includeAllAnonymous: true }).flatMap(({ rowId, actor }) => [...actor.enemySkills].flatMap(
+        ([targetId, bySkill]) => [...bySkill].map(([sourceId, stats]) => ({
+          attackerRowId: rowId,
+          targetId,
+          sourceId,
+          sourceLabel: stats.sourceLabel,
+          damage: stats.damage,
+          hits: stats.hits,
+          criticalHits: stats.criticalHits,
+        })),
+      )).sort((left, right) => right.damage - left.damage)
+      : [];
     return { encounterId, enemies: options, skills };
   }
 
@@ -265,6 +268,7 @@ export class CombatHistoryStore {
     sessionId: string,
     encounterId: string,
     meter: StoredMeter,
+    options: { withTimeline?: boolean } = {},
   ): EncounterAggregate | undefined {
     const database = this.model.database;
     const row = database
@@ -283,9 +287,6 @@ export class CombatHistoryStore {
       ...(row.ended_at_ms === null ? {} : { endedAtMs: row.ended_at_ms }),
       actors: [],
       activeActors: new Map(),
-      // Rendering an encounter snapshot needs only the actor aggregates; enemies and deaths are
-      // served by their own queries rather than loaded here.
-      enemies: new Map(),
       enemyFirstSeenAtMs: new Map(),
       enemyNames: new Map(),
       deaths: [],
@@ -296,7 +297,15 @@ export class CombatHistoryStore {
         "select * from combat_actors where session_id = ? and encounter_id = ? and meter = ? order by actor_index",
       )
       .all(sessionId, encounterId, meter)) {
-      encounter.actors.push(hydrateActor(database, sessionId, encounterId, meter, actorRow, encounter.startedAtMs));
+      encounter.actors.push(hydrateActor(
+        database,
+        sessionId,
+        encounterId,
+        meter,
+        actorRow,
+        encounter.startedAtMs,
+        options.withTimeline ?? true,
+      ));
     }
     return encounter;
   }
@@ -338,6 +347,7 @@ function hydrateActor(
   meter: StoredMeter,
   row: ActorRow,
   encounterStartedAtMs: number,
+  withTimeline: boolean,
 ): ActorAggregate {
   const actor = createActor(row.actor_id, encounterStartedAtMs, row.ewma_tau_seconds);
   if (row.display_name !== null) actor.displayName = row.display_name;
@@ -376,16 +386,35 @@ function hydrateActor(
     actor.targetDamage.set(target.target_id, target.damage);
   }
 
-  for (const bucket of database
-    .query<{ origin: string; origin_ms: number; width_ms: number; bucket_index: number; damage: number }, [string, string, string, number]>(
-      "select origin, origin_ms, width_ms, bucket_index, damage from combat_timeline_buckets where session_id = ? and encounter_id = ? and meter = ? and actor_index = ? order by bucket_index",
-    )
-    .all(sessionId, encounterId, meter, row.actor_index)) {
-    const series = bucket.origin === "actor" ? actor.actorSeries : actor.encounterSeries;
-    series.originMs = bucket.origin_ms;
-    series.widthMs = bucket.width_ms;
-    while (series.buckets.length <= bucket.bucket_index) series.buckets.push(0);
-    series.buckets[bucket.bucket_index] = bucket.damage;
+  if (meter === "dps") {
+    for (const enemySkill of database
+      .query<{ target_id: number; source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }, [string, string, number]>(
+        "select target_id, source_id, source_label, damage, hits, critical_hits from combat_enemy_skills where session_id = ? and encounter_id = ? and actor_index = ?",
+      )
+      .all(sessionId, encounterId, row.actor_index)) {
+      const bySkill = actor.enemySkills.get(enemySkill.target_id) ?? new Map();
+      actor.enemySkills.set(enemySkill.target_id, bySkill);
+      bySkill.set(enemySkill.source_id, {
+        sourceLabel: enemySkill.source_label,
+        damage: enemySkill.damage,
+        hits: enemySkill.hits,
+        criticalHits: enemySkill.critical_hits,
+      });
+    }
+  }
+
+  if (withTimeline) {
+    for (const bucket of database
+      .query<{ origin: string; origin_ms: number; width_ms: number; bucket_index: number; damage: number }, [string, string, string, number]>(
+        "select origin, origin_ms, width_ms, bucket_index, damage from combat_timeline_buckets where session_id = ? and encounter_id = ? and meter = ? and actor_index = ? order by bucket_index",
+      )
+      .all(sessionId, encounterId, meter, row.actor_index)) {
+      const series = bucket.origin === "actor" ? actor.actorSeries : actor.encounterSeries;
+      series.originMs = bucket.origin_ms;
+      series.widthMs = bucket.width_ms;
+      while (series.buckets.length <= bucket.bucket_index) series.buckets.push(0);
+      series.buckets[bucket.bucket_index] = bucket.damage;
+    }
   }
   return actor;
 }
