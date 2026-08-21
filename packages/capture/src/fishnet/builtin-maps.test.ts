@@ -88,7 +88,7 @@ describe("bundled FishNet maps", () => {
   test("assembles a complete map with unique behaviour-local identifiers", () => {
     const map = loadBundledFishNetRpcMap();
     expect(map.behaviours).toHaveLength(14);
-    expect(map.behaviours.reduce((count, behaviour) => count + behaviour.rpcs.length, 0)).toBe(331);
+    expect(map.behaviours.reduce((count, behaviour) => count + behaviour.rpcs.length, 0)).toBe(332);
     expect(map.broadcasts).toHaveLength(6);
 
     const behaviourNames = map.behaviours.map(({ typeName }) => typeName);
@@ -224,6 +224,34 @@ describe("bundled FishNet maps", () => {
     expect(unsourced[1]?.undecodedPayload).toBeUndefined();
   });
 
+  test("decodes a StatusComponent Data/Level/JobLevel sync bundle from the committed map", () => {
+    // Regression coverage for the gap this fixed: `StatusData` (SyncVar index 0) used to have no
+    // verified field layout, so a real bundle - Data, then Level, then JobLevel - left everything
+    // from Data onward as opaque undecoded bytes. All values below are fabricated for this test.
+    const name = Buffer.from("SyntheticHero", "utf8");
+    const body = Buffer.concat([
+      Buffer.from([0]), packed(name.length), name, packed(3), packed(1), // Data: DisplayName/DisplayClass/Race
+      Buffer.from([1]), packed(88), // Level
+      Buffer.from([2]), packed(42), // JobLevel
+    ]);
+    const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
+    const results = decoder.decode(tick(12, Buffer.concat([
+      spawnWithoutLinks(500, 0, 4), // collectionId 0, prefabId 4 = "Player" (StatusComponent at index 5)
+      syncType(500, 5, body),
+    ])), { reliable: true, connectionId: "synthetic-status" });
+
+    const sync = results.find((packet) => packet.packetName === "syncType");
+    expect(sync).toMatchObject({ networkBehaviourType: "StatusComponent", syncName: "Data" });
+    expect(sync?.decodedFields).toMatchObject([
+      { name: "DisplayName", value: "SyntheticHero" },
+      { name: "DisplayClass", value: 3 },
+      { name: "Race", value: 1 },
+      { name: "Level", value: 88 },
+      { name: "JobLevel", value: 42 },
+    ]);
+    expect(sync?.undecodedPayload).toBeUndefined();
+  });
+
   test("contains verified basic-attack parameter codecs", () => {
     const combat = loadBundledFishNetRpcMap().behaviours.find(({ typeName }) => typeName === "CombatComponent");
     expect(combat?.rpcs.find(({ methodName }) => methodName === "Attack_C")?.parameters).toEqual([
@@ -272,10 +300,36 @@ describe("bundled FishNet maps", () => {
     expect(death?.parameters?.[0]?.fields).toEqual(applyDamage?.parameters?.[0]?.fields);
   });
 
+  /**
+   * A minimal but wire-valid `CharacterData` payload: present (not null), every string/list/dict
+   * absent (-1) or empty, every nested struct null, every int 0. `CharacterData` is a C# class, so
+   * `Inspect_T`'s `data` parameter carries FishNet's null flag before its fields, same as any
+   * other nested reference-type value (see `character-data-schema.ts`) - a resolution test needs
+   * a payload that actually round-trips through it, since arbitrary bytes no longer pass the
+   * content cross-check that `signatureAdmitsPayload` performs once a shape exists.
+   */
+  function emptyCharacterData(): Buffer {
+    const absent = packed(-1); // null string / -1 list-or-dict count
+    const zero = packed(0);
+    const nullStruct = Buffer.from([1]); // FishNet's null flag: 1 = null
+    return Buffer.concat([
+      Buffer.from([0]), // top-level CharacterData itself: present, not null
+      // AppliedWriteIds is no longer serialized on the wire (see extract.py's `"Omitted"` kind) -
+      // no byte for it here.
+      absent, absent, zero, absent, absent, absent, // uid, accountId, version..name
+      nullStruct, nullStruct, absent, absent, absent, absent, absent, // appearance..archetypes
+      zero, zero, zero, zero, // level..jobExp
+      nullStruct, absent, absent, zero, absent, absent, absent, absent, // state..artifacts
+      nullStruct, absent, nullStruct, // skills, grimoires, inventory
+      zero, zero, zero, zero, zero, // lastLogin..deaths
+      absent, absent, absent, // waypointsUnlocked..waystoneMapId
+      zero, zero, // created, updated
+    ]);
+  }
+
   test("names PlayerController RPCs from prefab metadata when a spawn omits RPC Links", () => {
     // FishNet registers RPC-link ids per connection at spawn, so a capture that joins mid-session
-    // never sees them. The player prefab layout is what recovers the binding — without it the
-    // inspect reply is an anonymous multi-KB targetRpc and only a shape guess could claim it.
+    // never sees them. The player prefab layout is what recovers the binding.
     const map = loadBundledFishNetRpcMap();
     const inspect = map.behaviours
       .find(({ typeName }) => typeName === "PlayerController")?.rpcs
@@ -285,7 +339,7 @@ describe("bundled FishNet maps", () => {
     const decoder = new FishNetSessionDecoder(map);
     const results = decoder.decode(tick(1, Buffer.concat([
       spawnWithoutLinks(12, 0, 4),
-      targetRpc(12, 0, inspect?.wireHash ?? -1, Buffer.alloc(4878, 7)),
+      targetRpc(12, 0, inspect?.wireHash ?? -1, emptyCharacterData()),
     ])), { reliable: true, connectionId: "prefab-inspect" });
 
     expect(results[1]).toMatchObject({
@@ -307,8 +361,8 @@ describe("bundled FishNet maps", () => {
       packetName: "syncType",
       networkBehaviourType: "HealthComponent",
       syncIndex: 0,
-      syncName: "CurrentHealth",
-      decodedFields: [{ name: "CurrentHealth", value: 417 }],
+      syncName: "healthSync",
+      decodedFields: [{ name: "healthSync", value: 417 }],
     });
   });
 

@@ -36,8 +36,10 @@ export function syntheticCharacter(
   } = options;
   const out: number[] = [];
   if (update) packed(out, 4);
-  bool(out, false);
+  bool(out, false); // CharacterData is a class: present, not null.
   string(out, "example-character-id");
+  // AppliedWriteIds is no longer serialized on the wire (see extract.py's `"Omitted"` kind in
+  // spirit_vale_data_mine) - no bytes written for it here, matching the corrected schema.
   string(out, "example-account");
   packed(out, 7);
   string(out, ""); string(out, ""); string(out, characterName);
@@ -90,6 +92,10 @@ export function syntheticCharacter(
     packed(out, 0); string(out, "Fictional Hat"); bool(out, false);
   });
   packed(out, 0); packed(out, 3600); packed(out, 25); packed(out, 3); packed(out, 2);
+  list(out, [], () => undefined); // WaypointsUnlocked.
+  list(out, [], () => undefined); // NpcsSpokenTo.
+  string(out, ""); // WaystoneMapId.
+  packed(out, 0); packed(out, 0); // Created, Updated.
   return Buffer.from(out);
 }
 
