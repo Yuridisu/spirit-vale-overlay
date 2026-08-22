@@ -28,14 +28,10 @@ export type {
 } from "./fishnet/semantic-map.ts";
 export { classifyFishNetRecoveryStyle } from "./fishnet/recovery-style.ts";
 export { FishNetEternalTowerTracker } from "./fishnet/eternal-tower-tracker.ts";
-export type {
-  FishNetEternalTowerPhase,
-  FishNetEternalTowerSnapshot,
-} from "./fishnet/eternal-tower-tracker.ts";
+export type { FishNetEternalTowerSnapshot } from "./fishnet/eternal-tower-tracker.ts";
 export {
   FishNetMonsterDirectory,
   decodeMonsterSpawn,
-  decodeMonsterSync,
 } from "./fishnet/monster-directory.ts";
 export type {
   FishNetMonsterDirectoryChange,
