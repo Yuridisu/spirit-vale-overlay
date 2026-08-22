@@ -1,7 +1,4 @@
-/**
- * Options exist so the positional/chaos/qualifier fields can be exercised. Every default
- * reproduces the original payload byte for byte, so existing callers are unaffected.
- */
+/** Options exist so the positional/chaos/qualifier fields can be exercised. */
 export interface SyntheticCharacterOptions {
   /** `EquipData.ChaosType` on the worn weapon. -1 = no chaos substat. */
   chaosType?: number;
@@ -38,8 +35,6 @@ export function syntheticCharacter(
   if (update) packed(out, 4);
   bool(out, false); // CharacterData is a class: present, not null.
   string(out, "example-character-id");
-  // AppliedWriteIds is no longer serialized on the wire (see extract.py's `"Omitted"` kind in
-  // spirit_vale_data_mine) - no bytes written for it here, matching the corrected schema.
   string(out, "example-account");
   packed(out, 7);
   string(out, ""); string(out, ""); string(out, characterName);

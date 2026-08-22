@@ -22,30 +22,18 @@ export interface IndexCombatStreamOptions extends Pick<DamageReducerOptions, "id
   sessionId: string;
   sourcePath: string;
   batchBytes?: number;
-  /**
-   * Closes the encounter still in progress at the end of the log. Set this only when the log will
-   * not grow — a completed past session. While a session is live the trailing encounter must stay
-   * open so the next pass continues it instead of starting a new one.
-   */
+  /** Closes the encounter still in progress at the end of the log. */
   finalize?: boolean;
 }
 
-/**
- * Indexes one combat log into the read model.
- *
- * Encounter ids come from the log (`enc-<sequence of the first record>`) rather than a counter, so
- * the same log always produces the same ids and re-indexing is stable. An encounter still open at a
- * batch boundary is written with `ended_at_ms` null and resumed on the next pass.
- */
+/** Indexes one combat log into the read model. */
 export async function indexCombatStream(model: ReadModel, options: IndexCombatStreamOptions): Promise<IndexStreamResult> {
   const { sessionId, sourcePath } = options;
   const finished: EncounterAggregate[] = [];
   let currentSequence = 0;
   let lastObservedAtMs = 0;
 
-  // The tanked and healing meters follow the damage reducer's encounter boundaries; only outgoing
-  // party damage defines an encounter. Their aggregates are captured per encounter id so a finished
-  // encounter can be written after the reducer has already moved on.
+  // The tanked and healing meters follow the damage reducer's encounter boundaries; only outgoing party damage defines an encounter.
   const meters = METER_KINDS.map(({ meter, kind }) => ({
     meter,
     reducer: new MeterReducer({

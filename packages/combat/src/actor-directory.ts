@@ -39,7 +39,6 @@ export interface FishNetLocalIdentity {
   displayName: string;
   uid?: string;
   archetype?: number;
-  /** @deprecated retained for backwards-compatible callers; never used for matching. */
   accountId?: string;
 }
 
@@ -51,14 +50,10 @@ export interface FishNetKnownIdentity {
 }
 
 export interface FishNetActorDirectoryOptions {
-  /**
-   * Persisted local-player identity. Only the local player's objects emit serverRpc traffic, so
-   * it names them even when the capture attaches mid-connection and never sees their spawn.
-   */
+  /** Persisted local-player identity. */
   localIdentity?: FishNetLocalIdentity;
   /** Invoked whenever the local player's identity is decoded from CharacterData RPCs. */
   onLocalIdentity?: (identity: FishNetLocalIdentity) => void;
-  /** Previously learned party-member identities, keyed by uid, used to seed the UID cache. */
   knownIdentities?: readonly FishNetKnownIdentity[];
   /** Invoked whenever a uid's cached displayName/archetype is newly learned or changed. */
   onIdentityLearned?: (identity: FishNetKnownIdentity) => void;
@@ -236,11 +231,7 @@ export class FishNetActorDirectory {
     return [...this.identities.values()].map((identity) => ({ ...identity }));
   }
 
-  /**
-   * Marks an attacker ID from a player-team combat event as eligible for owner-based identity
-   * propagation. Spawn RPC metadata is sometimes incomplete, while the combat event itself is
-   * definitive evidence that this object participates in player damage.
-   */
+  /** Marks an attacker ID from a player-team combat event as eligible for owner-based identity propagation. */
   observePlayerActor(actorId: number, tick: number): FishNetActorIdentityEvent[] {
     if (!Number.isInteger(actorId) || actorId < 0) return [];
     this.observedPlayerActors.add(actorId);
@@ -251,11 +242,7 @@ export class FishNetActorDirectory {
     return this.reconcile(actorId, this.identitySources.get(actorId), tick);
   }
 
-  /**
-   * Clears per-connection state (spawned objects, owner mappings, in-session identity sources).
-   * The uid-keyed identity cache is intentionally preserved: it isn't tied to a stale connection
-   * and is the durable record that lets party members stay named across a stop/restart.
-   */
+  /** Clears per-connection state (spawned objects, owner mappings, in-session identity sources). */
   reset(): void {
     this.clear();
     this.seedLocalIdentity();
@@ -285,13 +272,6 @@ export class FishNetActorDirectory {
     this.options.onLocalIdentity?.(next);
   }
 
-  /**
-   * Names a spawn from its embedded VisualData. There is no structural (or, empirically, ever
-   * observed) source for a character's uid on a routine spawn - the datamine's full SyncType
-   * catalog has no GUID-shaped field on any behaviour, and a scan for one across several real
-   * captures never matched. A uid is only actually learned from `CharacterCallback_T` (self or an
-   * explicit inspect, see `CHARACTER_RPC_NAMES` below) or seeded externally via `knownIdentities`.
-   */
   private resolveSpawnIdentity(packet: DecodedFishNetPacket): { displayName: string; archetype?: number } | undefined {
     return decodeSpawnIdentity(packet);
   }
@@ -462,16 +442,6 @@ function decodedField(packet: DecodedFishNetPacket, name: string): FishNetDecode
 
 const VISUAL_DATA_SYNC_INDEX = 5;
 
-/**
- * Spawnable prefabs carrying a `PlayerController`, as `collectionId:prefabId`, derived from the
- * bundled map rather than hardcoded: prefab IDs are wire values and shift between game builds.
- *
- * `PlayerClone` is included alongside `Player`. A clone is a second network object under the same
- * owner connection, and its damage arrives under its own `AttackerId`, so leaving it out strands
- * that damage on an anonymous actor. Including it does not invent a row: `refreshOwner` propagates
- * one identity across every object of an owner, and `mergeActors` folds the aggregates back
- * together by display name.
- */
 const PLAYER_PREFAB_KEYS: ReadonlySet<string> = new Set(
   (loadBundledFishNetRpcMap().prefabs ?? [])
     .filter(({ components }) => components.some(({ typeName }) => typeName === "PlayerController"))

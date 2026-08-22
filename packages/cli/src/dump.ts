@@ -47,8 +47,7 @@ const combatTracker = combatOnly
   ? new FishNetCombatTracker({
       buildFingerprint: fishNetBuildFingerprint,
       semanticMap,
-      // Names each hit's target from its spawn packet. The combat log carries no spawn packets, so
-      // a name not stamped on the event here cannot be recovered when the log is replayed.
+      // Names each hit's target from its spawn packet.
       monsterCatalog: mobDefinitionsById(),
       bossCatalog: CURRENT_BOSS_SKILL_NAMES,
     })

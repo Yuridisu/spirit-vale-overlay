@@ -31,9 +31,7 @@ export class FishNetCharacterTracker {
 
   consume(packet: CapturedFishNetPacket): boolean {
     if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
-      // The client holds several server connections at once, so a boundary on a neighbouring one
-      // must not release a pin held on the live connection. If the pinned connection really is
-      // going away, the next serverRpc re-pins and reclaims tracking anyway.
+      // The client holds several server connections at once, so a boundary on a neighbouring one must not release a pin held on the live connection.
       if (this.localConnectionId === undefined || packet.connectionId === this.localConnectionId) {
         this.releaseLocalObject();
       }
@@ -53,9 +51,6 @@ export class FishNetCharacterTracker {
       this.localObjectId = packet.objectId;
       this.localConnectionId = packet.connectionId;
       const pending = this.pendingRecords.get(pendingKey(packet.connectionId, packet.objectId));
-      // Records describe one unit object and the sync stream refills them within moments, so a new
-      // object starts from its own values: showing the previous object's health is worse than showing
-      // none. Carried weight has no such stream and is deliberately left alone here.
       if (pending) this.records = pending;
       else if (objectChanged) this.records = {};
       this.pendingRecords.clear();

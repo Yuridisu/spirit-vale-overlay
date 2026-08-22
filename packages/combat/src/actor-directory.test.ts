@@ -314,15 +314,13 @@ describe("FishNetActorDirectory", () => {
     ]);
     const directory = new FishNetActorDirectory();
 
-    // Prefab 0 is LootDrop. It carries no PlayerController, so a player-shaped payload on it must
-    // not be scanned however convincing the bytes look.
+    // Prefab 0 is LootDrop.
     expect(directory.consume(prefabSpawn(1, 63, 15, 0, playerShapedPayload))).toEqual([]);
     expect(directory.get(63)).toBeUndefined();
   });
 
   test("names a PlayerClone spawn so its damage is not stranded on an anonymous actor", () => {
-    // A clone is a second network object under the owner's connection and deals damage under its
-    // own AttackerId. Excluding it left that damage on an unnamed actor keyed by object id.
+    // A clone is a second network object under the owner's connection and deals damage under its own AttackerId.
     const directory = new FishNetActorDirectory();
 
     expect(directory.consume(prefabSpawn(1, 64, 16, 1, undefined, visualSpawnEntries("Mirror Ranger", 8)))).toEqual([{
@@ -356,8 +354,7 @@ describe("FishNetActorDirectory", () => {
   });
 
   test("finds the VisualData entry regardless of where it sits among a spawn's SyncType sections", () => {
-    // A spawn commonly reports SyncTypes for several of its behaviours in one bundle; VisualData
-    // need not be first, or on componentIndex 0.
+    // A spawn commonly reports SyncTypes for several of its behaviours in one bundle; VisualData need not be first, or on componentIndex 0.
     const directory = new FishNetActorDirectory();
     const movementEntry: FishNetSpawnSyncEntry = {
       index: 2,
@@ -400,9 +397,6 @@ describe("FishNetActorDirectory", () => {
   });
 
   test("still resolves the local player's name when AppliedWriteIds is non-empty", () => {
-    // AppliedWriteIds sits between UID and AccountId. A build that added this field silently
-    // desynced the old hand-rolled decoder whenever it carried entries — this is the direct
-    // regression case for that bug, this time through the combat package's own decode path.
     const directory = new FishNetActorDirectory();
     directory.consume(spawn(1, 71, 30, "PlayerController"));
     const payload = characterCallbackPayload({
@@ -443,9 +437,6 @@ describe("FishNetActorDirectory", () => {
   });
 
   test("leaves a spawn with no VisualData unnamed", () => {
-    // A spawn's dirty SyncType list can omit VisualData entirely (already synced, unchanged) - there
-    // is no other structural source for identity on a spawn, so it stays unnamed until some other
-    // signal (a fresh VisualData resync, CharacterCallback_T, or owner-based propagation) names it.
     const directory = new FishNetActorDirectory();
     expect(directory.consume(spawn(1, 61, 13, "PlayerController", undefined, [])))
       .toEqual([]);
@@ -520,9 +511,7 @@ describe("FishNetActorDirectory", () => {
   });
 
   test("decodes non-Latin display names past the old 32-byte cap", () => {
-    // Twelve Hangul characters are 36 UTF-8 bytes, and the guild role is 18. Both used to
-    // overflow byte caps that were sized as if a character were one byte, which made the whole
-    // CharacterData decode throw and left the local player permanently unidentified.
+    // Twelve Hangul characters are 36 UTF-8 bytes, and the guild role is 18.
     const koreanName = "김철수박영희이준호최지우";
     expect(Buffer.byteLength(koreanName)).toBe(36);
 
@@ -545,15 +534,7 @@ describe("FishNetActorDirectory", () => {
 
 const syntheticUid = "00000000-0000-4000-8000-000000000001";
 
-/**
- * Encodes a `CharacterData` payload from the bundled RPC map's own field schema
- * (`characterDataParameter()`) rather than a hand-counted byte sequence. Every field not named
- * in `overrides` gets a schema-appropriate empty value (absent string, zero int, empty list, null
- * struct), so this stays correct however many fields `CharacterData` carries or in what order -
- * a hand-rolled byte sequence went stale exactly this way once before, when a build inserted
- * `AppliedWriteIds` between `UID` and `AccountId` and silently desynced every field after it.
- * `overrides` only needs to name the couple of fields a given test actually cares about.
- */
+/** Encodes a `CharacterData` payload from the bundled RPC map's own field schema (`characterDataParameter()`) rather than a hand-counted byte sequence. */
 function encodeCharacterData(overrides: Record<string, string | number | readonly string[]>): Buffer {
   const schema = characterDataParameter();
   const nullFlag = schema.nullable ? Buffer.from([0]) : Buffer.alloc(0); // present, not null

@@ -40,10 +40,6 @@ describe("mob reward tracker", () => {
     });
   });
 
-  /**
-   * Experience alone cannot decide whose kill a death was: at max level a real kill pays nothing,
-   * so a mob dying nearby is told apart from one of ours by whether we damaged it.
-   */
   test("ignores a mob that died without our damage and without paying out", () => {
     const tracker = new FishNetMobRewardTracker({ catalog, correlationWindowTicks: 5 });
     tracker.consume(monsterSync(1, 50));
@@ -75,11 +71,7 @@ describe("mob reward tracker", () => {
     expect(kills.map((kill) => kill.attributed)).toEqual([true]);
   });
 
-  /**
-   * Rewards arrive as coalesced state updates, so simultaneous deaths cannot each claim one. Both
-   * kills are still real and are reported as such; the reward stays on its own unmatched event so
-   * it is counted once rather than split or duplicated.
-   */
+  /** Rewards arrive as coalesced state updates, so simultaneous deaths cannot each claim one. */
   test("reports simultaneous deaths as unattributed kills, keeping their reward unmatched", () => {
     const tracker = new FishNetMobRewardTracker({ catalog, correlationWindowTicks: 5 });
     tracker.consume(monsterSync(1, 50));
@@ -207,8 +199,7 @@ describe("mob reward tracker", () => {
       coins: 6n,
     }));
 
-    // The XP baseline survived the boundary, so the next update computes a gain relative to it
-    // instead of silently reseeding with no event.
+    // The XP baseline survived the boundary, so the next update computes a gain relative to it instead of silently reseeding with no event.
     tracker.consume(monsterSync(5, 51));
     tracker.consume(death(6, 51));
     tracker.consume(experience(7, 30, 1, 12, 1, 8n));

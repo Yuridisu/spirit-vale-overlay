@@ -10,17 +10,8 @@ export interface FishNetRpcParameter {
   readonly codec?: FishNetWireCodec;
   /** Ordered fields for a generated structured writer. Leaf fields carry codecs. */
   readonly fields?: readonly FishNetRpcParameter[];
-  /**
-   * This field is a `List<T>`/array: a packed signed count, then that many elements, each
-   * shaped by this same parameter's `codec`/`nullable`/`fields`. Mutually exclusive with
-   * {@link dictionaryKey}.
-   */
+  /** This field is a `List<T>`/array: a packed signed count, then that many elements, each shaped by this same parameter's `codec`/`nullable`/`fields`. */
   readonly repeated?: boolean;
-  /**
-   * This field is a `Dictionary<string, T>`: a packed signed count, then that many
-   * (stringUtf8Packed key, value) pairs, the value shaped by this same parameter's
-   * `codec`/`nullable`/`fields`. Mutually exclusive with {@link repeated}.
-   */
   readonly dictionaryKey?: "stringUtf8Packed";
 }
 
@@ -57,17 +48,11 @@ export interface FishNetPrefabComponentDefinition {
   readonly typeName: string;
 }
 
-/**
- * A verified NetworkBehaviour layout for one entry in a FishNet spawnable-prefab collection.
- * The enclosing RPC map supplies the game-build scope.
- */
+/** A verified NetworkBehaviour layout for one entry in a FishNet spawnable-prefab collection. */
 export interface FishNetPrefabDefinition {
   readonly collectionId: number;
   readonly prefabId: number;
-  /**
-   * Serialized prefab name. `Player` and `PlayerClone` share an identical component layout, so the
-   * name is the only thing that separates a real player spawn from a mirrored one.
-   */
+  /** Serialized prefab name. */
   readonly prefabName?: string;
   readonly components: readonly FishNetPrefabComponentDefinition[];
 }

@@ -1,11 +1,6 @@
 import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
 import type { CharacterRecordValues } from "./types.ts";
 
-/**
- * SyncType payloads are a stream of [syncvar index byte][value] pairs whose value
- * encoding depends on the component's syncvar declaration, so each supported
- * component parses only the indexes it knows and stops at the first unknown one.
- */
 export function decodeCharacterRecordSync(packet: CapturedFishNetPacket): Partial<CharacterRecordValues> | undefined {
   if (packet.packetName !== "syncType" || packet.payload.length === 0) return undefined;
   switch (packet.networkBehaviourType) {

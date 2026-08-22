@@ -18,31 +18,6 @@ const EMPTY: FishNetEternalTowerSnapshot = { known: false, inTower: false };
 /** Matches a DrawTitle banner like "The Echoing Spire\nFloor 12". */
 const FLOOR_TITLE_PATTERN = /^(.*)\nFloor\s+(\d+)$/;
 
-/**
- * Reconstructs the local player's Eternal Tower floor from `PlayerController.DrawTitle` (a
- * targetRpc broadcasting a title banner) and `PlayerController.ClientInstancedMapReady` (confirms
- * which instanced map the client is bound to, discriminated by `bindingSlot === "et"`).
- *
- * The previous tracker consumed `ETUpdateRun`/`ETAdvanceFloor` (PlayerController wireHash 95/96).
- * Those RPCs are still present in the current build's generated rpc map (scraped from the live
- * assembly), but do not appear anywhere in three real Eternal Tower captures spanning entry, a
- * mid-tower session, and multiple floor transitions - not resolved, not unresolved, not even as
- * malformed traffic. The client-side ISIL for `EternalTowerManager`/`PlayerController` still
- * references floor state through `DrawTitle`'s "Floor {0}" format string (`PlayerController.txt`),
- * which is the mechanism this tracker follows instead.
- *
- * Deliberately does not reset on `authenticated`/`disconnect`, unlike the old tracker: a capture
- * spanning a mid-run crash and reload showed the client re-authenticate on the same floor at least
- * once with neither DrawTitle nor ClientInstancedMapReady repeating - the server does not
- * re-announce a floor the client is merely reattaching to. Treating a reconnect as "left the tower"
- * would make the overlay lose floor knowledge exactly when a crash recovery makes it most valuable.
- * Floor/tower state is instead only cleared by positive evidence of actually leaving: a
- * `ClientInstancedMapReady` whose `bindingSlot` is not `"et"`.
- *
- * Caveat: the title string was composed in a single fixed locale (English, "Floor N") in every
- * capture available. If the server localizes this banner per client, a non-English client's floor
- * would fail to parse - there is no numeric-only floor field on the wire to fall back to.
- */
 export class FishNetEternalTowerTracker {
   private snapshot: FishNetEternalTowerSnapshot = { ...EMPTY };
 

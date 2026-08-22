@@ -13,11 +13,7 @@ export interface RenderOptions {
 
 const DEFAULT_ANONYMOUS_IDENTITY_GRACE_MS = 10_000;
 
-/**
- * Renders an aggregate into an encounter snapshot. Every derived figure lives here — per-skill rows,
- * timeline buckets, crit rates, contribution shares, the personal row — so the live service, the
- * history read model and a whole-log replay all report identically from the same aggregates.
- */
+/** Renders an aggregate into an encounter snapshot. */
 export function renderEncounter(
   encounter: EncounterAggregate,
   options: RenderOptions = {},
@@ -149,10 +145,7 @@ function actorRow(
   };
 }
 
-/**
- * Every unidentified actor renders as its own row, so they would otherwise share one label. The
- * lowest actor id is stable across snapshots, unlike a position in the damage-sorted list.
- */
+/** Every unidentified actor renders as its own row, so they would otherwise share one label. */
 function unidentifiedLabel(actor: ActorAggregate): string {
   return `Unidentified (${Math.min(...actor.actorIds)})`;
 }

@@ -183,7 +183,6 @@ describe("FishNetCharacterTracker", () => {
       attributes: { STR: 99, VIT: 50, AGI: 1, DEX: 1, INT: 1, LUK: 71 },
       activeLoadout: "Normal",
       // Baked under an older build: wrong scaled value (11 instead of 9) and unnamed stat.
-      // "Synthetic Visor" is not catalogued, so the accessory slot-cap table (Hit cap 10) applies.
       equipment: [{ slot: "Left accessory", itemId: "Synthetic Visor", refine: 0, cards: [], substats: [{ type: 13, name: "Stat 13", roll: 67, value: 11, percent: false }] }],
       artifacts: [],
       skills: [],
@@ -270,8 +269,7 @@ describe("FishNetCharacterTracker", () => {
       expect(tracker.state().weight).toEqual({ current: 71, maximum: 3_260 });
       expect(tracker.state().records).toMatchObject({ currentMana: 120, maxMana: 240 });
 
-      // The next pin starts that object's records from scratch, and must not promote a candidate
-      // buffered before the boundary.
+      // The next pin starts that object's records from scratch, and must not promote a candidate buffered before the boundary.
       tracker.consume(pinPacket(303));
       expect(tracker.state().records).toBeUndefined();
       expect(tracker.state().weight).toEqual({ current: 71, maximum: 3_260 });
@@ -336,10 +334,6 @@ describe("FishNetCharacterTracker", () => {
   });
 
   test("exposes identity from a StatusComponent Data/Level/JobLevel sync, independent of a full snapshot", () => {
-    // `LoadCharacter_T`/`CharacterCallback_T` (which populate `snapshot`) aren't sent by the live
-    // game right now - `identity` is the only source for your own name/level until that changes.
-    // Fields below are fabricated, matching the shape `applySyncTypeEntries` decodes a real
-    // `StatusData` bundle into (see builtin-maps.test.ts's equivalent wire-level coverage).
     const tracker = new FishNetCharacterTracker();
     tracker.consume(pinPacket(202));
     tracker.consume(identityPacket(202, "Synthetic Hero", 88, 42));

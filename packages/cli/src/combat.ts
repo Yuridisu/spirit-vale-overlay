@@ -54,8 +54,7 @@ const result = await replayCombatCapture(input, {
       tanked.consumeIdentity(event);
       return;
     }
-    // The damage reducer owns encounter boundaries, so it runs first; the meter only follows the
-    // encounter it is told about. Mirrors `history/importer.ts`.
+    // The damage reducer owns encounter boundaries, so it runs first; the meter only follows the encounter it is told about.
     reducer.consumeCombat(event, observedAtMs);
     const encounter = reducer.current;
     if (!encounter) return;

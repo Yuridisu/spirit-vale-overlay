@@ -28,12 +28,7 @@ export interface FieldDecodeRun {
   complete: boolean;
 }
 
-/**
- * Decodes one parameter list and reports where it ended, so a caller walking several concatenated
- * entries in one payload can find the next boundary. Like {@link applyDecodedFields} it keeps the
- * prefix it managed to read, but it mutates nothing and leaves the caller to decide whether an
- * incomplete run is a stopping point.
- */
+/** Decodes one parameter list and reports where it ended, so a caller walking several concatenated entries in one payload can find the next boundary. */
 export function decodeFieldRun(
   payload: Buffer,
   parameters: readonly FishNetRpcParameter[] | undefined,
@@ -47,25 +42,14 @@ export function decodeFieldRun(
   return { fields, consumed: decoded.offset, complete: decoded.complete };
 }
 
-/**
- * Decode result for callers that need to know whether a payload actually *fits* a signature rather
- * than just how much of it could be read. `undecodable` marks a parameter list this decoder cannot
- * evaluate at all - one carrying an array or a game struct with no field breakdown - which is
- * distinct from a signature that was evaluated and did not match.
- */
+/** Decode result for callers that need to know whether a payload actually *fits* a signature rather than just how much of it could be read. */
 export interface FieldDecodeFit {
   consumed: number;
   complete: boolean;
   undecodable: boolean;
 }
 
-/**
- * Strict, non-mutating decode of one payload against one parameter list. `applyDecodedFields` is
- * deliberately lenient - it keeps whatever prefix decoded and stashes the rest as
- * `undecodedPayload` - which is right for display but useless for telling two candidate signatures
- * apart, so shape-based elimination needs the consumed length and the undecodable flag instead.
- *
- */
+/** Strict, non-mutating decode of one payload against one parameter list. */
 export function tryDecodeFields(
   payload: Buffer,
   parameters: readonly FishNetRpcParameter[] | undefined,
@@ -94,14 +78,7 @@ function isElementDecodable(parameter: FishNetRpcParameter): boolean {
   return parameter.fields !== undefined && parameter.fields.length > 0 && isDecodable(parameter.fields);
 }
 
-/**
- * Wire codecs for the BCL types the map leaves uncoded. The scraper records a parameter's type name
- * even when it assigns no codec, and 130 `System.String` parameters arrive that way - without this
- * table a single uncoded parameter stops the decode dead and every field after it is lost too.
- *
- * Deliberately limited to types whose encoding is unambiguous: game structs, enums and arrays stay
- * unresolved so a caller can still tell "does not match" apart from "cannot be checked".
- */
+/** Wire codecs for the BCL types the map leaves uncoded. */
 const PRIMITIVE_CODECS: Readonly<Record<string, FishNetWireCodec>> = {
   "System.Boolean": "boolean",
   "System.Byte": "uint8",

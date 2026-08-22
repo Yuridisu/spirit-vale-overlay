@@ -1,23 +1,5 @@
 #!/usr/bin/env bun
-/**
- * Regenerates definitions/statuses.ts's `effects` data from the Spirit Vale data-mine.
- *
- * The data-mine declares a status's duration on whatever grants it (a skill's
- * `config.StatusEffects[]`, or occasionally another status's `config.StatusEffects[]`
- * for self-granting "coating" statuses), not on the status itself. This script walks
- * both `skills.json` and `statuses.json`, aggregates every granter of each status,
- * dedupes identical duration/chance/stacks tuples, and orders them by how many
- * granters agree (so the fallback entry used by `statusDurationSeconds()` is the most
- * commonly-granted value for statuses with conflicting sources, e.g. `Stun` is granted
- * by 15 different skills with durations ranging 1s-3s).
- * Named scalar grants retain every granter because activation-based timer refreshes
- * need to identify each differently-named skill that grants ComboReady/CastReady.
- *
- * Run: `bun run packages/statuses/scripts/aggregate-durations.ts <path/to/data-mine/data/json>`.
- * That path is required - this script has no default and no assumption about where a
- * data-mine-style export lives relative to this repo (that varies per machine/checkout and is
- * not this repo's concern to hardcode).
- */
+/** Regenerates definitions/statuses.ts's `effects` data from the Spirit Vale data-mine. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -60,16 +42,9 @@ interface DataMineEntry {
   } & Partial<Record<string, DataMineScalarValue>>;
 }
 
-// Some statuses aren't granted via StatusEffects/SelfStatusEffects rows at all - they're
-// dedicated scalar fields on the skill sharing the status's own name (e.g. ComboReady:
-// { Value: 4, ValueLv: 0 } on 29 different Combo Finisher setup skills, all agreeing on
-// a flat 4s that StatusEffects has no row for whatsoever).
 const NAMED_SCALAR_DURATION_FIELDS = ["ComboReady", "CastReady"];
 
-// Statuses to always leave without duration data, regardless of what the data-mine
-// declares. Might is actively/frequently re-applied and stacked by ShoutMight, while
-// Fury is a toggle removed explicitly by the server. A computed expiry would clear
-// either one while it can still be active.
+// Statuses to always leave without duration data, regardless of what the data-mine declares.
 const NO_DURATION_OVERRIDE_IDS = new Set(["Fury", "Might"]);
 
 interface GrantTuple {
@@ -137,10 +112,6 @@ function collectNamedScalarGrants(entry: DataMineEntry, grants: Map<string, Gran
   }
 }
 
-// Skills/statuses grant statuses onto others via `StatusEffects[]`, and onto their own
-// caster via `SelfStatusEffects[]` (same row schema, e.g. Unyielding/BloodCrash are
-// only ever granted this way) - both are duration sources for the granted status.
-// A few statuses (ComboReady/CastReady) instead use a dedicated scalar field, see above.
 function collectGrants(entries: DataMineEntry[], grants: Map<string, GrantTuple[]>): void {
   for (const entry of entries) {
     collectGrantRows(entry.config?.StatusEffects, entry.id, grants);
@@ -150,10 +121,6 @@ function collectGrants(entries: DataMineEntry[], grants: Map<string, GrantTuple[
 }
 
 function toEffects(tuples: GrantTuple[]): FishNetStatusEffect[] {
-  // Rank by how many granters agree on the same (duration, durationPerLevel) - that's
-  // all statusDurationSeconds() reads - rather than the full tuple (which also includes
-  // chance/stacks fields that rarely match across unrelated skills and would otherwise
-  // make the ordering look arbitrary for multi-source statuses like Stun.
   const durationFrequency = new Map<string, number>();
   for (const t of tuples) {
     const key = `${t.duration}|${t.durationPerLevel}`;
@@ -225,21 +192,7 @@ function main(): void {
 
   const header = `import type { FishNetStatusDefinition } from "../catalog.ts";
 
-/**
- * Hand-ported from the Spirit Vale data-mine's statuses.json. A status's own
- * duration is aggregated from every other status/skill definition that grants it,
- * since the raw data declares durations on the granter, not the granted status.
- * Regenerate this file's effects via scripts/aggregate-durations.ts whenever the
- * data-mine's skills.json/statuses.json changes; when multiple granters disagree
- * (e.g. Stun ranges 1s-3s across 15 skills), effects[0] is the most common value.
- * isDebuff also applies manual overrides on top of the source data, which only marks
- * 8/185 statuses as debuffs and misses obvious ones like Stun/Blind/Silence/Slow.
- *
- * Known limitation: this does not account for the target's status-resist stat. The
- * game has a statusResist formula (see spirit_vale_data_mine/data/json/formulas.json)
- * but it is undecoded (no formula, no variables) as of this writing, so durations here
- * are an estimate/upper-bound - they may run longer than the real in-game expiry.
- */
+/** Hand-ported from the Spirit Vale data-mine's statuses.json. */
 export class StatusDefinitions {
   private constructor() {}
 

@@ -49,11 +49,7 @@ export function bindBehaviourTypes(
   return bindings;
 }
 
-/**
- * Recovers component bindings from build-scoped prefab metadata when a spawn omits some or all RPC
- * Link registrations. Any contradiction with bindings proven by this spawn rejects the bundled
- * layout for the whole object; fresh wire evidence always wins.
- */
+/** Recovers component bindings from build-scoped prefab metadata when a spawn omits some or all RPC Link registrations. */
 export function bindPrefabBehaviourTypes(
   collectionId: number,
   prefabId: number,

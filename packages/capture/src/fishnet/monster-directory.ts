@@ -1,11 +1,4 @@
-/**
- * Tracks which monster type each spawned network object is, from the spawn and sync packets the
- * server sends when a monster comes into view.
- *
- * This is deliberately name-free: it resolves a `mobId` (a catalog type id) and nothing else, so
- * both the reward tracker and the combat tracker can layer their own catalog lookup on top without
- * either package depending on the other.
- */
+/** Tracks which monster type each spawned network object is, from the spawn and sync packets the server sends when a monster comes into view. */
 
 import type { DecodedFishNetPacket, FishNetDecodedValue } from "./types.ts";
 
@@ -20,11 +13,7 @@ export type FishNetMonsterDirectoryChange =
   | { operation: "remove"; objectId: number }
   | { operation: "reset" };
 
-/**
- * The spawn payload is scanned at arbitrary offsets, so a known mob's catalog level is what
- * disambiguates a real match from a coincidental one. Supplying a lookup keeps the catalog itself
- * out of this package.
- */
+/** The spawn payload is scanned at arbitrary offsets, so a known mob's catalog level is what disambiguates a real match from a coincidental one. */
 export interface FishNetMonsterLevels {
   get(mobId: string): { readonly level: number } | undefined;
 }
@@ -82,10 +71,7 @@ export class FishNetMonsterDirectory {
   }
 }
 
-/**
- * Reads a monster's identity from its spawn's embedded `Data` (`MonsterDto`) SyncType entry,
- * decoded structurally from the rpc map rather than scanned for.
- */
+/** Reads a monster's identity from its spawn's embedded `Data` (`MonsterDto`) SyncType entry, decoded structurally from the rpc map rather than scanned for. */
 export function decodeMonsterSpawn(
   packet: DecodedFishNetPacket,
   levels: FishNetMonsterLevels,

@@ -3,14 +3,6 @@ import { describe, expect, test } from "bun:test";
 import { loadBundledFishNetRpcMap } from "./builtin-maps.ts";
 import { findSyncType } from "./rpc-resolution.ts";
 
-/**
- * All syncTypes below are the data-mine's own extracted names (the raw reflected field name),
- * not hand-curated - `packages/capture/src/fishnet/rpc-definitions/game/` no longer carries a
- * hand-rolled fallback for any of them. `packages/character/src/record-decoder.ts` reads
- * `HealthComponent`/`SkillsComponent`'s first two indexes positionally, not by name, so a
- * generator-driven rename here (e.g. `healthSync` instead of a hand-chosen `CurrentHealth`)
- * cannot desync it - only the index pinned below matters.
- */
 describe("bundled syncvar names", () => {
   const map = loadBundledFishNetRpcMap();
 

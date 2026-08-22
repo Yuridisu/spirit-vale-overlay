@@ -48,12 +48,7 @@ export interface ReadModel {
   close(): void;
 }
 
-/**
- * Opens the disposable read model, recreating or repairing whatever is unusable.
- *
- * The database is a cache: it is deleted and rebuilt rather than migrated, and no failure here is
- * allowed to touch a canonical JSON Lines log.
- */
+/** Opens the disposable read model, recreating or repairing whatever is unusable. */
 export async function openReadModel(options: OpenReadModelOptions): Promise<ReadModel> {
   const databasePath = options.path ?? readModelPath(options.logDirectory ?? defaultLogDirectory());
   await mkdir(path.dirname(databasePath), { recursive: true });
