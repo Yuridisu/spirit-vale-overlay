@@ -90,7 +90,7 @@ Catalog and domain packages export their public APIs from the package root:
 import { loadBundledItemCatalog, resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
 import { loadBundledSkillCatalog, resolveFishNetSkill } from "@kar-mi/spirit-vale-tools-skills";
 import { loadBundledStatusCatalog, resolveFishNetStatus } from "@kar-mi/spirit-vale-tools-statuses";
-import { FishNetCombatTracker, FishNetDpsMeter } from "@kar-mi/spirit-vale-tools-combat";
+import { FishNetCombatTracker, LiveCombatService } from "@kar-mi/spirit-vale-tools-combat";
 import { calculateCharacterStats, decodeCharacterRpcPayload } from "@kar-mi/spirit-vale-tools-character";
 import { FishNetMobRewardTracker, queryMobRewardCatalog } from "@kar-mi/spirit-vale-tools-rewards";
 ```

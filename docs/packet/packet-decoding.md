@@ -191,11 +191,13 @@ together by display name.
 ### Eternal Tower state
 
 `ETUpdateRun`/`ETAdvanceFloor` (`PlayerController` wireHash 95/96) are still
-present in the generated rpc map - scraped from the live assembly, so the
-methods still exist - but do not appear anywhere in real Eternal Tower
-captures spanning entry, a mid-tower session, and multiple floor transitions.
+present in the generated rpc map, scraped from the live assembly, and their RPC
+links are registered for spawned PlayerController components. That proves the
+methods still exist in the build, but not that the server calls them. Observed
+Eternal Tower captures contain no invocation of either method, whether resolved,
+unresolved, or malformed.
 `FishNetEternalTowerTracker` instead follows the mechanism the client-side
-ISIL actually exercises: `PlayerController.DrawTitle`, a targetRpc that
+IL actually exercises: `PlayerController.DrawTitle`, a targetRpc that
 broadcasts a title banner (`"<tower name>\nFloor <n>"`, e.g. `"The Echoing
 Spire\nFloor 12"`), and `PlayerController.ClientInstancedMapReady`, which
 confirms the instanced map the client is bound to and carries its instance id

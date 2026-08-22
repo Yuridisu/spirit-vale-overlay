@@ -1,7 +1,7 @@
 import type { FishNetActorIdentityEvent } from "../actor-directory.ts";
 import type { FishNetCombatEvent } from "../combat-tracker.ts";
 import { DEFAULT_CURRENT_TAU_SECONDS, createActor, isPositiveHit, positiveTau, recordHit } from "./damage.ts";
-import type { ActorAggregate, CombatIdentity, EncounterAggregate } from "./damage.ts";
+import type { CombatIdentity, EncounterAggregate } from "./damage.ts";
 
 /** Which side of an encounter a meter measures. */
 export type MeterKind = "tanked" | "healing";
