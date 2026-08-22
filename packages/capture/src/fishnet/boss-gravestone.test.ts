@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { decodeBossGravestone } from "./boss-gravestone.ts";
-import type { DecodedFishNetPacket, FishNetSpawnSyncEntry } from "./types.ts";
+import type { DecodedFishNetPacket, FishNetSyncEntry, FishNetSpawnSyncEntry } from "./types.ts";
 
 describe("boss gravestone", () => {
   test("reads the killer, the boss, its catalog id and the server's time of death", () => {
@@ -19,6 +19,43 @@ describe("boss gravestone", () => {
       mobId: "Sunflora Pixie",
       diedAtMs,
     });
+  });
+
+  test("reads a marker filled in after its own spawn, which is how a witnessed kill arrives", () => {
+    const diedAtMs = 1_787_375_811_000;
+    const packet = syncPacket({
+      killTime: diedAtMs / 1_000,
+      killerName: "Vapulah",
+      bossName: "Vespa",
+      bossId: "Sting",
+    });
+
+    expect(decodeBossGravestone(packet)).toEqual({
+      killedBy: "Vapulah",
+      bossName: "Vespa",
+      mobId: "Sting",
+      diedAtMs,
+    });
+  });
+
+  test("reads a filled-in marker from the packet's own fields when it carries no entries", () => {
+    const diedAtMs = 1_787_375_811_000;
+    const { syncEntries, ...withoutEntries } = syncPacket({
+      killTime: diedAtMs / 1_000,
+      killerName: "Vapulah",
+      bossName: "Vespa",
+      bossId: "Sting",
+    });
+    const fields = syncEntries!.flatMap((entry) => entry.fields);
+
+    expect(decodeBossGravestone({ ...withoutEntries, decodedFields: fields })).toMatchObject({ mobId: "Sting" });
+  });
+
+  test("ignores a SyncType on any other component", () => {
+    const packet = syncPacket({ killTime: 1_700_000_000, killerName: "A", bossName: "B", bossId: "C" });
+    expect(decodeBossGravestone({ ...packet, networkBehaviourType: "MonsterController" })).toBeUndefined();
+    const { networkBehaviourType, ...unresolved } = packet;
+    expect(decodeBossGravestone(unresolved)).toBeUndefined();
   });
 
   test("ignores a spawn with no BossGraveStone SyncType entry", () => {
@@ -59,6 +96,27 @@ function killInfoEntry(options: {
       { name: "BossName", codec: "stringUtf8Packed", value: options.bossName },
       { name: "BossId", codec: "stringUtf8Packed", value: options.bossId },
     ],
+  };
+}
+
+function syncPacket(options: {
+  killTime: number;
+  killerName: string;
+  bossName: string;
+  bossId: string;
+}): DecodedFishNetPacket {
+  const { componentIndex, networkBehaviourType, ...entry } = killInfoEntry(options);
+  const syncEntries: FishNetSyncEntry[] = [entry];
+  return {
+    tick: 1,
+    packetId: 7,
+    packetName: "syncType",
+    raw: Buffer.alloc(0),
+    payload: Buffer.alloc(0),
+    objectId: 1,
+    networkBehaviourIndex: componentIndex,
+    networkBehaviourType,
+    syncEntries,
   };
 }
 
