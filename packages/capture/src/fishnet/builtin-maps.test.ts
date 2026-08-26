@@ -34,6 +34,12 @@ function f32(value: number): Buffer {
   return result;
 }
 
+function f64(value: number): Buffer {
+  const result = Buffer.alloc(8);
+  result.writeDoubleLE(value);
+  return result;
+}
+
 function message(id: number, payload: Buffer): Buffer {
   return Buffer.concat([u16(id), payload]);
 }
@@ -55,6 +61,18 @@ function spawnWithoutLinks(objectId: number, collectionId: number, prefabId: num
   return message(3, Buffer.concat([
     Buffer.from([4]), packed(objectId), u16(collectionId), packed(0), packed(-1), Buffer.from([0]),
     packed(prefabId), u32(0), u16(0), u32(0),
+  ]));
+}
+
+function spawnWithInitialSyncTypes(
+  objectId: number,
+  collectionId: number,
+  prefabId: number,
+  syncTypes: Buffer,
+): Buffer {
+  return message(3, Buffer.concat([
+    Buffer.from([4]), packed(objectId), u16(collectionId), packed(0), packed(-1), Buffer.from([0]),
+    packed(prefabId), u32(0), u16(0), u32(syncTypes.length), syncTypes,
   ]));
 }
 
@@ -128,8 +146,9 @@ describe("bundled FishNet maps", () => {
       ?.find((prefab) => prefab.collectionId === 0 && prefab.prefabId === prefabId)
       ?.components.find((entry) => entry.index === index)?.typeName;
     expect(component(0, 0)).toBe("LootDrop");
-    expect(component(1, 1)).toBe("FishNet.Component.Transforming.NetworkTransform");
-    expect(component(2, 0)).toBe("BossGraveStone");
+    expect(component(1, 0)).toBe("PlayerController");
+    expect(component(2, 1)).toBe("FishNet.Component.Transforming.NetworkTransform");
+    expect(component(3, 0)).toBe("BossGraveStone");
     expect(component(4, 2)).toBe("HealthComponent");
     expect(component(4, 5)).toBe("StatusComponent");
     expect(component(5, 3)).toBe("HealthComponent");
@@ -144,7 +163,41 @@ describe("bundled FishNet maps", () => {
     const withPlayerController = map.prefabs
       ?.filter(({ components }) => components.some(({ typeName }) => typeName === "PlayerController"));
     expect(withPlayerController?.map(({ collectionId, prefabId, prefabName }) =>
-      `${collectionId}:${prefabId}:${prefabName}`)).toEqual(["0:3:Player", "0:4:PlayerClone"]);
+      `${collectionId}:${prefabId}:${prefabName}`)).toEqual(["0:1:PlayerClone", "0:4:Player"]);
+  });
+
+  test("decodes a gravestone using the runtime-sorted prefab id", () => {
+    // DefaultPrefabObjects is sorted by AssetPathHash at runtime before PrefabId is assigned. The
+    // serialized backing ids are stale and put Player at id 3, which made this complete component
+    // 0 / count 1 / SyncVar 0 group look like PlayerController.ChatRoomActive plus opaque bytes.
+    const syncTypes = Buffer.concat([
+      Buffer.from([0, 1, 0]),
+      f64(1_900_000_000),
+      string("SyntheticHunter"),
+      string("SyntheticWasp"),
+      string("SyntheticBossId"),
+    ]);
+    const [packet] = new FishNetSessionDecoder(loadBundledFishNetRpcMap()).decode(
+      tick(8, spawnWithInitialSyncTypes(44, 0, 3, syncTypes)),
+      { reliable: true, connectionId: "synthetic-gravestone" },
+    );
+
+    expect(packet).toMatchObject({
+      packetName: "objectSpawn",
+      spawnPrefabId: 3,
+      spawnSyncEntries: [{
+        componentIndex: 0,
+        networkBehaviourType: "BossGraveStone",
+        index: 0,
+        name: "_killInfo",
+        fields: [
+          { name: "KillTime", value: 1_900_000_000 },
+          { name: "KillerName", value: "SyntheticHunter" },
+          { name: "BossName", value: "SyntheticWasp" },
+          { name: "BossId", value: "SyntheticBossId" },
+        ],
+      }],
+    });
   });
 
   test("resolves the build-derived Eternal Tower run RPC on the real player prefab", () => {
@@ -321,7 +374,7 @@ describe("bundled FishNet maps", () => {
       packed(8),
     ]);
     const results = decoder.decode(tick(13, Buffer.concat([
-      spawnWithoutLinks(501, 0, 3),
+      spawnWithoutLinks(501, 0, 4),
       serverRpc(501, 0, 72, request),
       targetRpc(501, 0, 77, stallStatus),
     ])), { reliable: true, connectionId: "synthetic-market" });
