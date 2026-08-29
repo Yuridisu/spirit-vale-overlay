@@ -8,7 +8,7 @@ import { formatIpv6 } from "./ip-address.ts";
 import { extractIpPacket, supportsDataLink } from "./link-layer.ts";
 import { SystemNpcapRuntime } from "./npcap.ts";
 import { parseTransportPacket } from "./packet-parser.ts";
-import { WindowsTargetTracker } from "./target-tracker.ts";
+import { TARGET_REFRESH_INTERVAL_MS, WindowsTargetTracker } from "./target-tracker.ts";
 import type { CapturedLiteNetLibPacket } from "../litenetlib/types.ts";
 import type { CapturedFishNetPacket, FishNetRpcMap } from "../fishnet/types.ts";
 import type { NpcapDevice, NpcapRuntime, NpcapSession, NpcapStatus } from "./npcap.ts";
@@ -24,8 +24,18 @@ import type {
 
 const POLL_INTERVAL_MS = 2;
 const MAX_POLL_BATCH = 128;
-const PENDING_PACKET_LIMIT = 4_096;
-const PENDING_PACKET_MAX_AGE_MS = 1_000;
+const PENDING_PACKET_LIMIT = 16_384;
+/**
+ * How many refreshes a packet waits to be attributed to the target before it is given up on.
+ *
+ * A packet is held whenever neither endpoint is one `netstat` has reported for the process, which
+ * is the state every socket is in for its first moments. Holding for one refresh gave a new socket
+ * a single chance, and since a refresh spawns two processes it often did not land inside that one
+ * window: the opening of a connection was discarded on that race, the connect and the
+ * authentication with it. Several refreshes make it a margin rather than a coin toss.
+ */
+const PENDING_PACKET_MAX_AGE_MS = TARGET_REFRESH_INTERVAL_MS * 5;
+const PENDING_DROP_REPORT_MS = 10_000;
 const systemRuntime = new SystemNpcapRuntime();
 
 export interface PacketCaptureDependencies {
@@ -60,6 +70,8 @@ export class PacketCapture extends EventEmitter {
   private decodeFishNet = false;
   private fishNetRpcMap: FishNetRpcMap | undefined;
   private fishNetSessionDecoder: FishNetSessionDecoder | null = null;
+  private droppedPending = 0;
+  private droppedReportedAtMs = 0;
   private _state: CaptureState = "stopped";
 
   constructor(dependencies: PacketCaptureDependencies = {}) {
@@ -171,8 +183,10 @@ export class PacketCapture extends EventEmitter {
             packet.direction = direction;
             this.emitTransportPacket(packet);
           } else {
-            this.pending.push({ packet, observedAt: Date.now() });
-            if (this.pending.length > PENDING_PACKET_LIMIT) this.pending.splice(0, this.pending.length - PENDING_PACKET_LIMIT);
+            // The oldest held packets are a connection's opening, which is the part worth keeping,
+            // so a full buffer turns away what is arriving rather than discarding what it holds.
+            if (this.pending.length >= PENDING_PACKET_LIMIT) this.droppedPending += 1;
+            else this.pending.push({ packet, observedAt: Date.now() });
           }
         }
       }
@@ -187,11 +201,18 @@ export class PacketCapture extends EventEmitter {
   }
 
   private flushPending(): void {
-    if (!this.target || this.pending.length === 0) return;
+    if (!this.target) return;
+    if (this.pending.length === 0) {
+      this.reportDroppedPending();
+      return;
+    }
     const cutoff = Date.now() - PENDING_PACKET_MAX_AGE_MS;
     const remaining: PendingPacket[] = [];
     for (const candidate of this.pending) {
-      if (candidate.observedAt < cutoff) continue;
+      if (candidate.observedAt < cutoff) {
+        this.droppedPending += 1;
+        continue;
+      }
       const direction = this.target.classify(candidate.packet);
       if (!direction) remaining.push(candidate);
       else {
@@ -200,6 +221,18 @@ export class PacketCapture extends EventEmitter {
       }
     }
     this.pending = remaining;
+    this.reportDroppedPending();
+  }
+
+  /** Reports packets given up on unattributed, which is how a connection loses its opening. */
+  private reportDroppedPending(): void {
+    if (this.droppedPending === 0) return;
+    const now = Date.now();
+    this.droppedReportedAtMs ||= now;
+    if (now - this.droppedReportedAtMs < PENDING_DROP_REPORT_MS) return;
+    this.emitSafely("warning", `gave up on ${this.droppedPending} packets that could not be attributed to the target process`);
+    this.droppedPending = 0;
+    this.droppedReportedAtMs = now;
   }
 
   private emitTransportPacket(packet: CapturedTransportPacket): void {
@@ -280,6 +313,8 @@ export class PacketCapture extends EventEmitter {
     this.fishNetRpcMap = undefined;
     this.fishNetSessionDecoder?.reset();
     this.fishNetSessionDecoder = null;
+    this.droppedPending = 0;
+    this.droppedReportedAtMs = 0;
   }
 }
 
