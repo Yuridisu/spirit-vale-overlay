@@ -15,6 +15,7 @@ import type { NpcapDevice, NpcapRuntime, NpcapSession, NpcapStatus } from "./npc
 import type { TargetSnapshotProvider } from "./target-tracker.ts";
 import type {
   CaptureConfig,
+  CaptureConnectionEvent,
   CaptureTargetStatus,
   CapturedTcpPacket,
   CapturedTransportPacket,
@@ -70,6 +71,7 @@ export class PacketCapture extends EventEmitter {
   private decodeFishNet = false;
   private fishNetRpcMap: FishNetRpcMap | undefined;
   private fishNetSessionDecoder: FishNetSessionDecoder | null = null;
+  private currentConnectionId?: string;
   private droppedPending = 0;
   private droppedReportedAtMs = 0;
   private _state: CaptureState = "stopped";
@@ -85,12 +87,18 @@ export class PacketCapture extends EventEmitter {
     return this._state;
   }
 
+  /** The connection last seen opening and not since closing, undefined until one is observed. */
+  get connectionId(): string | undefined {
+    return this.currentConnectionId;
+  }
+
   override on(event: "started", listener: () => void): this;
   override on(event: "packet", listener: (packet: CapturedTcpPacket) => void): this;
   override on(event: "udpPacket", listener: (packet: CapturedUdpPacket) => void): this;
   override on(event: "transportPacket", listener: (packet: CapturedTransportPacket) => void): this;
   override on(event: "liteNetPacket", listener: (packet: CapturedLiteNetLibPacket) => void): this;
   override on(event: "fishNetPacket", listener: (packet: CapturedFishNetPacket) => void): this;
+  override on(event: "connection", listener: (event: CaptureConnectionEvent) => void): this;
   override on(event: "targetStatus", listener: (status: CaptureTargetStatus) => void): this;
   override on(event: "warning", listener: (message: string) => void): this;
   override on(event: "error", listener: (error: Error) => void): this;
@@ -247,6 +255,7 @@ export class PacketCapture extends EventEmitter {
       for (const decoded of decodeLiteNetLibDatagram(packet.payload)) {
         const captured = { ...decoded, udpPacket: packet } satisfies CapturedLiteNetLibPacket;
         this.emitSafely("liteNetPacket", captured);
+        this.trackConnection(captured);
         if (this.decodeFishNet) this.emitFishNetPacket(captured);
       }
     } catch (error) {
@@ -255,11 +264,32 @@ export class PacketCapture extends EventEmitter {
     }
   }
 
+  /**
+   * Follows the connection the game is playing on.
+   *
+   * FishNet says so once per connection, in `authenticated`; a consumer that misses that packet
+   * stays pinned to a connection the game has left, discarding everything the live one sends.
+   * Connects and disconnects are announced continually, so losing one of those costs nothing.
+   */
+  private trackConnection(packet: CapturedLiteNetLibPacket): void {
+    const { property } = packet.packet;
+    if (property !== "connectRequest" && property !== "connectAccept" && property !== "disconnect") return;
+    const connectionId = connectionIdFor(packet);
+    if (property === "disconnect") {
+      if (this.currentConnectionId === connectionId) this.currentConnectionId = undefined;
+      this.emitSafely("connection", { connectionId, state: "closed" } satisfies CaptureConnectionEvent);
+      return;
+    }
+    // A connect repeats until it is answered, so only the first one is worth reporting.
+    if (this.currentConnectionId === connectionId) return;
+    this.currentConnectionId = connectionId;
+    this.emitSafely("connection", { connectionId, state: "opened" } satisfies CaptureConnectionEvent);
+  }
+
   private emitFishNetPacket(packet: CapturedLiteNetLibPacket): void {
     const { property, payload } = packet.packet;
     const udp = packet.udpPacket;
-    const endpoints = [`${udp.sourceIP}:${udp.sourcePort}`, `${udp.destinationIP}:${udp.destinationPort}`].sort();
-    const connectionId = `${endpoints[0]}<->${endpoints[1]}#${packet.packet.connectionNumber}`;
+    const connectionId = connectionIdFor(packet);
     if (property === "connectRequest" || property === "connectAccept" || property === "disconnect") {
       this.fishNetSessionDecoder?.reset(connectionId);
       return;
@@ -313,9 +343,17 @@ export class PacketCapture extends EventEmitter {
     this.fishNetRpcMap = undefined;
     this.fishNetSessionDecoder?.reset();
     this.fishNetSessionDecoder = null;
+    this.currentConnectionId = undefined;
     this.droppedPending = 0;
     this.droppedReportedAtMs = 0;
   }
+}
+
+/** Names a connection by its endpoint pair, so both directions of the same socket agree. */
+function connectionIdFor(packet: CapturedLiteNetLibPacket): string {
+  const udp = packet.udpPacket;
+  const endpoints = [`${udp.sourceIP}:${udp.sourcePort}`, `${udp.destinationIP}:${udp.destinationPort}`].sort();
+  return `${endpoints[0]}<->${endpoints[1]}#${packet.packet.connectionNumber}`;
 }
 
 function inferDirection(ipPacket: Buffer, device: NpcapDevice): "inbound" | "outbound" {

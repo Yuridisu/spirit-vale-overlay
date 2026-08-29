@@ -4,6 +4,7 @@ import { DATA_LINK } from "./link-layer.ts";
 import { PacketCapture } from "./packet-capture.ts";
 import type { NpcapDevice, NpcapPacket, NpcapRuntime, NpcapSession, NpcapStatus } from "./npcap.ts";
 import type { TargetSnapshotProvider } from "./target-tracker.ts";
+import type { CaptureConnectionEvent } from "../types.ts";
 
 const DEVICE: NpcapDevice = {
   name: "\\Device\\NPF_{00000000-0000-4000-8000-000000000001}",
@@ -173,6 +174,68 @@ describe("PacketCapture target attribution", () => {
   });
 });
 
+describe("PacketCapture connection tracking", () => {
+  test("reports the connection the game opens and gives up the one it leaves", async () => {
+    const runtime = new FakeRuntime();
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_000)));
+    runtime.packets.push(packet(control(CONNECT_ACCEPT, 50_000)));
+    runtime.packets.push(packet(control(DISCONNECT, 50_000)));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+    const events: CaptureConnectionEvent[] = [];
+    capture.on("connection", (event) => events.push(event));
+
+    await capture.start({ protocols: ["udp"], decodeLiteNetLib: true });
+    await Bun.sleep(10);
+
+    expect(events).toEqual([
+      { connectionId: "192.0.2.10:50000<->198.51.100.20:7004#0", state: "opened" },
+      { connectionId: "192.0.2.10:50000<->198.51.100.20:7004#0", state: "closed" },
+    ]);
+    expect(capture.connectionId).toBeUndefined();
+    await capture.stop();
+  });
+
+  test("follows the next connection even when the disconnect before it is missed", async () => {
+    const runtime = new FakeRuntime();
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_000)));
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_001)));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+
+    await capture.start({ protocols: ["udp"], decodeLiteNetLib: true });
+    await Bun.sleep(10);
+
+    expect(capture.connectionId).toBe("192.0.2.10:50001<->198.51.100.20:7004#0");
+    await capture.stop();
+  });
+
+  test("keeps the current connection when an older one disconnects", async () => {
+    const runtime = new FakeRuntime();
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_000)));
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_001)));
+    runtime.packets.push(packet(control(DISCONNECT, 50_000)));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+
+    await capture.start({ protocols: ["udp"], decodeLiteNetLib: true });
+    await Bun.sleep(10);
+
+    expect(capture.connectionId).toBe("192.0.2.10:50001<->198.51.100.20:7004#0");
+    await capture.stop();
+  });
+
+  test("forgets the connection once capture stops", async () => {
+    const runtime = new FakeRuntime();
+    runtime.packets.push(packet(control(CONNECT_REQUEST, 50_000)));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+
+    await capture.start({ protocols: ["udp"], decodeLiteNetLib: true });
+    await Bun.sleep(10);
+    expect(capture.connectionId).toBe("192.0.2.10:50000<->198.51.100.20:7004#0");
+
+    await capture.stop();
+    expect(capture.connectionId).toBeUndefined();
+  });
+});
+
 function packet(data: Buffer): NpcapPacket {
   return { capturedAt: new Date(0), timestampTicks: 42n, data, originalLength: data.length };
 }
@@ -190,4 +253,12 @@ function udpDatagram(payload: Buffer, sourcePort = 50_000, destinationPort = 7_0
   data.writeUInt16BE(8 + payload.length, 24);
   payload.copy(data, 28);
   return data;
+}
+
+const CONNECT_REQUEST = 5;
+const CONNECT_ACCEPT = 6;
+const DISCONNECT = 7;
+
+function control(property: number, sourcePort: number): Buffer {
+  return udpDatagram(Buffer.from([property, 0, 0, 0]), sourcePort);
 }
