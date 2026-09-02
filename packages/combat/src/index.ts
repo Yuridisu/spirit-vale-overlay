@@ -1,4 +1,5 @@
 export { FishNetCombatTracker } from "./combat-tracker.ts";
+export type { FishNetRecoveryStyle } from "./inference/recovery-style.ts";
 export { createBossCatalog, CURRENT_BOSS_SKILL_NAMES } from "./boss-catalog.ts";
 export { FishNetActorDirectory } from "./actor-directory.ts";
 export { FishNetStatusTracker } from "./status-tracker.ts";
@@ -76,6 +77,7 @@ export type {
   FishNetCombatDeathEvent,
   FishNetCombatEvent,
   FishNetCombatHealEvent,
+  FishNetCombatShieldEvent,
   FishNetCombatMonsterIdentityEvent,
   FishNetCombatStatusEvent,
   FishNetCombatSummonEvent,
@@ -86,6 +88,7 @@ export type {
   FishNetHealAttribution,
   FishNetHealingTraits,
   FishNetHitResult,
+  FishNetShieldAction,
 } from "./combat-tracker.ts";
 export { FishNetPositionTracker } from "./position-tracker.ts";
 export type {
