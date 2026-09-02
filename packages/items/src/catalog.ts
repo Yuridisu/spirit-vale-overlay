@@ -76,7 +76,7 @@ export function loadBundledItemCatalog(
   }
   return {
     buildFingerprint: BUNDLED_CATALOG.buildFingerprint,
-    items: BUNDLED_CATALOG.items.map((item) => ({ ...item })),
+    items: BUNDLED_CATALOG.items.map(cloneDefinition),
   };
 }
 
@@ -89,7 +89,7 @@ export class FishNetItemDirectory {
       if (this.definitions.has(key)) {
         throw new Error(`duplicate item definition for type ${definition.itemType} ${JSON.stringify(definition.id)}`);
       }
-      this.definitions.set(key, definition);
+      this.definitions.set(key, deepFreeze(cloneDefinition(definition)));
     }
   }
 
@@ -122,4 +122,14 @@ export function requireFishNetItem(itemType: number, itemId: string): FishNetIte
 
 function itemKey(itemType: number, itemId: string): string {
   return `${itemType}|${itemId}`;
+}
+
+function cloneDefinition(definition: FishNetItemDefinition): FishNetItemDefinition {
+  return structuredClone(definition);
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const nested of Object.values(value)) deepFreeze(nested);
+  return Object.freeze(value);
 }

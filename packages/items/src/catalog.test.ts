@@ -36,6 +36,21 @@ test("resolves duplicate ids independently by item type", () => {
   expect(resolveFishNetItem(2, "3D Glasses")?.weight).toBe(10);
 });
 
+test("directory entries are immutable cached defensive copies", () => {
+  const catalog = loadBundledItemCatalog();
+  const source = catalog.items.find((item) => item.effects?.length);
+  expect(source).toBeDefined();
+  const directory = new FishNetItemDirectory(catalog);
+  const first = directory.require(source!.itemType, source!.id);
+  const second = directory.require(source!.itemType, source!.id);
+  expect(first).not.toBe(source);
+  expect(first).toBe(second);
+  expect(first.effects).not.toBe(source!.effects);
+  expect(Object.isFrozen(first)).toBe(true);
+  expect(Object.isFrozen(first.effects)).toBe(true);
+  expect(first.effects?.every((effect) => Object.isFrozen(effect) && (!effect.target || Object.isFrozen(effect.target)))).toBe(true);
+});
+
 test("includes standard artifact effects and refine scaling", () => {
   expect(resolveFishNetItem(3, "Vampiric")).toMatchObject({
     artifactSet: {

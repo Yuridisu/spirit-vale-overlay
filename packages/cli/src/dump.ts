@@ -1,6 +1,6 @@
 import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
 import type { CaptureProtocol } from "@kar-mi/spirit-vale-tools-capture";
-import { CURRENT_BOSS_SKILL_NAMES, FishNetActorDirectory, FishNetCombatTracker } from "@kar-mi/spirit-vale-tools-combat";
+import { FishNetActorDirectory, FishNetCombatTracker } from "@kar-mi/spirit-vale-tools-combat";
 import { createLogSession } from "@kar-mi/spirit-vale-tools-logging";
 import { mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
 import {
@@ -9,11 +9,7 @@ import {
   liteNetLibPacketData,
   transportPacketData,
 } from "./format-packet.ts";
-
-function option(name: string): string | undefined {
-  const index = Bun.argv.indexOf(name);
-  return index >= 0 ? Bun.argv[index + 1] : undefined;
-}
+import { option } from "./args.ts";
 
 const durationText = option("--duration");
 const durationSeconds = durationText === undefined ? undefined : Number(durationText);
@@ -40,7 +36,6 @@ const combatTracker = combatOnly
       buildFingerprint: fishNetBuildFingerprint,
       // Names each hit's target from its spawn packet.
       monsterCatalog: mobIdentityDefinitionsById(),
-      bossCatalog: CURRENT_BOSS_SKILL_NAMES,
     })
   : undefined;
 const actorDirectory = combatOnly ? new FishNetActorDirectory() : undefined;
