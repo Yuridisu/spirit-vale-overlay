@@ -13,6 +13,11 @@ description: >-
   Windows, in a portable overlay that never touches your game traffic.
 ---
 
+> [!WARNING]
+> **Deprecated:** Spirit Vale Overlay is no longer actively maintained. No further updates, fixes,
+> releases, or support are planned. The existing code, releases, and documentation remain available
+> as-is for reference.
+
 ## Launcher and settings
 
 The launcher gives you quick access to combat DPS, rewards, and character tools.
