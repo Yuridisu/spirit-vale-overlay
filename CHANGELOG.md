@@ -7,10 +7,11 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Added
 
-- **Gear pickup cards.** When you pick up a piece of equipment, a card shows its name, slot,
-  refine level, and every rolled stat with its value and roll percentage. Enable it under
-  Settings > Overlay > Visible elements > Gear pickups, then place and resize it like any other
-  element. Each card stays for 15 seconds.
+- **Gear and artifact pickup cards.** When you pick up a piece of equipment or an artifact, a card
+  shows its name, slot, refine level, and every rolled stat with its value and roll percentage.
+  They are two separate elements, so each can sit where you want it: enable Gear pickups and
+  Artifact pickups under Settings > Overlay > Visible elements. A card stays for 15 seconds;
+  several items picked up together take turns, one card at a time.
 
 ## 0.10.10
 

@@ -5,6 +5,7 @@ export { snapshotToBuild, countUnresolved, emptyUnresolved } from "./snapshot-to
 export type { TranslateResult, TranslateOptions, UnresolvedItems } from "./snapshot-to-build.ts";
 export { buildPlannerLink, encodeBuildFragment, decodeBuildFragment, SITE_ORIGIN } from "./site-links.ts";
 export { buildExportCatalog, snapshot } from "./catalog.ts";
-export { scaleRoll } from "./substats.ts";
+export { ARTIFACT_ITEM, scaleRoll } from "./substats.ts";
+export type { SnapshotEquipment } from "./snapshot-types.ts";
 export type { BuildExportCatalog, BuildExportSnapshot } from "./catalog.ts";
 export type { V2Build } from "./build.ts";

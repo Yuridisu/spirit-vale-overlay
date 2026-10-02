@@ -10,7 +10,7 @@ import {
 import { setLocked, startOverlayTransport } from "./transport.ts";
 import { BossTimersOverlayElement } from "./tiles/boss-timers.tsx";
 import { ClockElement } from "./tiles/clock.tsx";
-import { GearPickupElement } from "./tiles/gear-pickup.tsx";
+import { ArtifactPickupElement, GearPickupElement } from "./tiles/gear-pickup.tsx";
 import {
   CharacterResourceElement,
   GoldTrackerElement,
@@ -98,6 +98,9 @@ function App() {
       </OverlayElement>
       <OverlayElement id="gearPickup" locked={next.locked}>
         <GearPickupElement />
+      </OverlayElement>
+      <OverlayElement id="artifactPickup" locked={next.locked}>
+        <ArtifactPickupElement />
       </OverlayElement>
       {!next.locked && <DragGhost surface={next.surface} />}
     </main>

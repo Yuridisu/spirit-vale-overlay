@@ -345,6 +345,7 @@ export const en = {
   "overlay.element.bossTimers": "Boss timers",
   "overlay.element.clock": "Clock",
   "overlay.element.gearPickup": "Gear pickups",
+  "overlay.element.artifactPickup": "Artifact pickups",
   "overlay.gearPickup.roll": "{roll}% roll",
   "overlay.gearPickup.noStats": "No rolled stats",
 

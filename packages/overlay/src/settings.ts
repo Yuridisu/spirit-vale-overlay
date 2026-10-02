@@ -86,6 +86,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   bossTimers: { enabled: false, opacity: 1, x: 1140, y: 225, width: 173, height: 113 },
   clock: { enabled: false, opacity: 0.6, x: 905, y: 20, width: 110, height: 40 },
   gearPickup: { enabled: false, opacity: 0, x: 1190, y: 500, width: 300, height: 260 },
+  artifactPickup: { enabled: false, opacity: 0, x: 1190, y: 230, width: 300, height: 260 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative

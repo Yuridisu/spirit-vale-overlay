@@ -32,6 +32,7 @@ describe("reward packet decoder", () => {
       tick: 100,
       items: [{ category: "material", itemId: "training-material", count: 3 }],
       equipment: [],
+      artifacts: [],
     });
   });
 
@@ -65,6 +66,37 @@ describe("reward packet decoder", () => {
         refine: 1,
         substats: [{ type: 1, roll: 65 }, { type: 71, roll: 86, qualifier: "Fire" }],
       }],
+      artifacts: [],
+    });
+  });
+
+  test("keeps a picked-up artifact's slot, refine and rolled substats", () => {
+    const empty = packed(0);
+    const artifact = Buffer.concat([
+      packed(1), string("synthetic-uid"),
+      Buffer.from([0]), // non-null Artifact
+      packed(1), // Substats
+      Buffer.from([0]), packed(70), packed(40), string(""),
+      packed(2), // Slot
+      packed(0), // Gems
+      string("synthetic-uid"),
+      packed(3), // Refine
+      string("Matk"),
+      Buffer.from([0]),
+    ]);
+    const payload = Buffer.concat([
+      Buffer.from([0]), // non-null PickUpList
+      empty, // currency
+      empty, // equipment
+      artifact,
+      empty, empty, empty, empty, empty,
+    ]);
+    expect(decodeFishNetRewardPacket(packet("PickupItems_T", payload))).toEqual({
+      kind: "pickup",
+      tick: 100,
+      items: [{ category: "artifact", itemId: "Matk", count: 1 }],
+      equipment: [],
+      artifacts: [{ itemId: "Matk", slot: 2, refine: 3, substats: [{ type: 70, roll: 40 }] }],
     });
   });
 

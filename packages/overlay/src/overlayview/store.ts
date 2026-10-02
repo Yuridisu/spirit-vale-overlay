@@ -59,6 +59,7 @@ export const meterState = signal<OverlayMeterState | undefined>(undefined);
 export const minimapState = signal<OverlayMinimapState | undefined>(undefined);
 export const lootToasts = signal<LootToastCardState[]>([]);
 export const gearPickups = signal<GearPickupCardState[]>([]);
+export const artifactPickups = signal<GearPickupCardState[]>([]);
 export const gridEnabled = signal(false);
 export const selectedElementId = signal<OverlayElementId | undefined>(undefined);
 export const panelPosition = signal<{ x: number; y: number } | undefined>(undefined);
@@ -73,9 +74,6 @@ const GEAR_PICKUP_LIFETIME_MS = 15_000;
 /** How long a card is guaranteed once another is waiting behind it. */
 const GEAR_PICKUP_QUEUED_LIFETIME_MS = 6_000;
 const MAX_QUEUED_GEAR_PICKUPS = 20;
-const queuedGearPickups: GearPickupCardState[] = [];
-let gearPickupShownAtMs = 0;
-let gearPickupTimer: ReturnType<typeof setTimeout> | undefined;
 let lastChromeJson: string | undefined;
 const lastElementJson = new Map<OverlayElementId, string | undefined>();
 
@@ -130,35 +128,43 @@ export function applyBossTimers(next: BossTimerState): void {
 }
 
 /**
- * Shows picked-up gear one card at a time. A lone card stays its full lifetime; once another is
- * waiting, the one on screen only keeps its shorter guaranteed time before the next takes over.
+ * Shows pickups one card at a time. A lone card stays its full lifetime; once another is waiting,
+ * the one on screen only keeps its shorter guaranteed time before the next takes over.
  */
-export function pushGearPickup(event: OverlayGearPickupEvent): void {
-  const card = { id: `${Date.now()}-${gearPickupSequence++}`, event };
-  if (gearPickups.value.length === 0) {
-    showGearPickup(card);
-    return;
-  }
-  if (queuedGearPickups.length >= MAX_QUEUED_GEAR_PICKUPS) queuedGearPickups.shift();
-  queuedGearPickups.push(card);
-  scheduleGearPickupAdvance(GEAR_PICKUP_QUEUED_LIFETIME_MS - (Date.now() - gearPickupShownAtMs));
+function createPickupQueue(cards: Signal<GearPickupCardState[]>): (event: OverlayGearPickupEvent) => void {
+  const queued: GearPickupCardState[] = [];
+  let shownAtMs = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const scheduleAdvance = (delayMs: number): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      const next = queued.shift();
+      if (next) show(next);
+      else cards.value = [];
+    }, Math.max(0, delayMs));
+  };
+  const show = (card: GearPickupCardState): void => {
+    cards.value = [card];
+    shownAtMs = Date.now();
+    scheduleAdvance(queued.length > 0 ? GEAR_PICKUP_QUEUED_LIFETIME_MS : GEAR_PICKUP_LIFETIME_MS);
+  };
+
+  return (event) => {
+    const card = { id: `${Date.now()}-${gearPickupSequence++}`, event };
+    if (cards.value.length === 0) {
+      show(card);
+      return;
+    }
+    if (queued.length >= MAX_QUEUED_GEAR_PICKUPS) queued.shift();
+    queued.push(card);
+    scheduleAdvance(GEAR_PICKUP_QUEUED_LIFETIME_MS - (Date.now() - shownAtMs));
+  };
 }
 
-function showGearPickup(card: GearPickupCardState): void {
-  gearPickups.value = [card];
-  gearPickupShownAtMs = Date.now();
-  scheduleGearPickupAdvance(queuedGearPickups.length > 0 ? GEAR_PICKUP_QUEUED_LIFETIME_MS : GEAR_PICKUP_LIFETIME_MS);
-}
-
-function scheduleGearPickupAdvance(delayMs: number): void {
-  if (gearPickupTimer !== undefined) clearTimeout(gearPickupTimer);
-  gearPickupTimer = setTimeout(() => {
-    gearPickupTimer = undefined;
-    const next = queuedGearPickups.shift();
-    if (next) showGearPickup(next);
-    else gearPickups.value = [];
-  }, Math.max(0, delayMs));
-}
+export const pushGearPickup = createPickupQueue(gearPickups);
+export const pushArtifactPickup = createPickupQueue(artifactPickups);
 
 export function pushLootToast(event: OverlayLootToastEvent): void {
   const id = `${Date.now()}-${lootToastSequence++}`;

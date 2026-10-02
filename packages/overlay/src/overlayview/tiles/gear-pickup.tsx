@@ -1,12 +1,21 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayGearPickupEvent } from "../../app-types.ts";
-import { gearPickups } from "../store.ts";
+import { artifactPickups, gearPickups } from "../store.ts";
+import type { GearPickupCardState } from "../store.ts";
 
 /** The card for the equipment the player just picked up; several pickups take turns, one at a time. */
 export function GearPickupElement() {
-  const cards = gearPickups.value;
+  return <PickupCards cards={gearPickups.value} kind="gear" />;
+}
+
+/** Artifacts get their own element, so they can sit apart from equipment and be told apart at a glance. */
+export function ArtifactPickupElement() {
+  return <PickupCards cards={artifactPickups.value} kind="artifact" />;
+}
+
+function PickupCards({ cards, kind }: { cards: readonly GearPickupCardState[]; kind: "gear" | "artifact" }) {
   return (
-    <div class="gear-pickup-stack">
+    <div class={`gear-pickup-stack pickup-${kind}`}>
       {cards.map((card) => <GearPickupCard key={card.id} event={card.event} />)}
     </div>
   );

@@ -1,6 +1,24 @@
 import { expect, test } from "bun:test";
 
-import { describeGearPickup } from "./gear-pickup.ts";
+import { describeArtifactPickup, describeGearPickup } from "./gear-pickup.ts";
+
+test("describes a picked-up artifact by its set name and piece, scaled with the artifact ranges", () => {
+  expect(describeArtifactPickup({
+    itemId: "Acolyte",
+    slot: 1,
+    refine: 2,
+    substats: [{ type: 4, roll: 100 }, { type: 70, roll: 0 }],
+  })).toEqual({
+    itemId: "Acolyte",
+    displayName: "Holy Vow",
+    slot: "Jewel",
+    refine: 2,
+    stats: [
+      { label: "Int", roll: 100, value: 3 },
+      { label: "Matk %", roll: 0, value: 1 },
+    ],
+  });
+});
 
 test("describes a picked-up shield with its rolls scaled to the values the game shows", () => {
   expect(describeGearPickup({

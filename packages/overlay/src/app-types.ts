@@ -9,7 +9,7 @@ import type { RequiredStatusCategory } from "./required-statuses.ts";
 export type { StatType, RequiredStatusCategory };
 export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion"] as const;
@@ -311,5 +311,6 @@ export type OverlayRpc = {
     minimapChanged: OverlayMinimapState;
     lootDropped: OverlayLootToastEvent;
     gearPickedUp: OverlayGearPickupEvent;
+    artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

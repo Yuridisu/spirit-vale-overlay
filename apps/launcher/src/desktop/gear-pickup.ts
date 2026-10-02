@@ -1,9 +1,12 @@
 import { resolveFishNetItemDisplayName } from "@kar-mi/spirit-vale-tools-items";
-import type { PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
-import { scaleRoll, snapshot } from "@svoverlay/build-export";
-import type { OverlayGearPickupEvent } from "@svoverlay/overlay/app-types";
+import type { PickedUpArtifact, PickedUpEquipment, PickedUpSubstat } from "@kar-mi/spirit-vale-tools-rewards";
+import { ARTIFACT_ITEM, scaleRoll, snapshot } from "@svoverlay/build-export";
+import type { SnapshotEquipment } from "@svoverlay/build-export";
+import type { OverlayGearPickupEvent, OverlayGearPickupStat } from "@svoverlay/overlay/app-types";
 
 const EQUIPMENT_ITEM_TYPE = 2;
+const ARTIFACT_ITEM_TYPE = 3;
+const ARTIFACT_SLOTS = ["Rune", "Jewel", "Scroll", "Relic"];
 
 /**
  * Turns a picked-up equipment instance into the card the overlay shows: its name, slot, refine, and
@@ -17,18 +20,32 @@ export function describeGearPickup(equipment: PickedUpEquipment): OverlayGearPic
     displayName: resolveFishNetItemDisplayName(EQUIPMENT_ITEM_TYPE, equipment.itemId) ?? equipment.itemId,
     ...(item?.slot === undefined ? {} : { slot: item.slot }),
     refine: equipment.refine,
-    stats: equipment.substats.map((substat) => {
-      const statName = snapshot.statTypes[substat.type];
-      const value = statName === undefined
-        ? null
-        : scaleRoll(snapshot, item, statName, substat.qualifier ?? "", substat.roll);
-      return {
-        label: statLabel(statName, substat.type),
-        roll: substat.roll,
-        ...(value === null ? {} : { value }),
-        ...(substat.qualifier === undefined ? {} : { qualifier: substat.qualifier }),
-      };
-    }),
+    stats: equipment.substats.map((substat) => describeSubstat(substat, item)),
+  };
+}
+
+/** The artifact counterpart: the set's name, which of the four pieces it is, and its rolls. */
+export function describeArtifactPickup(artifact: PickedUpArtifact): OverlayGearPickupEvent {
+  const slot = ARTIFACT_SLOTS[artifact.slot];
+  return {
+    itemId: artifact.itemId,
+    displayName: resolveFishNetItemDisplayName(ARTIFACT_ITEM_TYPE, artifact.itemId) ?? artifact.itemId,
+    ...(slot === undefined ? {} : { slot }),
+    refine: artifact.refine,
+    stats: artifact.substats.map((substat) => describeSubstat(substat, ARTIFACT_ITEM)),
+  };
+}
+
+function describeSubstat(substat: PickedUpSubstat, item: SnapshotEquipment | undefined): OverlayGearPickupStat {
+  const statName = snapshot.statTypes[substat.type];
+  const value = statName === undefined
+    ? null
+    : scaleRoll(snapshot, item, statName, substat.qualifier ?? "", substat.roll);
+  return {
+    label: statLabel(statName, substat.type),
+    roll: substat.roll,
+    ...(value === null ? {} : { value }),
+    ...(substat.qualifier === undefined ? {} : { qualifier: substat.qualifier }),
   };
 }
 

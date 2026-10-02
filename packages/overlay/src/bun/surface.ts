@@ -130,6 +130,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendMinimap: (state) => rpc.send.minimapChanged(state),
     sendLootToast: (event) => rpc.send.lootDropped(event),
     sendGearPickup: (event) => rpc.send.gearPickedUp(event),
+    sendArtifactPickup: (event) => rpc.send.artifactPickedUp(event),
   };
   controller.registerSurface(sink);
 

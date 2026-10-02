@@ -33,9 +33,17 @@ export interface PickedUpEquipment {
   substats: PickedUpSubstat[];
 }
 
+/** An artifact instance the player picked up. `slot` indexes Rune, Jewel, Scroll, Relic. */
+export interface PickedUpArtifact {
+  itemId: string;
+  slot: number;
+  refine: number;
+  substats: PickedUpSubstat[];
+}
+
 export type DecodedRewardPacket =
   | { kind: "experienceState"; tick: number; state: ExperienceCoinsState }
-  | { kind: "pickup"; tick: number; items: RewardItem[]; equipment: PickedUpEquipment[] };
+  | { kind: "pickup"; tick: number; items: RewardItem[]; equipment: PickedUpEquipment[]; artifacts: PickedUpArtifact[] };
 
 export function decodeFishNetRewardPacket(packet: DecodedFishNetPacket): DecodedRewardPacket | undefined {
   if (packet.rpcName === "ExpCoinsChanged_T") {
@@ -54,7 +62,7 @@ export function decodeFishNetRewardPacket(packet: DecodedFishNetPacket): Decoded
     const reader = new RewardReader(packet.payload);
     const items = reader.pickupList();
     reader.finish(packet.rpcName);
-    return { kind: "pickup", tick: packet.tick, items, equipment: reader.equipment };
+    return { kind: "pickup", tick: packet.tick, items, equipment: reader.equipment, artifacts: reader.artifacts };
   }
   return undefined;
 }
@@ -63,6 +71,7 @@ class RewardReader {
   private offset = 0;
   /** Equipment instances read so far, kept apart from the coalesced item counts. */
   readonly equipment: PickedUpEquipment[] = [];
+  readonly artifacts: PickedUpArtifact[] = [];
 
   constructor(private readonly buffer: Buffer) {}
 
@@ -111,7 +120,7 @@ class RewardReader {
       if (value > 0n) items.push({ category: "currency", itemId: `currency:${type}`, count: safeCount(value) });
     });
     this.dictionary("equipment", () => this.equipmentItem(), items);
-    this.dictionary("artifact", () => this.artifact(), items);
+    this.dictionary("artifact", () => this.artifactItem(), items);
     this.dictionary("card", () => this.stackable(), items);
     this.dictionary("gem", () => this.refinable(), items);
     this.dictionary("material", () => this.stackable(), items);
@@ -168,15 +177,20 @@ class RewardReader {
     return { id, count: 1 };
   }
 
-  private artifact(): { id: string | null; count: number } {
+  private artifactItem(): { id: string | null; count: number } {
     if (this.boolean()) return { id: null, count: 0 };
-    this.list(() => this.stat());
-    this.int32();
-    this.list(() => this.string());
-    this.string();
-    this.int32();
+    const substats: PickedUpSubstat[] = [];
+    this.list(() => {
+      const substat = this.stat();
+      if (substat) substats.push(substat);
+    });
+    const slot = this.int32();
+    this.list(() => this.string()); // Gems
+    this.string(); // UID
+    const refine = this.int32();
     const { id } = this.inventoryBase();
     this.boolean();
+    if (id) this.artifacts.push({ itemId: id, slot, refine, substats });
     return { id, count: 1 };
   }
 

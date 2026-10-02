@@ -117,6 +117,7 @@ export interface OverlayControllerOptions {
   subscribeMinimap: (listener: (state: OverlayMinimapSourceState) => void) => () => void;
   subscribeLootToast: (listener: (event: OverlayLootToastEvent) => void) => () => void;
   subscribeGearPickup: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
+  subscribeArtifactPickup: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -142,6 +143,7 @@ export interface OverlaySurfaceSink {
   sendMinimap(state: OverlayMinimapState): void;
   sendLootToast(event: OverlayLootToastEvent): void;
   sendGearPickup(event: OverlayGearPickupEvent): void;
+  sendArtifactPickup(event: OverlayGearPickupEvent): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -248,6 +250,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendGearPickup(event));
   });
+  const unsubscribeArtifactPickup = options.subscribeArtifactPickup((event) => {
+    if (shuttingDown) return;
+    const element = settings.elements.artifactPickup;
+    if (!element.enabled) return;
+    const surface = surfaces.get(element.display);
+    if (surface) publishSafely(() => surface.sendArtifactPickup(event));
+  });
   const unsubscribeBossTimers = options.bossTimers.subscribe(() => publishBossTimers());
 
   if (options.lockOnCreate) persistence.schedule(settings);
@@ -323,6 +332,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeMinimap();
       unsubscribeLootToast();
       unsubscribeGearPickup();
+      unsubscribeArtifactPickup();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);

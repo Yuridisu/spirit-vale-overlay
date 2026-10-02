@@ -19,6 +19,7 @@ import {
   dragPreview,
   meterState,
   minimapState,
+  pushArtifactPickup,
   pushGearPickup,
   pushLootToast,
 } from "./store.ts";
@@ -38,6 +39,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     minimapChanged: (next) => { minimapState.value = repairRendererPayload(next); },
     lootDropped: (next) => { pushLootToast(repairRendererPayload(next)); },
     gearPickedUp: (next) => { pushGearPickup(repairRendererPayload(next)); },
+    artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
   } },
 });
 
