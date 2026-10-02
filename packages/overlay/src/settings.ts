@@ -66,6 +66,7 @@ const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
   cycleBossRegion: "Ctrl+Shift+8",
   toggleTimer: "Ctrl+Shift+9",
   resetTimer: "Ctrl+Shift+0",
+  toggleGearRating: "Ctrl+Shift+G",
 };
 
 const DEFAULT_LOCKED = true;
@@ -97,6 +98,8 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   killCounter: { enabled: false, opacity: 0.4, x: 430, y: 420, width: 220, height: 220 },
   dpsDetails: { enabled: false, opacity: 0.4, x: 1235, y: 100, width: 251, height: 230 },
   bossMeter: { enabled: false, opacity: 0.5, x: 960, y: 300, width: 270, height: 380 },
+  damageTaken: { enabled: false, opacity: 0.4, x: 1235, y: 340, width: 251, height: 230 },
+  gearRating: { enabled: false, opacity: 0, x: 420, y: 250, width: 1080, height: 480 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -314,6 +317,7 @@ export function normalizeShortcuts(source: Record<string, unknown>): Record<Keyb
     cycleBossRegion: shortcutsSource.cycleBossRegion,
     toggleTimer: shortcutsSource.toggleTimer,
     resetTimer: shortcutsSource.resetTimer,
+    toggleGearRating: shortcutsSource.toggleGearRating,
   };
   const shortcuts = {} as Record<KeybindAction, string>;
   for (const action of KEYBIND_ACTIONS) {

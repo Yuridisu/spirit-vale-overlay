@@ -12,6 +12,7 @@ import type {
   OverlayElementSettings,
   OverlayBossFightState,
   OverlayGearPickupEvent,
+  OverlayGearRatingState,
   OverlayKillState,
   OverlayTimerState,
   OverlayLootToastEvent,
@@ -65,6 +66,7 @@ export const gearPickups = signal<GearPickupCardState[]>([]);
 export const timerState = signal<OverlayTimerState | undefined>(undefined);
 export const killState = signal<OverlayKillState | undefined>(undefined);
 export const bossFightState = signal<OverlayBossFightState | undefined>(undefined);
+export const gearRatingState = signal<OverlayGearRatingState | undefined>(undefined);
 export const artifactPickups = signal<GearPickupCardState[]>([]);
 export const gridEnabled = signal(false);
 export const selectedElementId = signal<OverlayElementId | undefined>(undefined);

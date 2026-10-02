@@ -1,11 +1,26 @@
 import type { CombatEncounterRecord } from "@kar-mi/spirit-vale-tools-combat";
 import type { MeterEncounterSnapshot } from "@svoverlay/contracts/meter";
 
-import type { OverlayMeterPoint, OverlayMeterState, PersonalDpsMode, StatType } from "./app-types.ts";
+import type { CombatSkillRow } from "@kar-mi/spirit-vale-tools-combat";
+import type { OverlayMeterPoint, OverlayMeterSkill, OverlayMeterState, PersonalDpsMode, StatType } from "./app-types.ts";
 import { visiblePartyActors } from "./overlayview/party-ranking.ts";
 
 /** The details tile is a glance, not a report: the long tail of minor sources is left to the Combat window. */
 const MAX_DETAIL_SKILLS = 12;
+
+function detailSkills(skills: readonly CombatSkillRow[]): OverlayMeterSkill[] {
+  return [...skills]
+    .sort((left, right) => right.damage - left.damage)
+    .slice(0, MAX_DETAIL_SKILLS)
+    .map((skill) => ({
+      sourceId: skill.sourceId,
+      label: skill.sourceLabel,
+      damage: skill.damage,
+      contribution: skill.contribution,
+      hits: skill.hits,
+      ...(skill.critRate === undefined ? {} : { critRate: skill.critRate }),
+    }));
+}
 
 export function overlayMeterState(
   record: CombatEncounterRecord | undefined,
@@ -21,6 +36,7 @@ export function overlayMeterState(
   const chartSource = selected.personal;
   const chart = chartSource?.timeline ?? partyTimeline(selected);
   const personal = record.dps.personal;
+  const tanked = record.tps.detail.personal;
 
   return {
     personalChart: chartSource !== undefined,
@@ -41,19 +57,10 @@ export function overlayMeterState(
         damage: personal.damage,
         ...(personal.critRate === undefined ? {} : { critRate: personal.critRate }),
         durationMs: personal.durationMs ?? 0,
-        skills: [...personal.skills]
-          .sort((left, right) => right.damage - left.damage)
-          .slice(0, MAX_DETAIL_SKILLS)
-          .map((skill) => ({
-            sourceId: skill.sourceId,
-            label: skill.sourceLabel,
-            damage: skill.damage,
-            contribution: skill.contribution,
-            hits: skill.hits,
-            ...(skill.critRate === undefined ? {} : { critRate: skill.critRate }),
-          })),
+        skills: detailSkills(personal.skills),
       },
     }),
+    ...(tanked === undefined ? {} : { taken: { damage: tanked.damage, skills: detailSkills(tanked.skills) } }),
   };
 }
 

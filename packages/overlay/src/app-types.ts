@@ -11,10 +11,10 @@ export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers
 import type { OverlayTimerState, TimerMode } from "./timer.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
-export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer"] as const;
+export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating"] as const;
 export type KeybindAction = (typeof KEYBIND_ACTIONS)[number];
 
 export const METER_STAT_TYPE_CYCLE: readonly StatType[] = ["damage", "heal", "tanked"];
@@ -171,6 +171,11 @@ export interface OverlayMeterState {
     /** The encounter's damage by skill or attack, largest first. */
     skills: OverlayMeterSkill[];
   };
+  /** What hit the local player this encounter, by the enemy skill or attack that did it. */
+  taken?: {
+    damage: number;
+    skills: OverlayMeterSkill[];
+  };
 }
 
 export interface OverlayMeterSkill {
@@ -181,6 +186,21 @@ export interface OverlayMeterSkill {
   contribution: number;
   hits: number;
   critRate?: number;
+}
+
+/** One equipped item's substats rated out of six stars. */
+export interface OverlayGearRating {
+  slot: string;
+  name: string;
+  /** 0-6, in half-star steps. */
+  stars: number;
+  lines: number;
+  maxLines: number;
+}
+
+/** Ratings for the ten equipment slots in the game screen's order: rows top to bottom, left then right. */
+export interface OverlayGearRatingState {
+  slots: Array<OverlayGearRating | null>;
 }
 
 /** The current or latest boss fight: every player's damage to the bosses, apart from other targets. */
@@ -215,6 +235,7 @@ export interface OverlayViewState {
   timer: OverlayTimerState;
   kills: OverlayKillState;
   bossFight?: OverlayBossFightState;
+  gearRating: OverlayGearRatingState;
 }
 
 export interface OverlayLootToastEvent {
@@ -358,6 +379,7 @@ export type OverlayRpc = {
     timerChanged: OverlayTimerState;
     killsChanged: OverlayKillState;
     bossFightChanged: OverlayBossFightState | undefined;
+    gearRatingChanged: OverlayGearRatingState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

@@ -28,6 +28,7 @@ import type {
   OverlayElementId,
   OverlayBossFightState,
   OverlayGearPickupEvent,
+  OverlayGearRatingState,
   OverlayKillState,
   OverlayLootToastEvent,
   OverlayMinimapState,
@@ -94,6 +95,7 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   cycleBossRegion: "cycle boss region",
   toggleTimer: "start/pause timer",
   resetTimer: "reset timer",
+  toggleGearRating: "show/hide gear ratings",
 };
 
 export interface OverlayMinimapSourceState {
@@ -128,6 +130,8 @@ export interface OverlayControllerOptions {
   subscribeKills: (listener: (state: OverlayKillState) => void) => () => void;
   /** Calls the listener at once with the current fight, then on every change. */
   subscribeBossFight: (listener: (state: OverlayBossFightState | undefined) => void) => () => void;
+  /** Calls the listener at once with the current ratings, then whenever the equipment changes. */
+  subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -158,6 +162,7 @@ export interface OverlaySurfaceSink {
   sendArtifactPickup(event: OverlayGearPickupEvent): void;
   sendKills(state: OverlayKillState): void;
   sendBossFight(state: OverlayBossFightState | undefined): void;
+  sendGearRating(state: OverlayGearRatingState): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -265,6 +270,16 @@ export async function createOverlayController(options: OverlayControllerOptions)
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendGearPickup(event));
   });
+  let gearRating: OverlayGearRatingState = { slots: [] };
+  let lastGearRatingJson = "";
+  const unsubscribeGearRating = options.subscribeGearRating((next) => {
+    const json = JSON.stringify(next);
+    if (json === lastGearRatingJson) return;
+    lastGearRatingJson = json;
+    gearRating = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendGearRating(next));
+  });
   let bossFight: OverlayBossFightState | undefined;
   const unsubscribeBossFight = options.subscribeBossFight((next) => {
     bossFight = next;
@@ -366,6 +381,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeArtifactPickup();
       unsubscribeKills();
       unsubscribeBossFight();
+      unsubscribeGearRating();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);
@@ -578,6 +594,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       timer,
       kills: killState,
       ...(bossFight === undefined ? {} : { bossFight }),
+      gearRating,
     };
   }
 
@@ -876,6 +893,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       if (settings.minimapEnabled) setElementEnabled("minimap", !settings.elements.minimap.enabled);
     } else if (action === "cycleBossRegion") {
       cycleBossRegion();
+    } else if (action === "toggleGearRating") {
+      setElementEnabled("gearRating", !settings.elements.gearRating.enabled);
     } else if (action === "toggleTimer") {
       toggleTimerNow();
     } else if (action === "resetTimer") {

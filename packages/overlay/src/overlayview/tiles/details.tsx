@@ -5,6 +5,7 @@ import { WaitingForDps } from "./common.tsx";
 
 const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
 const KILL_ROW_COLOR = "rgba(190, 74, 69, 0.46)";
+const TAKEN_ROW_COLOR = "rgba(213, 130, 42, 0.5)";
 
 /** The local player's encounter damage, broken down by the skill or attack that dealt it. */
 export function DpsDetailsElement() {
@@ -28,6 +29,38 @@ export function DpsDetailsElement() {
           </span>
         </div>
       ))}</div> : <WaitingForDps />}
+    </div>
+  );
+}
+
+/** The damage the local player has taken this encounter, by the enemy skill or attack that dealt it. */
+export function DamageTakenElement() {
+  const t = useTranslator();
+  const taken = meterState.value?.taken;
+  const skills = taken?.skills ?? [];
+  const top = Math.max(1, ...skills.map((skill) => skill.damage));
+  return (
+    <div class="element-content">
+      <div class="party-heading">
+        <h2 class="element-title">{t("overlay.damageTaken.heading")}</h2>
+        {taken !== undefined && taken.damage > 0 && (
+          <span class="party-reset-hint">{t("overlay.damageTaken.total", { total: formatCompact(taken.damage) })}</span>
+        )}
+      </div>
+      {skills.length ? <div class="ranking">{skills.map((skill) => (
+        <div
+          class="ranking-row detail-row"
+          key={skill.sourceId}
+          style={`--row-fill:${skill.damage / top * 100}%;--row-color:${TAKEN_ROW_COLOR}`}
+          title={t("overlay.damageTaken.tooltip", { hits: formatInteger(skill.hits) })}
+        >
+          <span class="ranking-name">{skill.label}</span>
+          <span class="detail-values">
+            <strong>{formatCompact(skill.damage)}</strong>
+            <span class="detail-share">{Math.round(skill.contribution * 100)}%</span>
+          </span>
+        </div>
+      ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
     </div>
   );
 }

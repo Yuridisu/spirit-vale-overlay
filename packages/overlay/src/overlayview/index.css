@@ -817,6 +817,20 @@
 .boss-meter-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; color: rgba(255,255,255,.72); font-size: 12px; font-variant-numeric: tabular-nums; }
 .boss-meter-total { color: white; font-size: 22px; line-height: 1; }
 .boss-meter-row-rate { min-width: 6ch; color: rgba(255,255,255,.66); font-size: 11px; text-align: right; }
+.gear-rating-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+}
+.gear-rating-cell { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; }
+.gear-rating-cell.is-left { align-items: flex-start; }
+.gear-rating-cell.is-right { align-items: flex-end; }
+.gear-rating-stars { position: relative; display: inline-block; font-size: 17px; line-height: 1; letter-spacing: 1px; white-space: nowrap; text-shadow: 0 0 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.8); }
+.gear-rating-stars-empty { color: rgba(255,255,255,.28); }
+.gear-rating-stars-filled { position: absolute; top: 0; left: 0; overflow: hidden; color: rgb(255, 213, 74); }
+.gear-rating-detail { color: rgba(255,255,255,.8); font-size: 10px; font-variant-numeric: tabular-nums; text-shadow: 0 0 3px rgba(0,0,0,.95); }
 .detail-row { padding: 4px 8px; font-size: 12px; }
 .detail-values { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
 .detail-share { min-width: 4ch; color: rgba(255,255,255,.62); font-size: 11px; text-align: right; }
