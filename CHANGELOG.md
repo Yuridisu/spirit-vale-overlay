@@ -11,7 +11,8 @@ section as the GitHub Release notes, so write it for the people who use the app.
   [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2 are now part of this app, with the
   author's agreement. Open it from the Companion tile on the main window.
   - **Bag and storage.** Everything you carry and everything in your personal storage, with each
-    item's rolled stats, roll percentages and an estimated market value.
+    item's rolled stats, roll percentages and an estimated market value. The game sends the bag
+    with your first kill or pickup after the app starts, so it is empty until then.
   - **Loot rules.** Write `Show` and `Hide` rules by name, type, stat, roll quality, refine and more,
     each with its own colour, tag and sound. Rules are kept in named profiles, and a starter set is
     included. Matching drops are listed in an alert history.

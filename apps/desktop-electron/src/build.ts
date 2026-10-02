@@ -1,7 +1,7 @@
 import { mkdir, rm, copyFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { BunPlugin } from "bun";
-import { bundle, buildViews, copyViewAssets } from "@svoverlay/desktop/src/build-shared.ts";
+import { bundle, buildCompanionRenderer, buildViews, copyViewAssets } from "@svoverlay/desktop/src/build-shared.ts";
 import {
   electronBundleLayout,
   electronBundledHotkeyHelperPath,
@@ -36,6 +36,7 @@ await Promise.all([
 
 await bundle({ entrypoint: path.join(appRoot, "src/backend/index.ts"), outdir: backendDir, target: "bun" });
 await buildViews({ workspace, viewsDir: views, plugins: [electronViewPlugin] });
+await buildCompanionRenderer({ workspace, outdir: path.join(path.dirname(backendDir), "companion") });
 await copyViewAssets({ workspace, viewsDir: views, resourcesDir: resources });
 
 for (const entry of [

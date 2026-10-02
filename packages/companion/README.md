@@ -16,9 +16,9 @@ Taken from `bjb2/valecompanion` at commit `a6661a6` (release v0.8.0).
 | `src/shared/` | `src/shared/` | `pickup-overlay.ts` is cut down to the one type the loot session uses. |
 | `src/market/` | `src/backend/market-*.ts` | Imports only. |
 | `src/sounds.ts` | `src/backend/sounds.ts` | Imports only. |
-| `src/renderer/` | `src/frontend/` | Settings are cut down to what applies here; alert sounds are no longer played by the page. |
+| `src/renderer/` | `src/frontend/` | Settings are cut down to what applies here; alert sounds are no longer played by the page; the waiting hints say what makes the game send the bag. |
 | `src/bun/service.ts` | `src/backend/index.ts` | Rewritten around this app's capture. See below. |
-| `assets/` | `assets/`, `docs/starter-ruleset.txt` | The starter ruleset is `src/starter-ruleset.ts`. The item icons are not included. |
+| `assets/` | `assets/`, `docs/starter-ruleset.txt` | The starter ruleset is `src/starter-ruleset.ts`. |
 | `test/` | `test/` | The tests of the code above. |
 
 Not taken: Vale Companion's own packet capture, its Electron shell, updater and Linux support, and
@@ -45,9 +45,10 @@ Nothing else here makes a network request.
 
 ## Item icons
 
-The icons are game artwork and are not in this repository. Dropping Vale Companion's `assets/icons`
-files into `data/companion/icons` makes the pages show them; without them, items show their
-initials.
+`assets/icons` holds the item icons Vale Companion ships. They are Spirit Vale artwork, published
+by the game's wiki at spiritvalers.com, and remain the property of their rights holders; the
+licence of this repository does not cover them. An icon for an item newer than this set can be
+dropped into `data/companion/icons`; an item with no icon shows its initials.
 
 ## Working on the pages
 

@@ -86,7 +86,7 @@ export function GoldWorkspace({ state, connectionError, refreshState }: {
 }
 
 function WaitingForGold({ hasHistory }: { hasHistory: boolean }) {
-  return <section class={`gold-waiting ${hasHistory ? "with-history" : ""}`}><Coins size={34} strokeWidth={1.3} /><h1>Waiting for the first coin count</h1><p>Keep capture running and enter a character. The initial balance becomes the session baseline; nothing is read from memory or sent off-device.</p></section>;
+  return <section class={`gold-waiting ${hasHistory ? "with-history" : ""}`}><Coins size={34} strokeWidth={1.3} /><h1>Waiting for the first coin count</h1><p>The game sends your coins with your next kill or purchase. That first balance becomes the session baseline; nothing is read from memory or sent off-device.</p></section>;
 }
 
 function GoldLedger({ gold }: { gold: GoldAnalyticsView }) {

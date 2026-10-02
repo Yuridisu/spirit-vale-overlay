@@ -36,7 +36,7 @@ export interface CompanionCaptureStatus {
 export interface CompanionServiceOptions {
   /** Where settings, gold sessions, the market cache and custom sounds are kept. */
   dataDirectory: string;
-  /** The built renderer: index.html, index.js, index.css, market.html, item-catalog.js, fonts. */
+  /** The built renderer: index.html, index.js, index.css, market.html, item-catalog.js, fonts, icons. */
   rendererDirectory: string;
   version: string;
   /** Plays a WAV at 0-100 volume. Returns whether it could be played. */
@@ -54,7 +54,8 @@ export async function createCompanionService(options: CompanionServiceOptions) {
   const logsDirectory = path.join(dataDirectory, "logs");
   const settingsPath = path.join(dataDirectory, "settings.json");
   const soundsDirectory = path.join(dataDirectory, "sounds");
-  const iconDirectory = path.join(dataDirectory, "icons");
+  // The bundled artwork, then a folder the player can add to for items newer than the bundle.
+  const iconDirectories = [path.join(rendererDirectory, "icons"), path.join(dataDirectory, "icons")];
   mkdirSync(soundsDirectory, { recursive: true });
   const diagnostics = createDiagnosticLogger("companion", path.join(logsDirectory, "companion.log"));
 
@@ -189,11 +190,16 @@ export async function createCompanionService(options: CompanionServiceOptions) {
     await goldSaveChain;
   }
 
-  /** Icons are optional: a name is only handed to the renderer when its file is in the icon folder. */
+  /** A name is only handed to the renderer when its file exists, so a missing icon falls back to initials. */
   let knownIcons: Set<string> | undefined;
   function availableIcons(): Set<string> {
     if (knownIcons) return knownIcons;
-    try { knownIcons = new Set(readdirSync(iconDirectory)); } catch { knownIcons = new Set(); }
+    knownIcons = new Set();
+    for (const directory of iconDirectories) {
+      try {
+        for (const name of readdirSync(directory)) knownIcons.add(name);
+      } catch { /* The folder is optional. */ }
+    }
     return knownIcons;
   }
   function withKnownIcons(items: LootItemView[]): LootItemView[] {
@@ -421,8 +427,8 @@ export async function createCompanionService(options: CompanionServiceOptions) {
     if (method === "GET" && (route.startsWith("/v1/icons/") || route.startsWith("/icons/"))) {
       const name = decodeURIComponent(route.replace(/^\/(?:v1\/)?icons\//, ""));
       if (!/^[A-Za-z0-9_.-]+\.webp$/.test(name)) return errorResponse("unknown icon", 404);
-      const file = path.join(iconDirectory, name);
-      if (!existsSync(file)) return errorResponse("unknown icon", 404);
+      const file = iconDirectories.map((directory) => path.join(directory, name)).find((candidate) => existsSync(candidate));
+      if (!file) return errorResponse("unknown icon", 404);
       return new Response(Bun.file(file), {
         headers: { "cache-control": "public, max-age=86400", "content-type": "image/webp" },
       });

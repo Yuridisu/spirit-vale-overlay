@@ -111,6 +111,7 @@ export async function buildCompanionRenderer(options: { workspace: string; outdi
     copyFile(path.join(source, "src/renderer/market.html"), path.join(options.outdir, "market.html")),
     copyFile(path.join(source, "assets/catalog.json"), path.join(options.outdir, "catalog.json")),
     cp(path.join(source, "assets/fonts"), path.join(options.outdir, "fonts"), { recursive: true }),
+    cp(path.join(source, "assets/icons"), path.join(options.outdir, "icons"), { recursive: true }),
   ]);
 }
 

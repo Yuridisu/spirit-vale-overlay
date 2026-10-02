@@ -214,7 +214,7 @@ function BagSurface({ grouping, storage = false, state, error, query, matchesOnl
         : storage && inventory.length === 0 ? <Empty title="Storage is empty" detail="The last complete storage snapshot contained no items." />
         : !storage && state.phase === "capture-unavailable" ? <Empty title={`${state.capture.backend} is needed to observe the bag`} detail={`Open Settings to review the ${state.capture.backend} status, then install or repair the capture backend before restarting capture.`} />
         : !storage && state.phase === "disabled" ? <Empty title="Capture is paused" detail="Enable passive capture in Settings to watch the next bag snapshot." />
-        : inventory.length === 0 ? <Empty title="Waiting for the first bag snapshot" detail={state.phase === "waiting-for-game" ? "Launch Spirit Vale, enter a character, then switch maps once to trigger a complete inventory snapshot." : "Switch maps once to trigger a complete inventory snapshot. Changing inventory can also make the game send one."} />
+        : inventory.length === 0 ? <Empty title="Waiting for the first bag snapshot" detail={state.phase === "waiting-for-game" ? "Launch Spirit Vale and enter a character. The game sends the bag with your next kill or pickup." : "The game sends the bag when something about your character changes: kill a monster or pick something up."} />
         : items.length === 0 ? <Empty title="No items match this view" detail={matchesOnly ? "No current item matches your active filter. Switch to All to inspect these items." : "Try a shorter search term or clear the search."} action={matchesOnly && !query ? "Show all" : "Clear search"} onAction={() => { if (matchesOnly && !query) onMatchesOnly(false); else onQuery(""); }} />
         : <InventoryGrid items={items} grouping={grouping} selected={selected} onSelect={onSelect} searching={Boolean(query.trim()) || matchesOnly} />}
     </section>
@@ -465,7 +465,7 @@ function FiltersSurface({ grouping, state, text, dirty, scroll, profileName, sel
         <div class="preview-head"><div class="section-kicker">{ruleCount === 0 ? "Inventory preview · no rules active" : "Your bag, as the filter paints it"}</div><div class="preview-tally"><span><b>{matched}</b> rule match{matched === 1 ? "" : "es"}</span><span><b>{Math.max(0, (state?.bag.length ?? 0) - matched)}</b> unmatched</span><span><b>{state?.bag.length ?? 0}</b> seen this session</span></div></div>
         <div class="preview-grouping"><GroupingControl grouping={grouping} /></div>
         {!state || state.bag.length === 0
-          ? <Empty title="Waiting for the bag" detail="Enter a character, then switch maps once to trigger the first complete inventory snapshot. That snapshot becomes the silent baseline." />
+          ? <Empty title="Waiting for the bag" detail="The game sends the bag with your next kill or pickup. That first snapshot becomes the silent baseline." />
           : <InventoryGrid items={state.bag} grouping={grouping} selected={selected} onSelect={onSelect} preview />}
       </section>
       <aside class="filter-side">
