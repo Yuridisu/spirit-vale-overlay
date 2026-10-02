@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 
+import { splitCoalescedLiteNetLibDatagram } from "../litenetlib/coalesced.ts";
 import { decodeLiteNetLibDatagram, LiteNetLibProtocolError } from "../litenetlib/decoder.ts";
 import { loadBundledFishNetRpcMap } from "../fishnet/mapping/bundled-rpc-map.ts";
 import { FishNetProtocolError, FishNetSessionDecoder } from "../fishnet/decoding/decoder.ts";
@@ -288,6 +289,18 @@ export class PacketCapture extends EventEmitter {
   }
 
   private emitTransportPacket(packet: CapturedTransportPacket): void {
+    // Split a URO-coalesced burst ahead of the duplicate filter, so each datagram is judged alone.
+    const segments = packet.protocol === "udp" && this.decodeLiteNetLib
+      ? splitCoalescedLiteNetLibDatagram(packet.payload)
+      : undefined;
+    if (!segments) {
+      this.emitDatagram(packet);
+      return;
+    }
+    for (const payload of segments) this.emitDatagram({ ...packet, payload });
+  }
+
+  private emitDatagram(packet: CapturedTransportPacket): void {
     if (this.duplicateFilter && !this.duplicateFilter.admit(packet)) {
       this.relayObserved = true;
       return;

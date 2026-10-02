@@ -1,3 +1,4 @@
+import { splitCoalescedLiteNetLibDatagram } from "../litenetlib/coalesced.ts";
 import { decodeLiteNetLibDatagram } from "../litenetlib/decoder.ts";
 import type { DecodedFishNetPacket } from "./types.ts";
 import { FishNetSessionDecoder } from "./decoding/decoder.ts";
@@ -39,8 +40,18 @@ export class FishNetTransportReplay {
     const parsedAtMs = Date.parse(record.recordedAt);
     const observedAtMs = Number.isFinite(parsedAtMs) ? parsedAtMs : undefined;
 
+    const payload = Buffer.from(transport.payloadHex, "hex");
+    // Logs recorded before URO splitting existed can hold a coalesced burst in one record.
+    const datagrams = (splitCoalescedLiteNetLibDatagram(payload) ?? [payload]).map((datagram) => {
+      try {
+        return decodeLiteNetLibDatagram(datagram);
+      } catch {
+        this.decodeWarnings += 1;
+        return [];
+      }
+    });
     try {
-      for (const decoded of decodeLiteNetLibDatagram(Buffer.from(transport.payloadHex, "hex"))) {
+      for (const decoded of datagrams.flat()) {
         const packet = decoded.packet;
         const connectionId = `${connectionBase}#${packet.connectionNumber}`;
         if (packet.property === "connectRequest" || packet.property === "connectAccept" || packet.property === "disconnect") {

@@ -128,6 +128,51 @@ describe("PacketCapture Npcap lifecycle", () => {
     await capture.stop();
   });
 
+  test("splits a URO-coalesced burst into one datagram per LiteNetLib packet", async () => {
+    const runtime = new FakeRuntime();
+    const segments = [10, 11, 12].map((sequence) => {
+      const datagram = Buffer.alloc(1022, 0x5a);
+      datagram[0] = 0x01;
+      datagram.writeUInt16LE(sequence, 1);
+      datagram[3] = 2;
+      return datagram;
+    });
+    runtime.packets.push(packet(udpDatagram(Buffer.concat(segments))));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+    const udpLengths: number[] = [];
+    const sequences: number[] = [];
+    capture.on("udpPacket", (value) => udpLengths.push(value.payload.length));
+    capture.on("liteNetPacket", ({ packet: value }) => {
+      if (value.property === "channeled") sequences.push(value.sequence);
+    });
+
+    await capture.start({ protocols: ["udp"], decodeLiteNetLib: true });
+    await Bun.sleep(10);
+    expect(udpLengths).toEqual([1022, 1022, 1022]);
+    expect(sequences).toEqual([10, 11, 12]);
+    await capture.stop();
+  });
+
+  test("leaves a coalesced payload whole when LiteNetLib decoding is off", async () => {
+    const runtime = new FakeRuntime();
+    const segments = [10, 11].map((sequence) => {
+      const datagram = Buffer.alloc(1022, 0x5a);
+      datagram[0] = 0x01;
+      datagram.writeUInt16LE(sequence, 1);
+      datagram[3] = 2;
+      return datagram;
+    });
+    runtime.packets.push(packet(udpDatagram(Buffer.concat(segments))));
+    const capture = new PacketCapture({ runtime, platform: "win32" });
+    const udpLengths: number[] = [];
+    capture.on("udpPacket", (value) => udpLengths.push(value.payload.length));
+
+    await capture.start({ protocols: ["udp"] });
+    await Bun.sleep(10);
+    expect(udpLengths).toEqual([2044]);
+    await capture.stop();
+  });
+
   test("isolates a throwing packet listener and keeps capture running", async () => {
     const runtime = new FakeRuntime();
     runtime.packets.push(packet(udpDatagram(Buffer.from([1, 2, 3]))));
