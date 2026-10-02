@@ -13,30 +13,39 @@ export interface InventoryCountState {
 }
 
 /**
+ * The game sends the bag again with each pickup, already counting it, and the pickup itself lands
+ * just after. A pickup this soon after a bag report is taken to be in that report.
+ */
+const BAG_COVERS_PICKUP_MS = 2_000;
+
+/**
  * Keeps a running count of the stackable items the player carries.
  *
- * The game reports the whole bag only now and then, with the character. Between two reports the
- * count is carried forward by adding what is picked up; the next report replaces it, which also
- * corrects for anything sold, used or stored in the meantime.
+ * The bag the game reports is the count. A pickup is only added on top of it when no report came
+ * with it, which keeps the count moving should the game ever send a pickup on its own; the next
+ * report replaces everything, and so also corrects for anything sold, used or stored.
  */
 export class InventoryCounter {
   private readonly counts = new Map<string, number>();
   private readonly gained = new Map<string, number>();
   private known = false;
+  private bagAtMs = Number.NEGATIVE_INFINITY;
 
   /** Replaces every count with the bag the game just reported. */
-  setBag(items: ReadonlyArray<{ name: string; count: number }>): void {
+  setBag(items: ReadonlyArray<{ name: string; count: number }>, nowMs: number): void {
+    this.bagAtMs = nowMs;
     this.counts.clear();
     for (const item of items) add(this.counts, item.name, item.count);
     this.known = true;
   }
 
   /** Returns whether anything was counted. */
-  addPickup(items: ReadonlyArray<{ name: string; count: number }>): boolean {
+  addPickup(items: ReadonlyArray<{ name: string; count: number }>, nowMs: number): boolean {
+    const inBag = this.known && nowMs - this.bagAtMs < BAG_COVERS_PICKUP_MS;
     let changed = false;
     for (const item of items) {
       if (!Number.isFinite(item.count) || item.count <= 0) continue;
-      add(this.counts, item.name, item.count);
+      if (!inBag) add(this.counts, item.name, item.count);
       add(this.gained, item.name, item.count);
       changed = true;
     }
@@ -49,6 +58,7 @@ export class InventoryCounter {
     this.counts.clear();
     this.gained.clear();
     this.known = false;
+    this.bagAtMs = Number.NEGATIVE_INFINITY;
     return true;
   }
 

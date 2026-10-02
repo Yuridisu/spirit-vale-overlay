@@ -442,6 +442,10 @@ export class CaptureCoordinator {
     return () => this.inventoryListeners.delete(listener);
   }
 
+  inventoryState(): InventoryCountState {
+    return this.inventoryCounter.state();
+  }
+
   /** Refills the item counts whenever the game has sent the bag again. */
   private syncInventory(): void {
     const bag = this.character.inventory();
@@ -452,7 +456,7 @@ export class CaptureCoordinator {
     }
     if (bag.revision === this.inventoryRevision) return;
     this.inventoryRevision = bag.revision;
-    this.inventoryCounter.setBag(bag.items.map((item) => ({ name: stackableName(item.category, item.itemId), count: item.count })));
+    this.inventoryCounter.setBag(bag.items.map((item) => ({ name: stackableName(item.category, item.itemId), count: item.count })), this.clock.now());
     this.publishInventory();
   }
 
@@ -1516,7 +1520,7 @@ export class CaptureCoordinator {
     const stacks = pickup.items.flatMap((item) => isStackable(item.category)
       ? [{ name: stackableName(item.category, item.itemId), count: item.count }]
       : []);
-    if (this.inventoryCounter.addPickup(stacks)) this.publishInventory();
+    if (this.inventoryCounter.addPickup(stacks, this.clock.now())) this.publishInventory();
     for (const equipment of pickup.equipment) {
       for (const listener of this.gearPickupListeners) listener(equipment);
     }

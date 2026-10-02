@@ -22,6 +22,7 @@ import type {
   RewardsAppMode,
   RewardsAppRpc,
   RewardsAppState,
+  RewardsItemCounterState,
   RewardsAppStatus,
 } from "../app-types.ts";
 import { loadRewardsSettings, saveRewardsSettings, type RewardsAppSettings } from "../settings.ts";
@@ -69,6 +70,13 @@ export interface RewardsWindowOptions {
   onClosed?: () => void;
   onReset?: () => Promise<void>;
   onOpenSettings?: () => void;
+  itemCounter?: ItemCounterSource;
+}
+
+export interface ItemCounterSource {
+  getState(): RewardsItemCounterState;
+  setItems(items: string[]): Promise<void> | void;
+  subscribe(listener: () => void): () => void;
 }
 
 export async function createRewardsWindow(options: RewardsWindowOptions) {
@@ -152,6 +160,10 @@ const rpc = BrowserView.defineRPC<RewardsAppRpc>({
         options.xp.resetCoins();
         return appState();
       },
+      setItemCounterItems: async ({ items }) => {
+        await options.itemCounter?.setItems(items);
+        return appState();
+      },
       setPinned: ({ pinned }) => {
         settings.pinned = pinned;
         window.setAlwaysOnTop(pinned);
@@ -194,6 +206,7 @@ window = managed.window;
 void followRewards();
 const unsubscribeXp = options.xp.subscribe(() => publish());
 const unsubscribeCharacter = options.subscribeCharacter(() => publish());
+const unsubscribeItemCounter = options.itemCounter?.subscribe(() => publish());
 return {
   show: () => window.show(),
   activate: () => window.activate(),
@@ -257,6 +270,7 @@ function appState(): RewardsAppState {
     unidentified: snapshot.unmatchedByReason.unidentified,
     xp: options.xp.getSnapshot(),
     gold: options.xp.getCoinsSnapshot(),
+    itemCounter: options.itemCounter?.getState() ?? { slots: [], known: false, items: [] },
   };
 }
 
@@ -382,6 +396,7 @@ async function shutdown(): Promise<void> {
   follower.close();
   unsubscribeXp();
   unsubscribeCharacter();
+  unsubscribeItemCounter?.();
   liveSnapshot = emptyAggregate();
   replaySnapshot = emptyAggregate();
   if (!window.isMaximized()) settings.frame = mainFrameClamp.unscale(window.getFrame());

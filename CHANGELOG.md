@@ -37,9 +37,9 @@ section as the GitHub Release notes, so write it for the people who use the app.
   or Escape hides them; bind it to the key that opens your equipment screen to have both together.
 - **Item counter element.** Follow up to eight items you are farming and see how many of each you
   carry while you hunt, with what you have picked up since the app started beside it. Choose the
-  items under Settings > Overlay > Item counter; items in your bag are suggested as you type. The
-  count follows your pickups, and catches up with anything sold, used or stored the next time the
-  game sends your bag, on a map or channel change.
+  items in the Rewards window, under Item counter, by clicking them in the list of what is in your
+  bag or typing their names. The count is the one the game reports for your bag, which it sends
+  again with every pickup.
 - **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
   it, with each one's share of the total.
 

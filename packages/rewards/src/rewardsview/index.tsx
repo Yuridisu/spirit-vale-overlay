@@ -140,6 +140,7 @@ function App() {
             <button class={next.view === "recent" ? "active" : undefined} type="button" onClick={() => setView("recent")}>{t("rewards.view.recent")}</button>
             <button class={next.view === "trends" ? "active" : undefined} type="button" onClick={() => setView("trends")}>{t("rewards.view.trends")}</button>
             <button class={next.view === "xpTracker" ? "active" : undefined} type="button" onClick={() => setView("xpTracker")}>{t("rewards.view.xpTracker")}</button>
+            <button class={next.view === "itemCounter" ? "active" : undefined} type="button" onClick={() => setView("itemCounter")}>{t("rewards.view.itemCounter")}</button>
           </div>
           <StatusDot tone={STATUS_TONE[next.status]} detail={[next.statusDetail, ...next.statusDetailExtras ?? []].map((part) => t.text(part)).join(" · ")} />
           <div class="toolbar-actions">
@@ -250,8 +251,67 @@ function App() {
           </div>
           <XpTrackerSection xp={next.xp} gold={next.gold} />
         </section>
+
+        <section hidden={next.view !== "itemCounter"}>
+          <div class="section-head">
+            <h1>{t("rewards.itemCounter.heading")}</h1>
+            <p>{t("rewards.itemCounter.hint")}</p>
+          </div>
+          <ItemCounterSection counter={next.itemCounter} />
+        </section>
       </main>
     </>
+  );
+}
+
+/** Chooses what the overlay's item counter follows: one slot each, filled from the bag or typed in. */
+function ItemCounterSection({ counter }: { counter: RewardsAppState["itemCounter"] }) {
+  const t = useTranslator();
+  const setSlot = (slot: number, name: string): void => {
+    void desktopView.rpc?.request.setItemCounterItems({
+      items: counter.slots.map((current, index) => index === slot ? name : current),
+    });
+  };
+  const followed = new Set(counter.slots.map((name) => name.trim().toLowerCase()).filter(Boolean));
+  const freeSlot = counter.slots.findIndex((name) => !name.trim());
+  const byName = new Map(counter.items.map((item) => [item.name.toLowerCase(), item]));
+  const bag = counter.items.filter((item) => item.count > 0);
+  return (
+    <div class="item-counter">
+      <datalist id="item-counter-choices">{bag.map((item) => <option key={item.name} value={item.name} />)}</datalist>
+      <div class="item-counter-slots">
+        {counter.slots.map((name, slot) => {
+          const item = byName.get(name.trim().toLowerCase());
+          return (
+            <label class="item-counter-slot" key={slot}>
+              <span>{t("rewards.itemCounter.slot", { slot: slot + 1 })}</span>
+              <div class="item-counter-field">
+                <input class="input" type="text" list="item-counter-choices" maxLength={60} placeholder={t("rewards.itemCounter.placeholder")} value={name} onChange={(event) => setSlot(slot, event.currentTarget.value)} />
+                {name.trim() && <output>{counter.known ? formatInteger(item?.count ?? 0) : "?"}</output>}
+                {name.trim() && <button class="btn" type="button" onClick={() => setSlot(slot, "")}>{t("rewards.itemCounter.clear")}</button>}
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      <h2>{t("rewards.itemCounter.bag")}</h2>
+      {bag.length === 0
+        ? <p class="item-counter-empty">{t(counter.known ? "rewards.itemCounter.bagEmpty" : "rewards.itemCounter.bagUnknown")}</p>
+        : <div class="item-counter-bag">{bag.map((item) => {
+          const isFollowed = followed.has(item.name.toLowerCase());
+          return (
+            <button
+              class={`item-counter-chip${isFollowed ? " is-followed" : ""}`}
+              type="button"
+              key={item.name}
+              disabled={isFollowed || freeSlot < 0}
+              onClick={() => setSlot(freeSlot, item.name)}
+            >
+              <span>{item.name}</span><strong>{formatInteger(item.count)}</strong>
+            </button>
+          );
+        })}</div>}
+    </div>
   );
 }
 

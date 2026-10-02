@@ -55,6 +55,7 @@ import { createDeathLogWindow, createDpsWindow } from "@svoverlay/combat";
 import { readCombatLocations } from "@svoverlay/combat/zone-log";
 import { createOverlayWindow } from "@svoverlay/overlay";
 import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
+import { normalizeItemCounterItems } from "@svoverlay/overlay/item-counter";
 import {
   KEYBIND_ACTIONS,
   type KeybindAction,
@@ -284,6 +285,10 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   },
   onTimerChanged: rememberTimer,
   onSettingsStateChanged: (overlayState) => {
+    if (overlayState.itemCounterItems.join("\n") !== itemCounterSlots.join("\n")) {
+      itemCounterSlots = overlayState.itemCounterItems;
+      for (const listener of itemCounterListeners) listener();
+    }
     rememberOverlayShortcuts(overlayState.shortcuts);
     // Also the first word the launcher gets of the timer, before anything has changed it.
     const timer = overlayWindow.current?.getTimerState();
@@ -292,6 +297,9 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   },
   onClosed,
 }));
+/** The items the overlay's counter follows, as last reported by the overlay that owns the setting. */
+let itemCounterSlots: string[] = normalizeItemCounterItems(undefined);
+const itemCounterListeners = new Set<() => void>();
 const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   logDirectory,
   readModel,
@@ -304,6 +312,20 @@ const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   onClosed,
   onReset: () => capture.resetSession(),
   onOpenSettings: openSettings,
+  itemCounter: {
+    getState: () => ({ slots: itemCounterSlots, ...capture.inventoryState() }),
+    setItems: async (items) => {
+      await overlayWindow.withWindow((overlay) => overlay.setItemCounterItems(items));
+    },
+    subscribe: (listener) => {
+      itemCounterListeners.add(listener);
+      const unsubscribe = capture.subscribeInventory(() => listener());
+      return () => {
+        itemCounterListeners.delete(listener);
+        unsubscribe();
+      };
+    },
+  },
 }));
 const capture = new CaptureCoordinator({
   logDirectory,

@@ -561,6 +561,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
     settings = normalizeOverlaySettings({ ...settings, itemCounterItems: items }, displays);
     persist();
     publishItemCounter();
+    publishControl();
     return itemCounterState(settings.itemCounterItems, inventorySource);
   }
 

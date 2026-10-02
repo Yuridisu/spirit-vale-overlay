@@ -7,7 +7,7 @@ import type { MaximizableWindowChromeRequests } from "@svoverlay/contracts/windo
 export type RateTotals = Omit<RateSnapshot, "timeline">;
 
 export type RewardsAppMode = "live" | "replay";
-export type RewardsAppView = "summary" | "recent" | "trends" | "xpTracker";
+export type RewardsAppView = "summary" | "recent" | "trends" | "xpTracker" | "itemCounter";
 export type RewardsAppStatus = RewardLogStatus;
 
 export interface RewardsUiDrop { category: string; itemId: string; itemName: string; count: number; chance?: number }
@@ -43,6 +43,15 @@ export interface RewardsUiSummary {
   drops: RewardsUiDrop[];
 }
 
+/** The overlay's item counter: what it follows, and everything in the bag it could follow. */
+export interface RewardsItemCounterState {
+  /** The item followed in each slot; an empty string is a free slot. */
+  slots: string[];
+  /** False until the game has reported the bag. */
+  known: boolean;
+  items: Array<{ name: string; count: number; gained: number }>;
+}
+
 export interface RewardsUiGraphSample {
   recordedAt: string;
   experience: number;
@@ -74,6 +83,7 @@ export interface RewardsAppState {
   unidentified: number;
   xp: RateSnapshot;
   gold: RateTotals;
+  itemCounter: RewardsItemCounterState;
 }
 
 export type RewardsAppRpc = {
@@ -88,6 +98,7 @@ export type RewardsAppRpc = {
       resetSession: { params: Record<string, never>; response: RewardsAppState };
       resetXpTracker: { params: Record<string, never>; response: RewardsAppState };
       resetGoldTracker: { params: Record<string, never>; response: RewardsAppState };
+      setItemCounterItems: { params: { items: string[] }; response: RewardsAppState };
     };
   }>;
   webview: RPCSchema<{ messages: { stateChanged: RewardsAppState } }>;
