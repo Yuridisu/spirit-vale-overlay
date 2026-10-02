@@ -18,6 +18,7 @@ import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
 import { decodeBossGravestone, FishNetEternalTowerTracker } from "@kar-mi/spirit-vale-tools-capture";
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
+import { LootOwnership } from "./loot-ownership.ts";
 import type {
   CaptureConnectionEvent,
   CapturedFishNetPacket,
@@ -174,6 +175,8 @@ export class CaptureCoordinator {
   private minimapTimer?: ClockTimer;
   private lastPublishedMinimapJson?: string;
   private readonly lootToastListeners = new Set<(event: CaptureLootToastEvent) => void>();
+  private readonly lootOwnership = new LootOwnership();
+  private loggedLootOwnership: string | undefined;
   private readonly gearPickupListeners = new Set<(event: CaptureGearPickupEvent) => void>();
   private readonly artifactPickupListeners = new Set<(event: CaptureArtifactPickupEvent) => void>();
   private readonly toastedLootIds = new Set<number>();
@@ -774,6 +777,8 @@ export class CaptureCoordinator {
 
   private routePacket(packet: CapturedFishNetPacket): void {
     this.health.observeFishNet();
+    // The account callback arrives on the login connection, before any packet is admitted.
+    this.lootOwnership.observe(packet);
     if (this.deferPacketDuringTransition(packet)) return;
     this.beginPacketDiagnostics(packet);
     const admission = this.consumePacketAdmission(packet);
@@ -1251,6 +1256,29 @@ export class CaptureCoordinator {
     }
   }
 
+  /** Records, once each, the lock format the game uses and the moment the player's own drops are recognised. */
+  private logLootOwnership(): void {
+    const state = `${this.lootOwnership.lockShape ?? "none"}:${this.lootOwnership.isConfirmed}`;
+    if (state === this.loggedLootOwnership || this.lootOwnership.lockShape === undefined) return;
+    this.loggedLootOwnership = state;
+    this.rewardsLog?.log("rewards.lootOwnership", {
+      lockShape: this.lootOwnership.lockShape,
+      ownDropRecognised: this.lootOwnership.isConfirmed,
+    });
+  }
+
+  /** Every way the game might name the local player on a drop's lock. */
+  private localLootIdentifiers(): Array<string | undefined> {
+    const actorId = this.character.physicalObjectId();
+    const identity = actorId === undefined ? undefined : this.actors.getAttribution(actorId);
+    return [
+      this.character.current()?.name,
+      identity?.displayName,
+      identity?.uid,
+      identity?.ownerConnectionId === undefined ? undefined : String(identity.ownerConnectionId),
+    ];
+  }
+
   private emitLootToasts(events: readonly FishNetLootDropEvent[]): void {
     if (this.lootToastListeners.size === 0) return;
     const threshold = this.options.getMinimapRarityFilter?.() ?? 0;
@@ -1258,6 +1286,10 @@ export class CaptureCoordinator {
     for (const event of events) {
       if (event.kind === "removed" || this.toastedLootIds.has(event.drop.objectId)) continue;
       if (event.drop.displayName === undefined) continue;
+      // Judged before the filters, so a common drop of the player's own still teaches the lock format.
+      const lootable = this.lootOwnership.isLootable(event.drop, this.localLootIdentifiers());
+      this.logLootOwnership();
+      if (!lootable) continue;
       if (!isAlwaysShownLoot(event.drop.displayName)) {
         if ((event.drop.rarity ?? 0) < threshold) continue;
         if ((event.drop.lootChance ?? 0) > chanceThreshold) continue;

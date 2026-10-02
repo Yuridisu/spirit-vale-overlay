@@ -13,6 +13,12 @@ section as the GitHub Release notes, so write it for the people who use the app.
   Artifact pickups under Settings > Overlay > Visible elements. A card stays for 15 seconds;
   several items picked up together take turns, one card at a time.
 
+### Changed
+
+- **Loot notifications only show drops you can pick up.** A drop locked to another player is no
+  longer announced. The filter engages once the overlay has recognised one of your own drops, and
+  it never hides a drop locked to your party.
+
 ## 0.10.10
 
 First release of the community continuation. The original project by
