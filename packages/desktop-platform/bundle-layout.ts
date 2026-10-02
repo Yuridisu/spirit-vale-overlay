@@ -18,6 +18,7 @@ export const bundleLayout = {
   backendOwnerFile: ".neutralino-backend-owner.json",
   neutralinoLog: "neutralinojs.log",
   backendLog: "neutralino-backend.log",
+  backendErrorLog: "neutralino-backend-stderr.log",
 } as const;
 
 export const electronBundleLayout = {
@@ -70,7 +71,11 @@ export function backendExtensionCommand(
 ): string {
   const runtime = joinBundlePath(applicationPath, bundledRuntimePath(platform));
   const entrypoint = joinBundlePath(applicationPath, bundleLayout.backendEntrypoint);
-  return `"${runtime}" --no-orphans "${entrypoint}"`;
+  const command = `"${runtime}" --no-orphans "${entrypoint}"`;
+  if (platform !== "win32") return command;
+  // Neutralino runs this through cmd.exe and discards the output. A Bun panic says why on stderr and
+  // nowhere else, so keep it: without this file a crashed backend leaves no trace at all.
+  return `${command} 2>> "${joinBundlePath(applicationPath, bundleLayout.backendErrorLog)}"`;
 }
 
 /** The log files worth pointing a user at when startup fails. */

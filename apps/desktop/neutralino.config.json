@@ -39,7 +39,7 @@
   "extensions": [
     {
       "id": "dev.spiritvale.backend",
-      "commandWindows": "\"${NL_PATH}/extensions/bin/bun.exe\" --no-orphans \"${NL_PATH}/extensions/backend/index.js\""
+      "commandWindows": "\"${NL_PATH}/extensions/bin/bun.exe\" --no-orphans \"${NL_PATH}/extensions/backend/index.js\" 2>> \"${NL_PATH}/neutralino-backend-stderr.log\""
     }
   ],
   "modes": {
