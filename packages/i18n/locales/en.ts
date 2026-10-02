@@ -407,6 +407,7 @@ export const en = {
   "overlay.boss.spawned.description": "must have spawned by now (window closed at {clock})",
 
   "overlay.minimap.waiting": "Waiting for position",
+  "overlay.minimap.gravestone": "{boss} gravestone",
   "overlay.loot.fallbackName": "Loot",
   "overlay.waitingForDps": "Waiting for DPS",
   "overlay.waitingHelp.shortcut": "Press {shortcut} to toggle edit mode, or open Settings from any app window",

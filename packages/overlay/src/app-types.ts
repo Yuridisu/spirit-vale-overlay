@@ -190,9 +190,17 @@ export interface OverlayMinimapLootDrop {
   lootChance?: number;
 }
 
+export interface OverlayMinimapGravestone {
+  objectId: number;
+  x: number;
+  z: number;
+  bossName: string;
+}
+
 export interface OverlayMinimapState {
   player?: { x: number; z: number; heading?: number };
   loot: OverlayMinimapLootDrop[];
+  gravestones: OverlayMinimapGravestone[];
   rarityFilter: number;
   lootChanceFilter: number;
 }

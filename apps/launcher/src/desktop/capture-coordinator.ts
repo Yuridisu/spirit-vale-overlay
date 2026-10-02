@@ -16,6 +16,7 @@ import { FishNetInspectRoster, resolveCharacterHealingTraits } from "@kar-mi/spi
 import type { CharacterSnapshot, CharacterViewState, InspectedCharacter } from "@kar-mi/spirit-vale-tools-character";
 import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
 import { decodeBossGravestone, FishNetEternalTowerTracker } from "@kar-mi/spirit-vale-tools-capture";
+import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import type {
   CaptureConnectionEvent,
   CapturedFishNetPacket,
@@ -89,9 +90,17 @@ interface PacketAdmission {
   suppressBeforeAdmission: boolean;
 }
 
+/** A boss gravestone standing on the current map, placed where its marker spawned. */
+export interface CaptureMinimapGravestone {
+  objectId: number;
+  bossName: string;
+  position: readonly [number, number, number];
+}
+
 export interface CaptureMinimapState {
   self: FishNetPosition | undefined;
   loot: FishNetLootDrop[];
+  gravestones: CaptureMinimapGravestone[];
 }
 
 export interface CaptureLootToastEvent {
@@ -202,6 +211,9 @@ export class CaptureCoordinator {
   private currentChannel: number | undefined;
   private currentInstanceId: string | undefined;
   private readonly reportedGravestones = new Map<number, string>();
+  /** Where each live object spawned; a fresh gravestone only names itself in a later SyncType. */
+  private readonly spawnPositions = new Map<number, readonly [number, number, number]>();
+  private readonly standingGravestones = new Map<number, BossGravestone>();
   private lifecycleChain: Promise<void> = Promise.resolve();
   private readonly clock: Clock;
   constructor(private readonly options: CaptureCoordinatorOptions) {
@@ -286,6 +298,8 @@ export class CaptureCoordinator {
     this.setServerInstance(undefined);
     this.loggedMobIdentities.clear();
     this.reportedGravestones.clear();
+    this.spawnPositions.clear();
+    this.standingGravestones.clear();
     this.loggedShortDisplayStatuses.clear();
     this.toastedLootIds.clear();
     this.positions.reset();
@@ -321,17 +335,33 @@ export class CaptureCoordinator {
     // only one already standing carries them in the spawn. Offering spawns alone missed every kill
     // the player was present for.
     if (packet.objectId === undefined) return false;
+    if (packet.packetName === "objectDespawn") {
+      this.spawnPositions.delete(packet.objectId);
+      if (this.standingGravestones.delete(packet.objectId) && this.minimapEnabled()) this.scheduleMinimapPublish();
+      return false;
+    }
     if (packet.packetName !== "objectSpawn" && packet.packetName !== "syncType") return false;
+    if (packet.packetName === "objectSpawn" && packet.spawnLocalPosition) {
+      this.spawnPositions.set(packet.objectId, packet.spawnLocalPosition);
+    }
     const gravestone = decodeBossGravestone(packet);
     if (!gravestone) return false;
+    this.standingGravestones.set(packet.objectId, gravestone);
+    if (this.minimapEnabled()) this.scheduleMinimapPublish();
+    this.reportGravestone(packet.objectId, gravestone);
+    return true;
+  }
+
+  /** Reports a gravestone once per place, so one seen before the channel list is reported again after it. */
+  private reportGravestone(objectId: number, gravestone: BossGravestone): void {
     const fingerprint = [
       gravestone.mobId,
       gravestone.diedAtMs,
       this.currentChannel ?? "?",
       this.currentInstanceId ?? "?",
     ].join("\u0000");
-    if (this.reportedGravestones.get(packet.objectId) === fingerprint) return true;
-    this.reportedGravestones.set(packet.objectId, fingerprint);
+    if (this.reportedGravestones.get(objectId) === fingerprint) return;
+    this.reportedGravestones.set(objectId, fingerprint);
     this.options.onBossGravestone?.({
       mobId: gravestone.mobId,
       bossName: gravestone.bossName,
@@ -340,7 +370,6 @@ export class CaptureCoordinator {
       ...(this.currentInstanceId === undefined ? {} : { instanceId: this.currentInstanceId }),
       diedAtMs: gravestone.diedAtMs,
     });
-    return true;
   }
 
   setCachedCharacter(snapshot: CharacterSnapshot | undefined): void {
@@ -860,6 +889,8 @@ export class CaptureCoordinator {
       if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
         this.loggedMobIdentities.clear();
         this.reportedGravestones.clear();
+        this.spawnPositions.clear();
+        this.standingGravestones.clear();
       }
       const identities = this.actors.consume(packet);
       if (this.minimapEnabled() && this.positions.consume(packet).length > 0) this.scheduleMinimapPublish();
@@ -1052,6 +1083,7 @@ export class CaptureCoordinator {
     this.currentChannel = channel;
     const instanceId = packet.decodedFields?.find((field) => field.name === "instanceId")?.value;
     this.setServerInstance(typeof instanceId === "string" && instanceId.length > 0 ? instanceId : undefined);
+    for (const [objectId, gravestone] of this.standingGravestones) this.reportGravestone(objectId, gravestone);
   }
 
   private setServerInstance(instanceId: string | undefined): void {
@@ -1177,7 +1209,11 @@ export class CaptureCoordinator {
   }
 
   private minimapState(): CaptureMinimapState {
-    return { self: this.positions.self(), loot: this.loot.active() };
+    const gravestones = [...this.standingGravestones].flatMap(([objectId, gravestone]) => {
+      const position = this.spawnPositions.get(objectId);
+      return position === undefined ? [] : [{ objectId, bossName: gravestone.bossName, position }];
+    });
+    return { self: this.positions.self(), loot: this.loot.active(), gravestones };
   }
 
   private minimapEnabled(): boolean {

@@ -30,6 +30,28 @@ const minimapDots = computed<RadarDot[]>(() => {
     });
 });
 
+interface RadarGravestone {
+  objectId: number;
+  bossName: string;
+  fx: number;
+  fy: number;
+  distant: boolean;
+}
+
+/** Gravestones stay on the radar at any range: one past the edge is pinned to the rim as a bearing. */
+const minimapGravestones = computed<RadarGravestone[]>(() => {
+  const state = minimapState.value;
+  const player = state?.player;
+  if (!player) return [];
+  return (state.gravestones ?? []).map((gravestone) => {
+    const fx = -(gravestone.z - player.z) / RADAR_WORLD_RADIUS;
+    const fy = -(gravestone.x - player.x) / RADAR_WORLD_RADIUS;
+    const distance = Math.hypot(fx, fy);
+    const scale = distance > 1 ? 1 / distance : 1;
+    return { objectId: gravestone.objectId, bossName: gravestone.bossName, fx: fx * scale, fy: fy * scale, distant: distance > 1 };
+  });
+});
+
 export function MinimapElement() {
   const t = useTranslator();
   const state = minimapState.value;
@@ -51,6 +73,14 @@ export function MinimapElement() {
               : { transform: `translate(-50%, -50%) rotate(${state.player.heading * (180 / Math.PI) - 90}deg)` }}
           />
           {minimapDots.value.map((dot) => <MinimapLootDot key={dot.objectId} dot={dot} />)}
+          {minimapGravestones.value.map((gravestone) => (
+            <span
+              key={gravestone.objectId}
+              class={`minimap-gravestone${gravestone.distant ? " is-distant" : ""}`}
+              style={{ left: `calc(50% + ${gravestone.fx * 50}%)`, top: `calc(50% + ${gravestone.fy * 50}%)` }}
+              title={t("overlay.minimap.gravestone", { boss: gravestone.bossName })}
+            >✝</span>
+          ))}
         </>
       ) : <span class="minimap-empty">{t("overlay.minimap.waiting")}</span>}
     </div>

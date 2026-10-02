@@ -92,6 +92,7 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
 export interface OverlayMinimapSourceState {
   self: FishNetPosition | undefined;
   loot: FishNetLootDrop[];
+  gravestones?: Array<{ objectId: number; bossName: string; position: readonly [number, number, number] }>;
 }
 
 export interface XpTrackerSource {
@@ -396,6 +397,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
         ...(drop.lootType === undefined ? {} : { lootType: drop.lootType }),
         ...(drop.lootChance === undefined ? {} : { lootChance: drop.lootChance }),
       }])),
+      gravestones: (minimapSource.gravestones ?? []).map((gravestone) => ({
+        objectId: gravestone.objectId,
+        x: gravestone.position[0],
+        z: gravestone.position[2],
+        bossName: gravestone.bossName,
+      })),
       rarityFilter: settings.minimapRarityFilter,
       lootChanceFilter: settings.minimapLootChanceFilter,
     };

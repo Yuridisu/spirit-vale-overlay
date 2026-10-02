@@ -1493,6 +1493,46 @@ describe("central capture coordinator", () => {
     });
   });
 
+  test("places a gravestone once the channel list arrives, without the marker being sent again", async () => {
+    const kills: Array<{ mobId: string; channel?: number; instanceId?: string; diedAtMs: number }> = [];
+    await withCoordinator({ options: {
+        onBossGravestone: (gravestone) => kills.push(gravestone),
+      } }, async ({ coordinator, capture }) => {
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(2, 700, diedAtMs, "Testerson", "Lady Fey", "Sunflora Pixie"));
+      capture.packet(channelListPacket(3, 1, "nova-6"));
+
+      expect(kills).toHaveLength(2);
+      expect(kills[1]).toMatchObject({ mobId: "Sunflora Pixie", channel: 2, instanceId: "nova-6", diedAtMs });
+      await coordinator.stop();
+    });
+  });
+
+  test("marks a standing gravestone on the minimap until it despawns", async () => {
+    await withCoordinator({}, async ({ coordinator, capture }) => {
+      const gravestones = (): unknown => {
+        let latest: unknown;
+        coordinator.subscribeMinimap((state) => { latest = state.gravestones; })();
+        return latest;
+      };
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet({
+        ...gravestonePacket(2, 700, diedAtMs, "Testerson", "Lady Fey", "Sunflora Pixie"),
+        spawnLocalPosition: [12, 0, -34],
+      });
+      expect(gravestones()).toEqual([{ objectId: 700, bossName: "Lady Fey", position: [12, 0, -34] }]);
+
+      const payload = Buffer.alloc(0);
+      capture.packet({ tick: 3, packetId: 6, packetName: "objectDespawn", objectId: 700, raw: payload, payload });
+      expect(gravestones()).toEqual([]);
+      await coordinator.stop();
+    });
+  });
+
   test("announces the server instance as the player moves between regions", async () => {
     const instances: Array<string | undefined> = [];
     await withCoordinator({ options: {

@@ -719,6 +719,17 @@
   box-shadow: 0 0 4px 1px color-mix(in srgb, var(--dot-color, #ffd24f) 55%, transparent);
   transition: left 0.1s linear, top 0.1s linear, opacity 0.15s ease;
 }
+.minimap-gravestone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: rgb(255, 138, 138);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0,0,0,.9);
+  transition: left 0.1s linear, top 0.1s linear;
+}
+.minimap-gravestone.is-distant { opacity: .7; font-size: 11px; }
 .minimap-empty {
   position: absolute;
   bottom: 10px;
