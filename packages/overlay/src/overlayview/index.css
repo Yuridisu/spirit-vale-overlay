@@ -837,6 +837,10 @@
 .kill-name { display: grid; min-width: 0; gap: 1px; }
 .kill-rewards { overflow: hidden; color: rgba(255,255,255,.66); font-size: 10px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .detail-empty { color: rgba(255,255,255,.5); font-size: 11px; }
+.killed-by { display: grid; gap: 1px; margin-top: 6px; padding: 6px 8px; border-left: 3px solid rgb(226, 86, 86); border-radius: 4px; background: rgba(226, 86, 86, .18); }
+.killed-by-title { color: rgb(255, 150, 150); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.killed-by-who { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.killed-by-how { overflow: hidden; color: rgba(255,255,255,.72); font-size: 11px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .item-gained { color: rgb(142, 222, 150); font-size: 11px; }
 .gear-pickup-stack {
   display: flex;

@@ -7,9 +7,20 @@ export interface DamageTakenRow {
   hits: number;
 }
 
+/** The hit that killed the player. */
+export interface DamageTakenDeath {
+  label: string;
+  attacker?: string;
+  damage: number;
+  /** Wall-clock time of the death, in milliseconds. */
+  atMs: number;
+}
+
 export interface DamageTakenState {
   total: number;
   rows: DamageTakenRow[];
+  /** The player's last death, kept on show until the next one. */
+  killedBy?: DamageTakenDeath;
 }
 
 /** Hits this long apart belong to two different fights. */
@@ -26,6 +37,7 @@ export class DamageTakenTracker {
   private readonly rows = new Map<string, DamageTakenRow>();
   private total = 0;
   private lastHitAtMs: number | undefined;
+  private killedBy: DamageTakenDeath | undefined;
 
   observe(hit: { label: string; attacker?: string; damage: number }, nowMs: number): void {
     if (!Number.isFinite(hit.damage) || hit.damage <= 0) return;
@@ -44,6 +56,19 @@ export class DamageTakenTracker {
     this.rows.set(key, row);
   }
 
+  /**
+   * Remembers the killing blow. It outlives the tally: dying sends the player back to town, and the
+   * map change and the quiet that follow would otherwise clear the answer before it was read.
+   */
+  observeDeath(hit: { label: string; attacker?: string; damage: number }, atMs: number): void {
+    this.killedBy = {
+      label: hit.label,
+      ...(hit.attacker === undefined ? {} : { attacker: hit.attacker }),
+      damage: Number.isFinite(hit.damage) ? Math.max(0, hit.damage) : 0,
+      atMs,
+    };
+  }
+
   reset(): void {
     this.rows.clear();
     this.total = 0;
@@ -57,6 +82,7 @@ export class DamageTakenTracker {
         .sort((left, right) => right.damage - left.damage || left.label.localeCompare(right.label))
         .slice(0, MAX_ROWS)
         .map((row) => ({ ...row })),
+      ...(this.killedBy === undefined ? {} : { killedBy: { ...this.killedBy } }),
     };
   }
 }

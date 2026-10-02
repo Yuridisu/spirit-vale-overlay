@@ -191,6 +191,8 @@ export interface OverlayMeterSkill {
 export interface OverlayDamageTakenState {
   total: number;
   rows: Array<{ label: string; attacker?: string; damage: number; hits: number }>;
+  /** The hit that last killed the player, kept on show until the next death. */
+  killedBy?: { label: string; attacker?: string; damage: number; atMs: number };
 }
 
 /** One equipped item's substats rated out of six stars. */

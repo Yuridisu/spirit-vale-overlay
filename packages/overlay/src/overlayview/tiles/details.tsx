@@ -41,6 +41,7 @@ export function DamageTakenElement() {
   const rows = taken?.rows ?? [];
   const total = taken?.total ?? 0;
   const top = Math.max(1, ...rows.map((row) => row.damage));
+  const killedBy = taken?.killedBy;
   return (
     <div class="element-content">
       <div class="party-heading">
@@ -69,6 +70,17 @@ export function DamageTakenElement() {
           </span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
+      {killedBy !== undefined && (
+        <div class="killed-by">
+          <span class="killed-by-title">{t("overlay.damageTaken.killedBy", { time: new Date(killedBy.atMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span>
+          <span class="killed-by-who">{killedBy.attacker ?? killedBy.label}</span>
+          <span class="killed-by-how">
+            {killedBy.attacker === undefined
+              ? t("overlay.damageTaken.killedByDamage", { damage: formatCompact(killedBy.damage) })
+              : t("overlay.damageTaken.killedByHit", { label: killedBy.label, damage: formatCompact(killedBy.damage) })}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

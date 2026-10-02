@@ -482,12 +482,13 @@ export class CaptureCoordinator {
     let changed = false;
     for (const event of events) {
       if ((event.kind !== "damage" && event.kind !== "death") || event.team === 0) continue;
-      if (event.value <= 0 || !this.isLocalRewardActor(event.targetId)) continue;
+      if (!this.isLocalRewardActor(event.targetId)) continue;
+      if (event.kind !== "death" && event.value <= 0) continue;
       const attacker = this.mobs.get(event.actorId)?.displayName;
-      this.damageTaken.observe(
-        { label: event.sourceLabel, ...(attacker === undefined ? {} : { attacker }), damage: event.value },
-        this.clock.now(),
-      );
+      const hit = { label: event.sourceLabel, ...(attacker === undefined ? {} : { attacker }), damage: event.value };
+      // The killing blow is usually reported twice, as damage and as the death; count it once.
+      if (event.kind !== "death" || !event.duplicatesDamageEvent) this.damageTaken.observe(hit, this.clock.now());
+      if (event.kind === "death") this.damageTaken.observeDeath(hit, this.clock.now());
       changed = true;
     }
     if (!changed || this.damageTakenTimer !== undefined) return;
@@ -665,6 +666,7 @@ export class CaptureCoordinator {
       this.publishBossFight();
     }
     if (this.damageTaken.state().total > 0) {
+      // The last death stays on show; only the tally starts over.
       this.damageTaken.reset();
       this.publishDamageTaken();
     }

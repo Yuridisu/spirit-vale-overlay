@@ -36,3 +36,16 @@ test("starts a new tally after a long quiet spell", () => {
   tracker.observe({ label: "Stomp", damage: 50 }, 121_000);
   expect(tracker.state()).toEqual({ total: 50, rows: [{ label: "Stomp", damage: 50, hits: 1 }] });
 });
+
+test("keeps the killing blow on show after the tally starts over", () => {
+  const tracker = new DamageTakenTracker();
+  tracker.observe({ label: "Stomp", attacker: "Ember Hound", damage: 400 }, 1_000);
+  tracker.observeDeath({ label: "Stomp", attacker: "Ember Hound", damage: 400 }, 1_000);
+  expect(tracker.state().killedBy).toEqual({ label: "Stomp", attacker: "Ember Hound", damage: 400, atMs: 1_000 });
+
+  tracker.reset();
+  expect(tracker.state()).toEqual({ total: 0, rows: [], killedBy: { label: "Stomp", attacker: "Ember Hound", damage: 400, atMs: 1_000 } });
+
+  tracker.observeDeath({ label: "Bleeding", damage: 12 }, 9_000);
+  expect(tracker.state().killedBy).toEqual({ label: "Bleeding", damage: 12, atMs: 9_000 });
+});

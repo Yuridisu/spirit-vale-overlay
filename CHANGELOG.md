@@ -7,6 +7,9 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Added
 
+- **Who killed you.** The Damage taken element now keeps your last death on show: the monster,
+  the attack that landed the killing blow, its damage and the time. It stays until your next death,
+  through the trip back to town.
 - **Target drops.** Name up to four drops you are hunting, each with the stats it must have and
   the least of each, such as a Starfire Jewel with Int 3, Mp % 2 and Matk % 2. When you pick one
   up, the overlay's Target drops element announces it under a banner, with a sound if you want
