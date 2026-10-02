@@ -50,7 +50,12 @@ export function KillCounterElement() {
           key={kill.name}
           style={`--row-fill:${kill.count / top * 100}%;--row-color:${KILL_ROW_COLOR}`}
         >
-          <span class="ranking-name">{kill.name}</span>
+          <span class="kill-name">
+            <span class="ranking-name">{kill.name}</span>
+            <span class="kill-rewards">
+              {t("overlay.killCounter.rewards", { experience: formatCompact(kill.experience), coins: formatCompact(kill.coins) })}
+            </span>
+          </span>
           <span class="detail-values"><strong>{formatInteger(kill.count)}</strong></span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.killCounter.empty")}</span>}

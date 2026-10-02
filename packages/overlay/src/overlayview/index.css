@@ -803,6 +803,8 @@
 .detail-row { padding: 4px 8px; font-size: 12px; }
 .detail-values { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
 .detail-share { min-width: 4ch; color: rgba(255,255,255,.62); font-size: 11px; text-align: right; }
+.kill-name { display: grid; min-width: 0; gap: 1px; }
+.kill-rewards { overflow: hidden; color: rgba(255,255,255,.66); font-size: 10px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .detail-empty { color: rgba(255,255,255,.5); font-size: 11px; }
 .gear-pickup-stack {
   display: flex;

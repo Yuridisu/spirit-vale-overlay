@@ -425,7 +425,7 @@ describe("central capture coordinator", () => {
     await withCoordinator({
       beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
     }, async ({ coordinator, capture }) => {
-      let kills: Array<{ name: string; count: number }> = [];
+      let kills: Array<{ name: string; count: number; experience: number; coins: number }> = [];
       coordinator.subscribeKills((state) => { kills = state.kills; });
 
       capture.packet(authenticatedPacket(1, "test-connection"));
@@ -440,6 +440,7 @@ describe("central capture coordinator", () => {
       });
       capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
       for (const [tick, mob] of [[4, 900], [5, 901], [6, 902]] as const) capture.packet(monsterIdentityPacket(tick, mob));
+      capture.packet(experiencePacket(7, 0, 0n));
 
       // Another player's kill is not the local player's.
       const otherDeath = damagePacket(9, 900, 20);
@@ -447,12 +448,18 @@ describe("central capture coordinator", () => {
       capture.packet(otherDeath);
       expect(kills).toEqual([]);
 
-      for (const [tick, target] of [[10, 901], [11, 902]] as const) {
-        const death = damagePacket(tick, target, 10);
+      for (const [tick, target] of [[10, 901], [12, 902]] as const) {
+        capture.packet(damagePacket(tick, target, 10));
+        const death = damagePacket(tick + 1, target, 10);
         death.rpcName = "Death_C";
         capture.packet(death);
       }
-      expect(kills).toEqual([{ name: "Abomination", count: 2 }]);
+      expect(kills).toEqual([{ name: "Abomination", count: 2, experience: 0, coins: 0 }]);
+
+      // The reward arrives as one running total and is credited once the kills are confirmed.
+      capture.packet(experiencePacket(14, 200, 20n));
+      capture.packet({ tick: 80, packetId: 2, packetName: "pingPong", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      expect(kills).toEqual([{ name: "Abomination", count: 2, experience: 200, coins: 20 }]);
 
       // A new map is a new connection to its server.
       capture.connection("test-connection", "closed");

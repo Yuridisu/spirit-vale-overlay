@@ -423,7 +423,7 @@ const rpc = BrowserView.defineRPC<LauncherRpc>({
       },
       windowAction: async ({ action }) => {
         if (action === "minimize") minimizeLauncher();
-        else await closeLauncher();
+        else await closeLauncher("launcher close request");
       },
     },
     messages: {},
@@ -550,7 +550,7 @@ tray.on("tray-clicked", (event) => {
   else if (action === "open-combat") void openTool("combat");
   else if (action === "open-overlay") void openTool("overlay");
   else if (action === "open-rewards") void openTool("rewards");
-  else if (action === "exit") void shutdown();
+  else if (action === "exit") void shutdown("tray Exit");
 });
 
 launcherLifecycle.add(onWindowEvent(launcherWindow, "resize", (event: { data: { width: number; height: number } }) => {
@@ -558,10 +558,13 @@ launcherLifecycle.add(onWindowEvent(launcherWindow, "resize", (event: { data: { 
   const height = Math.max(scaledSize(430), event.data.height);
   if (width !== event.data.width || height !== event.data.height) launcherWindow.setSize(width, height);
 }));
-launcherLifecycle.add(onceWindowEvent(launcherWindow, "close", () => void shutdown()));
+launcherLifecycle.add(onWindowEvent(launcherWindow, "closeRequested", (event: { data?: { source?: string } }) => {
+  console.warn(`[spiritvale-exit] the launcher asked to close (${event.data?.source ?? "unknown"})`);
+}));
+launcherLifecycle.add(onceWindowEvent(launcherWindow, "close", () => void shutdown("launcher window closed")));
 
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
 void initializeCapture();
 void checkForUpdate();
 void measureLogUsage().catch((error) => {
@@ -898,8 +901,8 @@ function minimizeLauncher(): void {
   launcherWindow.minimize();
 }
 
-async function closeLauncher(): Promise<void> {
-  await shutdown();
+async function closeLauncher(reason: string): Promise<void> {
+  await shutdown(reason);
 }
 
 function showLauncher(): void {
@@ -1005,7 +1008,9 @@ async function quitImmediately(): Promise<void> {
   try { await capture.stop(); } finally { Utils.quit(); }
 }
 
-async function shutdown(): Promise<void> {
+/** Every way the app ends goes through here, and says why, so an unexpected exit can be traced afterwards. */
+async function shutdown(reason: string): Promise<void> {
+  console.warn(`[spiritvale-exit] shutting down: ${reason}`);
   try {
     await closeAllWindowsAndFlush();
   } finally {

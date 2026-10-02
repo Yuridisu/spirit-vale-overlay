@@ -127,6 +127,7 @@ function detachSession(session: Session): void {
   sessions.delete(session.windowId);
   if (launcherSession === session) {
     launcherSession = undefined;
+    if (!shuttingDown) console.warn("[spiritvale-exit] the launcher window disconnected from the backend");
     if (launcherAnnouncementsEnabled && !shuttingDown) {
       if (!announceTimer) announceTimer = setInterval(() => void announceLauncher(), 750);
       void announceLauncher();

@@ -185,7 +185,15 @@ export interface OverlayMeterSkill {
 
 /** Monsters the local player has killed since the last map change, most killed first. */
 export interface OverlayKillState {
-  kills: Array<{ name: string; count: number }>;
+  kills: OverlayKillRow[];
+}
+
+export interface OverlayKillRow {
+  name: string;
+  count: number;
+  /** Experience and coins credited to kills of this monster. */
+  experience: number;
+  coins: number;
 }
 
 export interface OverlayViewState {

@@ -19,7 +19,8 @@ section as the GitHub Release notes, so write it for the people who use the app.
   rebound. A countdown flashes when it reaches zero until you press start or reset.
 
 - **Kill counter element.** Lists the monsters you have killed on the current map and how many
-  of each, most killed first. It starts over when you change map.
+  of each, most killed first, with the experience and gold those kills paid. It starts over when
+  you change map.
 - **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
   it, with each one's share of the total.
 

@@ -81,7 +81,11 @@ export class DesktopView<T extends { setTransport(transport: DesktopTransport): 
       get(target, property, receiver) {
         if (property === "windowAction") return async ({ action }: { action: "minimize" | "close" }) => {
           if (action === "minimize") await neutralinoWindow.minimize();
-          else await app.exit();
+          else {
+            // Told to the backend first, so its log can tell a deliberate close from the window vanishing.
+            transport.sendWindowEvent("closeRequested", { source: "close-button" });
+            await app.exit();
+          }
         };
         if (property === "getWindowFrame") return async () => {
           const [position, size] = await Promise.all([neutralinoWindow.getPosition(), neutralinoWindow.getSize()]);

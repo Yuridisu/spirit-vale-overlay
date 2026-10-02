@@ -40,7 +40,7 @@ import type {
   LogWriteFailure,
 } from "@kar-mi/spirit-vale-tools-logging";
 import { decodeFishNetRewardPacket, FishNetLootDropTracker, FishNetMobDirectory, FishNetMobRewardTracker, mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
-import type { FishNetLootDrop, FishNetLootDropEvent, PickedUpArtifact, PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
+import type { FishNetConfirmedMobKill, FishNetLootDrop, FishNetLootDropEvent, PickedUpArtifact, PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
 import { TOWER_FLOOR_EVENT_SOURCE_PREFIX, TOWER_FLOOR_UNKNOWN_SUFFIX, ZONE_EVENT_SOURCE_PREFIX } from "@svoverlay/combat/zone-log";
 import { sameSpiritValeLocation, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
 import { getCurrentExecutableNames } from "@svoverlay/desktop-platform/executable-names";
@@ -117,7 +117,7 @@ export type CaptureGearPickupEvent = PickedUpEquipment;
 export type CaptureArtifactPickupEvent = PickedUpArtifact;
 
 export interface CaptureKillState {
-  kills: Array<{ name: string; count: number }>;
+  kills: Array<{ name: string; count: number; experience: number; coins: number }>;
 }
 
 export interface CaptureErrorReport {
@@ -186,6 +186,8 @@ export class CaptureCoordinator {
   private readonly killListeners = new Set<(state: CaptureKillState) => void>();
   /** Local kills by monster name since the last map change. */
   private readonly killCounts = new Map<string, number>();
+  /** Experience and coins the reward tracker pinned to kills of each monster, over the same span. */
+  private readonly killRewards = new Map<string, { experience: number; coins: number }>();
   private readonly toastedLootIds = new Set<number>();
   private readonly character = new LocalCharacterRouter({
     onHandled: () => this.syncLocalActorIdentity(),
@@ -422,7 +424,10 @@ export class CaptureCoordinator {
 
   private killState(): CaptureKillState {
     const kills = [...this.killCounts]
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, count]) => {
+        const rewards = this.killRewards.get(name);
+        return { name, count, experience: rewards?.experience ?? 0, coins: rewards?.coins ?? 0 };
+      })
       .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
     return { kills };
   }
@@ -445,9 +450,28 @@ export class CaptureCoordinator {
     if (changed) this.publishKills();
   }
 
+  /**
+   * Adds what each rewarded kill paid. The game reports experience and coins as running totals, so
+   * monsters that die together share one gain and it is credited to one of them.
+   */
+  private countKillRewards(events: readonly { kind: string }[]): void {
+    let changed = false;
+    for (const event of events as readonly (FishNetConfirmedMobKill | { kind: "unmatched" })[]) {
+      if (event.kind !== "kill" || (event.experience === 0 && event.coins === 0n)) continue;
+      const name = event.mob.displayName;
+      const rewards = this.killRewards.get(name) ?? { experience: 0, coins: 0 };
+      rewards.experience += event.experience;
+      rewards.coins += Number(event.coins);
+      this.killRewards.set(name, rewards);
+      changed = true;
+    }
+    if (changed && this.killCounts.size > 0) this.publishKills();
+  }
+
   /** Everything that follows the player to a new map starts over here. */
   private noteMapChange(): void {
     this.options.onGoldMapChange?.();
+    this.killRewards.clear();
     if (this.killCounts.size === 0) return;
     this.killCounts.clear();
     this.publishKills();
@@ -1011,6 +1035,7 @@ export class CaptureCoordinator {
       for (const event of events) {
         this.rewardsLog?.log(event.kind === "kill" ? "rewards.kill" : "rewards.unmatched", jsonObject(event));
       }
+      this.countKillRewards(events);
       return events.length > 0;
     } catch (error) {
       this.logDomainWarning("rewards", error);

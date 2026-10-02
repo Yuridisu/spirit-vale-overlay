@@ -371,6 +371,7 @@ export const en = {
   "overlay.killCounter.heading": "Kills",
   "overlay.killCounter.total": "{total} total",
   "overlay.killCounter.empty": "No kills on this map yet",
+  "overlay.killCounter.rewards": "EXP {experience} | GOLD {coins}",
   "overlay.dpsDetails.heading": "Damage by skill",
   "overlay.dpsDetails.tooltip": "{hits} hits · {crit}% crit",
   "overlay.element.gearPickup": "Gear pickups",
