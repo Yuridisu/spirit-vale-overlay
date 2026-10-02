@@ -84,6 +84,8 @@ export class DesktopView<T extends { setTransport(transport: DesktopTransport): 
           else {
             // Told to the backend first, so its log can tell a deliberate close from the window vanishing.
             transport.sendWindowEvent("closeRequested", { source: "close-button" });
+            // Exiting at once can tear the socket down before that message has left.
+            await new Promise((resolve) => setTimeout(resolve, 80));
             await app.exit();
           }
         };
