@@ -4,7 +4,7 @@ import type { OverlayLootToastEvent, OverlayMinimapLootDrop } from "../../app-ty
 import { rarityColor, rarityLabelKey } from "../../rarity.ts";
 import { lootToasts, minimapState } from "../store.ts";
 
-const RADAR_WORLD_RADIUS = 60;
+const DEFAULT_RADAR_WORLD_RADIUS = 215;
 const RADAR_RING_COUNT = 3;
 
 interface RadarDot extends OverlayMinimapLootDrop {
@@ -16,6 +16,7 @@ const minimapDots = computed<RadarDot[]>(() => {
   const state = minimapState.value;
   const player = state?.player;
   if (!player) return [];
+  const radius = state.range ?? DEFAULT_RADAR_WORLD_RADIUS;
   return state.loot
     .filter((drop) => (drop.rarity ?? 0) >= state.rarityFilter)
     .filter((drop) => (drop.lootChance ?? 0) <= state.lootChanceFilter)
@@ -23,8 +24,8 @@ const minimapDots = computed<RadarDot[]>(() => {
       const dx = drop.x - player.x;
       // The game's world-space x axis maps to the radar's vertical (N/S) axis (inverted), and z maps to horizontal (E/W, inverted).
       const dz = drop.z - player.z;
-      const fx = -dz / RADAR_WORLD_RADIUS;
-      const fy = -dx / RADAR_WORLD_RADIUS;
+      const fx = -dz / radius;
+      const fy = -dx / radius;
       if (Math.hypot(fx, fy) > 1) return [];
       return [{ ...drop, fx, fy }];
     });
@@ -43,9 +44,10 @@ const minimapGravestones = computed<RadarGravestone[]>(() => {
   const state = minimapState.value;
   const player = state?.player;
   if (!player) return [];
+  const radius = state.range ?? DEFAULT_RADAR_WORLD_RADIUS;
   return (state.gravestones ?? []).map((gravestone) => {
-    const fx = -(gravestone.z - player.z) / RADAR_WORLD_RADIUS;
-    const fy = -(gravestone.x - player.x) / RADAR_WORLD_RADIUS;
+    const fx = -(gravestone.z - player.z) / radius;
+    const fy = -(gravestone.x - player.x) / radius;
     const distance = Math.hypot(fx, fy);
     const scale = distance > 1 ? 1 / distance : 1;
     return { objectId: gravestone.objectId, bossName: gravestone.bossName, fx: fx * scale, fy: fy * scale, distant: distance > 1 };

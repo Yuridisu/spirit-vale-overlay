@@ -83,6 +83,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
         },
         setMinimapRarityFilter: ({ rarity }) => controller.setMinimapRarityFilter(rarity),
         setMinimapLootChanceFilter: ({ chance }) => controller.setMinimapLootChanceFilter(chance),
+        setMinimapRange: ({ range }) => controller.setMinimapRange(range),
       },
       messages: {
         dragPreview: (preview) => controller.relayDragPreview(preview),

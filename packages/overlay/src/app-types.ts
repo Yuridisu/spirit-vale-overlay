@@ -203,6 +203,8 @@ export interface OverlayMinimapState {
   gravestones: OverlayMinimapGravestone[];
   rarityFilter: number;
   lootChanceFilter: number;
+  /** World units from the player to the radar rim. */
+  range: number;
 }
 
 export interface OverlaySettingsState {
@@ -220,6 +222,7 @@ export interface OverlaySettingsState {
   minimapEnabled: boolean;
   minimapRarityFilter: number;
   minimapLootChanceFilter: number;
+  minimapRange: number;
 }
 
 type OverlaySharedRequests = {
@@ -247,6 +250,7 @@ type OverlaySharedRequests = {
   setMinimapEnabled: { params: { enabled: boolean }; response: OverlayControlState };
   setMinimapRarityFilter: { params: { rarity: number }; response: OverlayMinimapState };
   setMinimapLootChanceFilter: { params: { chance: number }; response: OverlayMinimapState };
+  setMinimapRange: { params: { range: number }; response: OverlayMinimapState };
 };
 
 export type OverlayRpc = {

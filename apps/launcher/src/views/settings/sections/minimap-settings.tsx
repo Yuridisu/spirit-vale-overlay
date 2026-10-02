@@ -31,7 +31,7 @@ function LootChanceNumberInput({ value, onChange }: { value: number; onChange: (
 }
 
 export function buildMinimapSettingsSection({ state, busy, actions, t }: SettingsSectionContext): SettingsSection {
-  const { minimapEnabled, minimapRarityFilter, minimapLootChanceFilter } = state.overlay;
+  const { minimapEnabled, minimapRarityFilter, minimapLootChanceFilter, minimapRange } = state.overlay;
   return {
     id: "minimap",
     label: t("settings.minimap.label"),
@@ -95,6 +95,22 @@ export function buildMinimapSettingsSection({ state, busy, actions, t }: Setting
             />
           </label>
           <p class="settings-hint">{t("settings.minimap.lootChance.hint")}</p>
+          <label class="settings-field">
+            <span class="settings-row">
+              <span>{t("settings.minimap.range.label")}</span>
+              <span>{minimapRange}</span>
+            </span>
+            <input
+              class="settings-slider"
+              type="range"
+              min="30"
+              max="600"
+              step="5"
+              value={minimapRange}
+              onInput={(event) => actions.setMinimapRange(event.currentTarget.valueAsNumber)}
+            />
+          </label>
+          <p class="settings-hint">{t("settings.minimap.range.hint")}</p>
           <p class="settings-hint">{t("settings.minimap.filters.hintShared")}</p>
         </div>,
       },

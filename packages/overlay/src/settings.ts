@@ -46,6 +46,8 @@ export interface OverlaySettings {
   minimapEnabled: boolean;
   minimapRarityFilter: number;
   minimapLootChanceFilter: number;
+  /** World units from the player to the radar rim. */
+  minimapRange: number;
 }
 
 const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
@@ -197,6 +199,7 @@ export function normalizeOverlaySettings(
     minimapEnabled,
     minimapRarityFilter: normalizeRarityFilter(source.minimapRarityFilter),
     minimapLootChanceFilter: normalizeLootChanceFilter(source.minimapLootChanceFilter),
+    minimapRange: normalizeMinimapRange(source.minimapRange),
   };
 }
 
@@ -229,6 +232,16 @@ function normalizeRarityFilter(value: unknown): number {
 }
 
 const DEFAULT_LOOT_CHANCE_FILTER = 100;
+/** Matches the game's own minimap fully zoomed out when the tile is sized over it. */
+export const DEFAULT_MINIMAP_RANGE = 215;
+export const MIN_MINIMAP_RANGE = 30;
+export const MAX_MINIMAP_RANGE = 600;
+
+function normalizeMinimapRange(value: unknown): number {
+  const number = typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_MINIMAP_RANGE;
+  return Math.round(Math.max(MIN_MINIMAP_RANGE, Math.min(MAX_MINIMAP_RANGE, number)));
+}
+
 function normalizeLootChanceFilter(value: unknown): number {
   const number = typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_LOOT_CHANCE_FILTER;
   return Math.round(Math.max(0, Math.min(100, number)) * 100) / 100;

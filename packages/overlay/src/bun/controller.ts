@@ -285,6 +285,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setMinimapEnabled,
     setMinimapRarityFilter,
     setMinimapLootChanceFilter,
+    setMinimapRange,
     resetXpTracker: () => {
       options.xp.reset();
       publishCharacter();
@@ -375,6 +376,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       minimapEnabled: settings.minimapEnabled,
       minimapRarityFilter: settings.minimapRarityFilter,
       minimapLootChanceFilter: settings.minimapLootChanceFilter,
+      minimapRange: settings.minimapRange,
     };
   }
 
@@ -405,6 +407,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       })),
       rarityFilter: settings.minimapRarityFilter,
       lootChanceFilter: settings.minimapLootChanceFilter,
+      range: settings.minimapRange,
     };
   }
 
@@ -430,6 +433,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
 
   function setMinimapLootChanceFilter(chance: number): OverlayMinimapState {
     settings = normalizeOverlaySettings({ ...settings, minimapLootChanceFilter: chance }, displays);
+    persist();
+    publishMinimap(true);
+    return minimapState();
+  }
+
+  function setMinimapRange(range: number): OverlayMinimapState {
+    settings = normalizeOverlaySettings({ ...settings, minimapRange: range }, displays);
     persist();
     publishMinimap(true);
     return minimapState();

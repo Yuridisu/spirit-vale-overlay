@@ -442,6 +442,8 @@ export const en = {
   "settings.minimap.rarity.hint": "A minimum: Rare keeps Rare and Epic.",
   "settings.minimap.lootChance.label": "Maximum drop chance (%)",
   "settings.minimap.lootChance.hint": "A maximum: loot that drops more often than this is hidden.",
+  "settings.minimap.range.label": "Radar range (world units)",
+  "settings.minimap.range.hint": "Distance from you to the radar rim. Around 215 lines the radar up with the game's own minimap fully zoomed out when the tile is sized over it; lower values zoom in.",
   "settings.minimap.filters.hintShared": "Both filters also apply to Loot notifications, which stay active while the minimap is off.",
 
   "settings.keybinds.label": "Keybinds",

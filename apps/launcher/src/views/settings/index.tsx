@@ -71,6 +71,7 @@ function App() {
     setMinimapEnabled: (enabled) => update(desktopView.rpc?.request.setMinimapEnabled({ enabled })),
     setMinimapRarityFilter: (rarity) => update(desktopView.rpc?.request.setMinimapRarityFilter({ rarity })),
     setMinimapLootChanceFilter: (chance) => update(desktopView.rpc?.request.setMinimapLootChanceFilter({ chance })),
+    setMinimapRange: (range) => update(desktopView.rpc?.request.setMinimapRange({ range })),
     importSettings: () => { void desktopView.rpc?.request.importSettings({}); },
     importSetting: (kind) => { void desktopView.rpc?.request.importSetting({ kind }); },
     exportSetting: (kind) => { void desktopView.rpc?.request.exportSetting({ kind }); },

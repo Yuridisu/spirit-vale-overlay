@@ -38,6 +38,7 @@ export interface SettingsActions {
   setMinimapEnabled(value: boolean): void;
   setMinimapRarityFilter(value: number): void;
   setMinimapLootChanceFilter(value: number): void;
+  setMinimapRange(value: number): void;
   setRequiredStatuses(category: RequiredStatusCategory, statusIds: string[]): void;
   importSettings(): void;
   importSetting(kind: SettingsKind): void;

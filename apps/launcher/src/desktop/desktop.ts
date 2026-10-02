@@ -472,6 +472,7 @@ const settingsRpc = BrowserView.defineRPC<LauncherSettingsRpc>({
       setMinimapEnabled: overlayAction((o, { enabled }: { enabled: boolean }) => o.setMinimapEnabled(enabled)),
       setMinimapRarityFilter: overlayAction((o, { rarity }: { rarity: number }) => o.setMinimapRarityFilter(rarity)),
       setMinimapLootChanceFilter: overlayAction((o, { chance }: { chance: number }) => o.setMinimapLootChanceFilter(chance)),
+      setMinimapRange: overlayAction((o, { range }: { range: number }) => o.setMinimapRange(range)),
       importSettings: () => importSettings(),
       importSetting: ({ kind }) => importSetting(kind),
       exportSetting: ({ kind }) => exportSettingAndNotify(kind),

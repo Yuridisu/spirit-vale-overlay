@@ -57,6 +57,7 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     setMinimapEnabled: (enabled: boolean) => controller.setMinimapEnabled(enabled),
     setMinimapRarityFilter: (rarity: number) => controller.setMinimapRarityFilter(rarity),
     setMinimapLootChanceFilter: (chance: number) => controller.setMinimapLootChanceFilter(chance),
+    setMinimapRange: (range: number) => controller.setMinimapRange(range),
   };
 
   function scheduleReconcile(): void {
