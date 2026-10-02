@@ -17,8 +17,16 @@ test("meter presentation sends only the selected chart, bounded rows, and damage
   expect(state.personalChart).toBe(true);
   expect(state.chart).toEqual([{ elapsedMs: 0, dps: 25 }]);
   expect(state.party).toEqual([{ actorId: 90, displayName: "Player 90", archetype: 2, dps: 25 }]);
-  expect(state.personal).toEqual({ archetype: 2, currentDps: 14, damage: 140, critRate: 0.5, durationMs: 100 });
-  expect(JSON.stringify(state)).not.toContain("skills");
+  expect(state.personal).toEqual({
+    archetype: 2,
+    currentDps: 14,
+    damage: 140,
+    critRate: 0.5,
+    durationMs: 100,
+    skills: [{ sourceId: "unused", label: "Unused", damage: 1, contribution: 1, hits: 1 }],
+  });
+  // Only the local player's skills travel to the overlay; the party rows stay bare.
+  expect(JSON.stringify(state.party)).not.toContain("skills");
   expect(JSON.stringify(state).length).toBeLessThan(JSON.stringify(record).length / 2);
 });
 
@@ -101,3 +109,25 @@ function actor(actorId: number, dps: number): MeterActorRow {
     timeline: [{ elapsedMs: 0, damage: dps, cumulativeDamage: dps, dps }],
   };
 }
+
+test("meter presentation lists the player's skills by damage and keeps only the largest twelve", () => {
+  const damage = snapshot("damage", 100, [actor(1, 10)]);
+  damage.personal = {
+    ...damage.actors[0]!,
+    skills: Array.from({ length: 15 }, (_, index) => ({
+      sourceId: `skill-${index}`,
+      sourceLabel: `Skill ${index}`,
+      damage: (index + 1) * 10,
+      dps: 1,
+      contribution: (index + 1) / 120,
+      hits: index + 1,
+      criticalHits: 0,
+      ...(index === 14 ? { critRate: 0.25 } : {}),
+    })),
+  };
+  const skills = overlayMeterState(combatRecord(damage, damage, damage), "damage", 0, "encounter").personal?.skills ?? [];
+
+  expect(skills).toHaveLength(12);
+  expect(skills[0]).toEqual({ sourceId: "skill-14", label: "Skill 14", damage: 150, contribution: 15 / 120, hits: 15, critRate: 0.25 });
+  expect(skills.map((skill) => skill.damage)).toEqual([150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40]);
+});

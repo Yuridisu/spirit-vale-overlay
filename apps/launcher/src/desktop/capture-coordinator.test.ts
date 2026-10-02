@@ -421,6 +421,48 @@ describe("central capture coordinator", () => {
     });
   });
 
+  test("counts the local player's kills by monster and starts over on a new map", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture }) => {
+      let kills: Array<{ name: string; count: number }> = [];
+      coordinator.subscribeKills((state) => { kills = state.kills; });
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({
+        tick: 2,
+        packetId: 10,
+        packetName: "serverRpc",
+        objectId: 10,
+        rpcName: "SyntheticLocalCallback_C",
+        raw: Buffer.alloc(0),
+        payload: Buffer.alloc(0),
+      });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      for (const [tick, mob] of [[4, 900], [5, 901], [6, 902]] as const) capture.packet(monsterIdentityPacket(tick, mob));
+
+      // Another player's kill is not the local player's.
+      const otherDeath = damagePacket(9, 900, 20);
+      otherDeath.rpcName = "Death_C";
+      capture.packet(otherDeath);
+      expect(kills).toEqual([]);
+
+      for (const [tick, target] of [[10, 901], [11, 902]] as const) {
+        const death = damagePacket(tick, target, 10);
+        death.rpcName = "Death_C";
+        capture.packet(death);
+      }
+      expect(kills).toEqual([{ name: "Abomination", count: 2 }]);
+
+      // A new map is a new connection to its server.
+      capture.connection("test-connection", "closed");
+      capture.connection("next-map", "opened");
+      capture.packet(authenticatedPacket(20, "next-map"));
+      expect(kills).toEqual([]);
+      await coordinator.stop();
+    });
+  });
+
   test("writes a resolved victim identity before a player-death event", async () => {
     await withCoordinator(async ({ coordinator, capture, directory }) => {
 

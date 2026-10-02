@@ -18,6 +18,11 @@ section as the GitHub Release notes, so write it for the people who use the app.
   buttons. In game, `Ctrl+Shift+9` starts and pauses it and `Ctrl+Shift+0` resets it; both can be
   rebound. A countdown flashes when it reaches zero until you press start or reset.
 
+- **Kill counter element.** Lists the monsters you have killed on the current map and how many
+  of each, most killed first. It starts over when you change map.
+- **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
+  it, with each one's share of the total.
+
 ### Changed
 
 - **Loot notifications only show drops you can pick up.** A drop locked to another player is no

@@ -21,6 +21,7 @@ import {
   minimapState,
   pushArtifactPickup,
   pushGearPickup,
+  killState,
   pushLootToast,
   timerState,
 } from "./store.ts";
@@ -41,6 +42,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     lootDropped: (next) => { pushLootToast(repairRendererPayload(next)); },
     gearPickedUp: (next) => { pushGearPickup(repairRendererPayload(next)); },
     timerChanged: (next) => { timerState.value = repairRendererPayload(next); },
+    killsChanged: (next) => { killState.value = repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
   } },
 });
@@ -59,6 +61,7 @@ export function startOverlayTransport(): void {
       minimapState.value = repaired.minimap;
       applyBossTimers(repaired.bossTimers);
       timerState.value = repaired.timer;
+      killState.value = repaired.kills;
     });
   });
 }

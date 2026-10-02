@@ -800,6 +800,10 @@
 @media (prefers-reduced-motion: reduce) {
   .timer-finished { animation: none; background: rgba(228, 72, 72, .45); }
 }
+.detail-row { padding: 4px 8px; font-size: 12px; }
+.detail-values { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+.detail-share { min-width: 4ch; color: rgba(255,255,255,.62); font-size: 11px; text-align: right; }
+.detail-empty { color: rgba(255,255,255,.5); font-size: 11px; }
 .gear-pickup-stack {
   display: flex;
   flex-direction: column;

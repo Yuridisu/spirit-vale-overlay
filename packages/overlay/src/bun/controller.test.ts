@@ -39,6 +39,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendGearPickup: () => {},
     sendArtifactPickup: () => {},
     sendTimer: () => {},
+    sendKills: () => {},
   };
 }
 
@@ -53,6 +54,7 @@ async function createController(settingsPath: string): Promise<OverlayController
     subscribeLootToast: () => () => {},
     subscribeGearPickup: () => () => {},
     subscribeArtifactPickup: () => () => {},
+    subscribeKills: () => () => {},
     xp: {
       getSnapshot: () => ({ ...emptyRate, timeline: [] }),
       getCoinsSnapshot: () => ({ ...emptyRate }),

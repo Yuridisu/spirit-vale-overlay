@@ -4,6 +4,9 @@ import type { MeterEncounterSnapshot } from "@svoverlay/contracts/meter";
 import type { OverlayMeterPoint, OverlayMeterState, PersonalDpsMode, StatType } from "./app-types.ts";
 import { visiblePartyActors } from "./overlayview/party-ranking.ts";
 
+/** The details tile is a glance, not a report: the long tail of minor sources is left to the Combat window. */
+const MAX_DETAIL_SKILLS = 12;
+
 export function overlayMeterState(
   record: CombatEncounterRecord | undefined,
   statType: StatType,
@@ -38,6 +41,17 @@ export function overlayMeterState(
         damage: personal.damage,
         ...(personal.critRate === undefined ? {} : { critRate: personal.critRate }),
         durationMs: personal.durationMs ?? 0,
+        skills: [...personal.skills]
+          .sort((left, right) => right.damage - left.damage)
+          .slice(0, MAX_DETAIL_SKILLS)
+          .map((skill) => ({
+            sourceId: skill.sourceId,
+            label: skill.sourceLabel,
+            damage: skill.damage,
+            contribution: skill.contribution,
+            hits: skill.hits,
+            ...(skill.critRate === undefined ? {} : { critRate: skill.critRate }),
+          })),
       },
     }),
   };

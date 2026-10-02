@@ -116,6 +116,10 @@ export interface CaptureLootToastEvent {
 export type CaptureGearPickupEvent = PickedUpEquipment;
 export type CaptureArtifactPickupEvent = PickedUpArtifact;
 
+export interface CaptureKillState {
+  kills: Array<{ name: string; count: number }>;
+}
+
 export interface CaptureErrorReport {
   title: string;
   reason: string;
@@ -179,6 +183,9 @@ export class CaptureCoordinator {
   private loggedLootOwnership: string | undefined;
   private readonly gearPickupListeners = new Set<(event: CaptureGearPickupEvent) => void>();
   private readonly artifactPickupListeners = new Set<(event: CaptureArtifactPickupEvent) => void>();
+  private readonly killListeners = new Set<(state: CaptureKillState) => void>();
+  /** Local kills by monster name since the last map change. */
+  private readonly killCounts = new Map<string, number>();
   private readonly toastedLootIds = new Set<number>();
   private readonly character = new LocalCharacterRouter({
     onHandled: () => this.syncLocalActorIdentity(),
@@ -405,6 +412,45 @@ export class CaptureCoordinator {
   subscribeGearPickup(listener: (event: CaptureGearPickupEvent) => void): () => void {
     this.gearPickupListeners.add(listener);
     return () => this.gearPickupListeners.delete(listener);
+  }
+
+  subscribeKills(listener: (state: CaptureKillState) => void): () => void {
+    this.killListeners.add(listener);
+    listener(this.killState());
+    return () => this.killListeners.delete(listener);
+  }
+
+  private killState(): CaptureKillState {
+    const kills = [...this.killCounts]
+      .map(([name, count]) => ({ name, count }))
+      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+    return { kills };
+  }
+
+  private publishKills(): void {
+    const state = this.killState();
+    for (const listener of this.killListeners) listener(state);
+  }
+
+  /** Counts a monster the local player, or one of their summons, landed the killing blow on. */
+  private countLocalKills(events: readonly FishNetCombatEvent[]): void {
+    let changed = false;
+    for (const event of events) {
+      if (event.kind !== "death" || event.team !== 0 || !this.isLocalRewardActor(event.actorId)) continue;
+      const name = this.mobs.get(event.targetId)?.displayName;
+      if (name === undefined) continue;
+      this.killCounts.set(name, (this.killCounts.get(name) ?? 0) + 1);
+      changed = true;
+    }
+    if (changed) this.publishKills();
+  }
+
+  /** Everything that follows the player to a new map starts over here. */
+  private noteMapChange(): void {
+    this.options.onGoldMapChange?.();
+    if (this.killCounts.size === 0) return;
+    this.killCounts.clear();
+    this.publishKills();
   }
 
   subscribeArtifactPickup(listener: (event: CaptureArtifactPickupEvent) => void): () => void {
@@ -934,6 +980,7 @@ export class CaptureCoordinator {
       const observedAtMs = this.clock.now();
       for (const identity of identities) this.statusTracker.consumeIdentity(identity);
       for (const event of events) this.statusTracker.consume(event, observedAtMs);
+      this.countLocalKills(events);
       this.scheduleActiveStatusExpiry();
       handled ||= identities.length > 0 || events.length > 0;
       for (const event of identities) this.combatLog?.log("combat.actorIdentity", jsonObject(event));
@@ -975,7 +1022,7 @@ export class CaptureCoordinator {
     if (sameSpiritValeLocation(location, this.lastLoggedLocation)) return;
     this.pendingDirectWorldTransition = true;
     this.lastObservedMapId = location.mapId;
-    this.options.onGoldMapChange?.();
+    this.noteMapChange();
     if (this.options.resetOnMapChange?.()) {
       void this.rotateSession({ location }).catch(() => {});
     } else {
@@ -988,7 +1035,7 @@ export class CaptureCoordinator {
     this.pendingDirectWorldTransition = false;
     this.combatLog?.log("combat.actorIdentity", { kind: "actorIdentity", operation: "reset", tick });
     this.resetTrackers("character");
-    this.options.onGoldMapChange?.();
+    this.noteMapChange();
     if (this.options.resetOnMapChange?.()) {
       void this.rotateSession({ identities: [], resetRewards: true }).catch(() => {});
     } else {
@@ -1002,7 +1049,7 @@ export class CaptureCoordinator {
     const initialLogin = !this.sawAuthenticated && !this.sawAdmittedTrafficBeforeAuthentication;
     this.sawAuthenticated = true;
     if (initialLogin) return;
-    this.options.onGoldMapChange?.();
+    this.noteMapChange();
     if (!this.options.resetOnMapChange?.()) return;
     void this.rotateSession(seed).catch(() => {});
   }
@@ -1180,7 +1227,7 @@ export class CaptureCoordinator {
     this.towerLocationDeadlineMs = undefined;
     const location = this.effectiveLocation();
     const changed = location !== undefined && !sameSpiritValeLocation(location, this.lastLoggedLocation);
-    if (changed && allowSideEffects) this.options.onGoldMapChange?.();
+    if (changed && allowSideEffects) this.noteMapChange();
     const shouldRotate = allowSideEffects
       && location !== undefined
       && (forceRotation || (changed && this.options.resetOnMapChange?.()));

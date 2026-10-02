@@ -11,7 +11,7 @@ export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers
 import type { OverlayTimerState, TimerMode } from "./timer.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer"] as const;
@@ -168,7 +168,24 @@ export interface OverlayMeterState {
     damage: number;
     critRate?: number;
     durationMs: number;
+    /** The encounter's damage by skill or attack, largest first. */
+    skills: OverlayMeterSkill[];
   };
+}
+
+export interface OverlayMeterSkill {
+  sourceId: string;
+  label: string;
+  damage: number;
+  /** Share of the player's encounter damage, 0-1. */
+  contribution: number;
+  hits: number;
+  critRate?: number;
+}
+
+/** Monsters the local player has killed since the last map change, most killed first. */
+export interface OverlayKillState {
+  kills: Array<{ name: string; count: number }>;
 }
 
 export interface OverlayViewState {
@@ -179,6 +196,7 @@ export interface OverlayViewState {
   minimap: OverlayMinimapState;
   bossTimers: BossTimerState;
   timer: OverlayTimerState;
+  kills: OverlayKillState;
 }
 
 export interface OverlayLootToastEvent {
@@ -320,6 +338,7 @@ export type OverlayRpc = {
     lootDropped: OverlayLootToastEvent;
     gearPickedUp: OverlayGearPickupEvent;
     timerChanged: OverlayTimerState;
+    killsChanged: OverlayKillState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

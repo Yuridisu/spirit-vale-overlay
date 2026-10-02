@@ -256,6 +256,7 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeMinimap: (listener) => capture.subscribeMinimap(listener),
   subscribeLootToast: (listener) => capture.subscribeLootToast(listener),
   subscribeGearPickup: (listener) => capture.subscribeGearPickup((equipment) => listener(describeGearPickup(equipment))),
+  subscribeKills: (listener) => capture.subscribeKills(listener),
   subscribeArtifactPickup: (listener) => capture.subscribeArtifactPickup((artifact) => listener(describeArtifactPickup(artifact))),
   xp: xpTracker,
   bossTimers,

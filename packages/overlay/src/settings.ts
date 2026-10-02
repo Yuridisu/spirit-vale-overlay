@@ -94,6 +94,8 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   gearPickup: { enabled: false, opacity: 0, x: 1190, y: 500, width: 300, height: 260 },
   artifactPickup: { enabled: false, opacity: 0, x: 1190, y: 230, width: 300, height: 260 },
   timer: { enabled: false, opacity: 0.6, x: 905, y: 70, width: 110, height: 46 },
+  killCounter: { enabled: false, opacity: 0.4, x: 430, y: 420, width: 220, height: 220 },
+  dpsDetails: { enabled: false, opacity: 0.4, x: 1235, y: 100, width: 251, height: 230 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
