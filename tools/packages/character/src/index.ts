@@ -13,6 +13,7 @@ export type {
   CharacterEquipment,
   CharacterHealingTraits,
   CharacterIdentity,
+  CharacterInventoryItem,
   GearStatTotal,
   CharacterRecordValues,
   CharacterSubstat,

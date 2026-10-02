@@ -35,6 +35,11 @@ section as the GitHub Release notes, so write it for the people who use the app.
   steps, laid out in the two columns of the game's equipment screen so each rating sits beside its
   slot. The overlay cannot see that screen open, so `Ctrl+Shift+G` shows the ratings and that key
   or Escape hides them; bind it to the key that opens your equipment screen to have both together.
+- **Item counter element.** Follow up to eight items you are farming and see how many of each you
+  carry while you hunt, with what you have picked up since the app started beside it. Choose the
+  items under Settings > Overlay > Item counter; items in your bag are suggested as you type. The
+  count follows your pickups, and catches up with anything sold, used or stored the next time the
+  game sends your bag, on a map or channel change.
 - **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
   it, with each one's share of the total.
 

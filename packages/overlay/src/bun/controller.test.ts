@@ -43,6 +43,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendBossFight: () => {},
     sendGearRating: () => {},
     sendDamageTaken: () => {},
+    sendItemCounter: () => {},
   };
 }
 
@@ -61,6 +62,7 @@ async function createController(settingsPath: string): Promise<OverlayController
     subscribeBossFight: () => () => {},
     subscribeGearRating: () => () => {},
     subscribeDamageTaken: () => () => {},
+    subscribeInventory: () => () => {},
     xp: {
       getSnapshot: () => ({ ...emptyRate, timeline: [] }),
       getCoinsSnapshot: () => ({ ...emptyRate }),

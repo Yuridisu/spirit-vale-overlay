@@ -2,7 +2,7 @@ import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
 import { decodeCharacterRpcPayload, rescaleSubstats, resolveCharacterArchetypeId } from "./decoder.ts";
 import { aggregateGearSubstats, calculateAdvancedGearStats, calculateCharacterStats, calculateWeightLimit, materializeGearStats, materializeSkillStats } from "./formulas.ts";
 import { decodeCharacterRecordSync, decodeCharacterSpawnRecords } from "./record-decoder.ts";
-import type { CharacterIdentity, CharacterRecordValues, CharacterSnapshot, CharacterStatBreakdown, CharacterViewState } from "./types.ts";
+import type { CharacterIdentity, CharacterInventoryItem, CharacterRecordValues, CharacterSnapshot, CharacterStatBreakdown, CharacterViewState } from "./types.ts";
 
 const CHARACTER_RPCS = new Set(["LoadCharacter_T", "CharacterCallback_T"]);
 const MAX_PENDING_RECORD_OBJECTS = 4_096;
@@ -33,6 +33,8 @@ export class FishNetCharacterTracker {
   private identity?: CharacterIdentity;
   private unsupportedDetail?: string;
   private currentWeight?: number;
+  private inventoryItems?: CharacterInventoryItem[];
+  private inventoryRevision = 0;
   private localObjectId?: number;
   /** Transport connection that owns {@link localObjectId}; object ids only mean anything within one. */
   private localConnectionId?: string;
@@ -99,11 +101,16 @@ export class FishNetCharacterTracker {
       const decoded = decodeCharacterRpcPayload(packet.payload, packet.rpcName === "CharacterCallback_T");
       if (this.snapshot && this.snapshot.name !== decoded.snapshot.name) {
         this.currentWeight = undefined;
+        this.dropInventory();
         this.records = {};
         this.resetRegenSequences();
       }
       this.snapshot = mergeSnapshot(this.snapshot, decoded.snapshot, decoded.updateType);
       if (decoded.currentWeight !== undefined) this.currentWeight = decoded.currentWeight;
+      if (decoded.inventory !== undefined) {
+        this.inventoryItems = decoded.inventory;
+        this.inventoryRevision += 1;
+      }
       this.unsupportedDetail = undefined;
     } catch (error) {
       this.unsupportedDetail = `Character data isn't recognized: ${errorMessage(error)}. Change maps or channels to request a fresh update.`.slice(0, 240);
@@ -190,11 +197,26 @@ export class FishNetCharacterTracker {
   setCached(snapshot: CharacterSnapshot | undefined): void {
     this.snapshot = snapshot ? { ...snapshot, source: "cached" } : undefined;
     this.currentWeight = undefined;
+    this.dropInventory();
     this.records = {};
     this.pendingRecords.clear();
     this.resetRegenSequences();
     this.unsupportedDetail = undefined;
     this.publish();
+  }
+
+  /**
+   * The stackable items last reported in the bag. `revision` moves each time the game sends the
+   * bag again, so a caller can tell a fresh report from one it has already seen.
+   */
+  inventory(): { revision: number; items: readonly CharacterInventoryItem[] } | undefined {
+    return this.inventoryItems ? { revision: this.inventoryRevision, items: this.inventoryItems } : undefined;
+  }
+
+  private dropInventory(): void {
+    if (!this.inventoryItems) return;
+    this.inventoryItems = undefined;
+    this.inventoryRevision += 1;
   }
 
   current(): CharacterSnapshot | undefined { return this.snapshot ? structuredClone(this.snapshot) : undefined; }

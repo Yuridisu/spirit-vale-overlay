@@ -1,5 +1,6 @@
 import path from "node:path";
 import { TIMER_MODES, type TimerMode } from "./timer.ts";
+import { normalizeItemCounterItems } from "./item-counter.ts";
 import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
 
@@ -52,6 +53,8 @@ export interface OverlaySettings {
   timerMode: TimerMode;
   /** Target of the countdown, in seconds. */
   timerDurationSeconds: number;
+  /** The item followed in each counter slot; an empty string is a free slot. */
+  itemCounterItems: string[];
 }
 
 const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
@@ -100,6 +103,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   bossMeter: { enabled: false, opacity: 0.5, x: 960, y: 300, width: 270, height: 380 },
   damageTaken: { enabled: false, opacity: 0.4, x: 1235, y: 340, width: 251, height: 230 },
   gearRating: { enabled: false, opacity: 0, x: 112, y: 125, width: 1049, height: 480 },
+  itemCounter: { enabled: false, opacity: 0.4, x: 430, y: 650, width: 220, height: 150 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -218,6 +222,7 @@ export function normalizeOverlaySettings(
     minimapRange: normalizeMinimapRange(source.minimapRange),
     timerMode: TIMER_MODES.includes(source.timerMode as TimerMode) ? source.timerMode as TimerMode : "countdown",
     timerDurationSeconds: normalizeTimerDuration(source.timerDurationSeconds),
+    itemCounterItems: normalizeItemCounterItems(source.itemCounterItems),
   };
 }
 

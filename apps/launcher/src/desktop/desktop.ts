@@ -264,6 +264,7 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeKills: (listener) => capture.subscribeKills(listener),
   subscribeBossFight: (listener) => capture.subscribeBossFight(listener),
   subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
+  subscribeInventory: (listener) => capture.subscribeInventory(listener),
   subscribeGearRating: (listener) => {
     listener(rateGear(capture.characterState().snapshot));
     return capture.subscribeCharacter((state) => listener(rateGear(state.snapshot)));
@@ -506,6 +507,7 @@ const settingsRpc = BrowserView.defineRPC<LauncherSettingsRpc>({
       setMinimapLootChanceFilter: overlayAction((o, { chance }: { chance: number }) => o.setMinimapLootChanceFilter(chance)),
       setMinimapRange: overlayAction((o, { range }: { range: number }) => o.setMinimapRange(range)),
       setTimerConfig: overlayAction((o, { mode, durationSeconds }: { mode: TimerMode; durationSeconds: number }) => o.setTimerConfig(mode, durationSeconds)),
+      setItemCounterItems: overlayAction((o, { items }: { items: string[] }) => o.setItemCounterItems(items)),
       importSettings: () => importSettings(),
       importSetting: ({ kind }) => importSetting(kind),
       exportSetting: ({ kind }) => exportSettingAndNotify(kind),

@@ -8,7 +8,7 @@ const ACTIVE_CHARACTER_OBJECT_ID = -1;
 
 type CharacterTracker = Pick<
   FishNetCharacterTracker,
-  "consume" | "current" | "currentArchetypeId" | "rekeyPendingObject" | "setCached" | "state" | "subscribe"
+  "consume" | "current" | "currentArchetypeId" | "inventory" | "rekeyPendingObject" | "setCached" | "state" | "subscribe"
 >;
 
 interface LocalCharacterRouterOptions {
@@ -49,6 +49,10 @@ export class LocalCharacterRouter {
 
   current(): CharacterSnapshot | undefined {
     return this.tracker.current();
+  }
+
+  inventory(): ReturnType<FishNetCharacterTracker["inventory"]> {
+    return this.tracker.inventory();
   }
 
   currentArchetypeId(): number | undefined {

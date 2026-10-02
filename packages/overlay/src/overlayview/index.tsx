@@ -11,7 +11,7 @@ import { setLocked, startOverlayTransport } from "./transport.ts";
 import { BossTimersOverlayElement } from "./tiles/boss-timers.tsx";
 import { ClockElement } from "./tiles/clock.tsx";
 import { TimerElement } from "./tiles/timer.tsx";
-import { DamageTakenElement, DpsDetailsElement, KillCounterElement } from "./tiles/details.tsx";
+import { DamageTakenElement, DpsDetailsElement, ItemCounterElement, KillCounterElement } from "./tiles/details.tsx";
 import { GearRatingElement } from "./tiles/gear-rating.tsx";
 import { BossMeterElement } from "./tiles/boss-meter.tsx";
 import { ArtifactPickupElement, GearPickupElement } from "./tiles/gear-pickup.tsx";
@@ -111,6 +111,9 @@ function App() {
       </OverlayElement>
       <OverlayElement id="bossMeter" locked={next.locked}>
         <BossMeterElement />
+      </OverlayElement>
+      <OverlayElement id="itemCounter" locked={next.locked}>
+        <ItemCounterElement />
       </OverlayElement>
       <OverlayElement id="killCounter" locked={next.locked}>
         <KillCounterElement />

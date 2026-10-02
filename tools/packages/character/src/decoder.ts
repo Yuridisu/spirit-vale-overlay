@@ -4,7 +4,7 @@ import { readSignedPackedWhole } from "@kar-mi/spirit-vale-tools-capture/wire-re
 import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
 import { resolveFishNetSkill } from "@kar-mi/spirit-vale-tools-skills";
 import { PERCENT_STATS, STAT_NAMES } from "./stat-names.ts";
-import type { CharacterArtifact, CharacterAttributes, CharacterEquipment, CharacterSkill, CharacterSnapshot, CharacterSubstat } from "./types.ts";
+import type { CharacterArtifact, CharacterAttributes, CharacterEquipment, CharacterInventoryItem, CharacterSkill, CharacterSnapshot, CharacterSubstat } from "./types.ts";
 
 const ARCHETYPES: Record<number, string> = {
   [-1]: "Novice", 0: "Warrior", 1: "Mage", 2: "Rogue", 3: "Knight", 4: "Summoner", 5: "Acolyte", 6: "Scout",
@@ -21,6 +21,8 @@ export interface DecodedCharacterUpdate {
   updateType: number;
   snapshot: CharacterSnapshot;
   currentWeight?: number;
+  /** The stackable items in the bag. Absent when the payload ended before the inventory. */
+  inventory?: CharacterInventoryItem[];
 }
 
 export function resolveCharacterArchetypeId(name: string): number | undefined {
@@ -71,11 +73,12 @@ export function decodeCharacterRpcPayload(payload: Buffer, includesUpdateType: b
     .filter((value): value is CharacterArtifact => value !== undefined);
   const equipment = loadouts[activeIndex]?.length ? loadouts[activeIndex]! : equipped;
 
-  const { skills, currentWeight, ...history } = readCharacterHistory(data, run.complete, equipped, artifacts);
+  const { skills, currentWeight, inventory, ...history } = readCharacterHistory(data, run.complete, equipped, artifacts);
 
   return {
     updateType,
     ...(currentWeight === undefined ? {} : { currentWeight }),
+    ...(inventory === undefined ? {} : { inventory }),
     snapshot: {
       schemaVersion: 1,
       buildFingerprint: CURRENT_GAME_BUILD_FINGERPRINT,
@@ -146,6 +149,7 @@ function readCharacterHistory(
   assignedSkills?: CharacterSkill[];
   grimoires?: CharacterEquipment[];
   currentWeight?: number;
+  inventory?: CharacterInventoryItem[];
 } {
   // A partial callback may end after build data. Unlike a raw byte reader, the schema-driven
   // decode does not throw on a truncated payload — it just stops emitting fields — so truncation
@@ -162,6 +166,13 @@ function readCharacterHistory(
       .map((item, index) => (item ? { ...item, slot: `Grimoire ${index + 1}` } : undefined))
       .filter((item): item is CharacterEquipment => item !== undefined);
     let inventoryWeight = 0;
+    const stackables: CharacterInventoryItem[] = [];
+    const stack = (category: CharacterInventoryItem["category"], item: FieldNode | undefined): number => {
+      const count = readStackableCount(item);
+      const itemId = leafString(item, "Id");
+      if (itemId && count > 0) stackables.push({ category, itemId, count });
+      return count;
+    };
     const inventory = child(data, "Inventory");
     if (inventory) {
       dictionaryValues(inventory, "Equips", (item) => {
@@ -171,13 +182,13 @@ function readCharacterHistory(
       dictionaryValues(inventory, "Artifacts", (item) => {
         if (readArtifactData(item)) inventoryWeight += 10;
       });
-      dictionaryValues(inventory, "Cards", (item) => { inventoryWeight += readStackableCount(item); });
+      dictionaryValues(inventory, "Cards", (item) => { inventoryWeight += stack("card", item); });
       dictionaryValues(inventory, "Gems", (item) => {
         // The game's inventory-total routine reads gems but omits them from weight.
         readRefinableItem(item);
       });
-      dictionaryValues(inventory, "Junks", (item) => { inventoryWeight += readStackableCount(item); });
-      dictionaryValues(inventory, "Consumables", (item) => { inventoryWeight += readStackableCount(item); });
+      dictionaryValues(inventory, "Junks", (item) => { inventoryWeight += stack("material", item); });
+      dictionaryValues(inventory, "Consumables", (item) => { inventoryWeight += stack("consumable", item); });
       dictionaryValues(inventory, "Cosmetics", () => undefined);
     }
     const playtimeSeconds = leafInt64Number(data, "Playtime", 0);
@@ -189,6 +200,7 @@ function readCharacterHistory(
       ...(assigned.length ? { assignedSkills: assigned } : {}),
       grimoires,
       currentWeight: equippedWeight + inventoryWeight,
+      ...(inventory ? { inventory: stackables } : {}),
       playtimeSeconds,
       monsterKills,
       bossKills,

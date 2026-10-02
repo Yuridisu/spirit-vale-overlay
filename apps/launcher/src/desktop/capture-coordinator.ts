@@ -42,6 +42,7 @@ import type {
   LogStream,
   LogWriteFailure,
 } from "@kar-mi/spirit-vale-tools-logging";
+import { resolveFishNetItemDisplayName } from "@kar-mi/spirit-vale-tools-items";
 import { decodeFishNetRewardPacket, FishNetLootDropTracker, FishNetMobDirectory, FishNetMobRewardTracker, mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
 import type { FishNetConfirmedMobKill, FishNetLootDrop, FishNetLootDropEvent, PickedUpArtifact, PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
 import { TOWER_FLOOR_EVENT_SOURCE_PREFIX, TOWER_FLOOR_UNKNOWN_SUFFIX, ZONE_EVENT_SOURCE_PREFIX } from "@svoverlay/combat/zone-log";
@@ -55,6 +56,7 @@ import type { BossGravestoneObservation } from "./boss-timer-coordinator.ts";
 import { CaptureDiagnostics } from "./capture-diagnostics.ts";
 import { CaptureHealthMonitor } from "./capture-health-monitor.ts";
 import { systemClock, type Clock, type ClockTimer } from "./clock.ts";
+import { InventoryCounter, type InventoryCountState } from "./inventory-counter.ts";
 import { LocalCharacterRouter } from "./local-character-router.ts";
 import { RewardEventAttributor } from "./reward-event-attributor.ts";
 
@@ -194,6 +196,10 @@ export class CaptureCoordinator {
   private readonly damageTakenListeners = new Set<(state: DamageTakenState) => void>();
   private readonly damageTaken = new DamageTakenTracker();
   private damageTakenTimer?: ClockTimer;
+  private readonly inventoryListeners = new Set<(state: InventoryCountState) => void>();
+  private readonly inventoryCounter = new InventoryCounter();
+  /** The bag report the counter was last filled from, so the same one is not applied over later pickups. */
+  private inventoryRevision: number | undefined;
   private bossFightTimer?: ClockTimer;
   /** Local kills by monster name since the last map change. */
   private readonly killCounts = new Map<string, number>();
@@ -201,7 +207,10 @@ export class CaptureCoordinator {
   private readonly killRewards = new Map<string, { experience: number; coins: number }>();
   private readonly toastedLootIds = new Set<number>();
   private readonly character = new LocalCharacterRouter({
-    onHandled: () => this.syncLocalActorIdentity(),
+    onHandled: () => {
+      this.syncLocalActorIdentity();
+      this.syncInventory();
+    },
     onError: (packet, error) => this.logCharacterWarning(packet, error),
   });
   private readonly inspected = new FishNetInspectRoster(Number.POSITIVE_INFINITY);
@@ -425,6 +434,31 @@ export class CaptureCoordinator {
   subscribeGearPickup(listener: (event: CaptureGearPickupEvent) => void): () => void {
     this.gearPickupListeners.add(listener);
     return () => this.gearPickupListeners.delete(listener);
+  }
+
+  subscribeInventory(listener: (state: InventoryCountState) => void): () => void {
+    this.inventoryListeners.add(listener);
+    listener(this.inventoryCounter.state());
+    return () => this.inventoryListeners.delete(listener);
+  }
+
+  /** Refills the item counts whenever the game has sent the bag again. */
+  private syncInventory(): void {
+    const bag = this.character.inventory();
+    if (!bag) {
+      this.inventoryRevision = undefined;
+      if (this.inventoryCounter.forgetBag()) this.publishInventory();
+      return;
+    }
+    if (bag.revision === this.inventoryRevision) return;
+    this.inventoryRevision = bag.revision;
+    this.inventoryCounter.setBag(bag.items.map((item) => ({ name: stackableName(item.category, item.itemId), count: item.count })));
+    this.publishInventory();
+  }
+
+  private publishInventory(): void {
+    const state = this.inventoryCounter.state();
+    for (const listener of this.inventoryListeners) listener(state);
   }
 
   subscribeDamageTaken(listener: (state: DamageTakenState) => void): () => void {
@@ -1477,9 +1511,12 @@ export class CaptureCoordinator {
   /** Equipment and artifacts keep their rolls only in the pickup packet, so they are read here rather than from the reward totals. */
   private emitGearPickups(packet: CapturedFishNetPacket): void {
     if (packet.rpcName !== "PickupItems_T") return;
-    if (this.gearPickupListeners.size === 0 && this.artifactPickupListeners.size === 0) return;
     const pickup = decodeFishNetRewardPacket(packet);
     if (pickup?.kind !== "pickup") return;
+    const stacks = pickup.items.flatMap((item) => isStackable(item.category)
+      ? [{ name: stackableName(item.category, item.itemId), count: item.count }]
+      : []);
+    if (this.inventoryCounter.addPickup(stacks)) this.publishInventory();
     for (const equipment of pickup.equipment) {
       for (const listener of this.gearPickupListeners) listener(equipment);
     }
@@ -1793,4 +1830,17 @@ function errorMessage(error: unknown): string {
 
 function envFlag(value: string | undefined): boolean {
   return value !== undefined && value !== "" && value !== "0" && value.toLowerCase() !== "false";
+}
+
+/** Item-catalog types of the bag's stackable categories. */
+const STACKABLE_ITEM_TYPES = { material: 0, consumable: 1, card: 4 } as const;
+type StackableCategory = keyof typeof STACKABLE_ITEM_TYPES;
+
+function isStackable(category: string): category is StackableCategory {
+  return category in STACKABLE_ITEM_TYPES;
+}
+
+/** The name the game shows for a stackable item, which is what the player types to follow it. */
+function stackableName(category: StackableCategory, itemId: string): string {
+  return resolveFishNetItemDisplayName(STACKABLE_ITEM_TYPES[category], itemId) ?? itemId;
 }

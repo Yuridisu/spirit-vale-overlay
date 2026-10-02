@@ -60,6 +60,7 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     setMinimapLootChanceFilter: (chance: number) => controller.setMinimapLootChanceFilter(chance),
     setMinimapRange: (range: number) => controller.setMinimapRange(range),
     setTimerConfig: (mode: TimerMode, durationSeconds: number) => controller.setTimerConfig(mode, durationSeconds),
+    setItemCounterItems: (items: string[]) => controller.setItemCounterItems(items),
     toggleTimer: () => controller.toggleTimer(),
     resetTimer: () => controller.resetTimer(),
     getTimerState: () => controller.timerState(),

@@ -128,6 +128,10 @@ class FakeCharacterTracker {
     return undefined;
   }
 
+  inventory(): undefined {
+    return undefined;
+  }
+
   setCached(snapshot: CharacterSnapshot | undefined): void {
     this.snapshot = snapshot;
   }

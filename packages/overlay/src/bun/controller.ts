@@ -18,6 +18,7 @@ import { Screen } from "@svoverlay/desktop-runtime";
 
 import { idleTimer, toggleTimer } from "../timer.ts";
 import type { OverlayTimerState, TimerMode } from "../timer.ts";
+import { itemCounterState, type ItemCounterSource, type OverlayItemCounterState } from "../item-counter.ts";
 import type {
   BossTimerState,
   KeybindAction,
@@ -135,6 +136,8 @@ export interface OverlayControllerOptions {
   subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
   /** Calls the listener at once with the current tally, then on every change. */
   subscribeDamageTaken: (listener: (state: OverlayDamageTakenState) => void) => () => void;
+  /** Calls the listener at once with the bag as it is known, then on every change. */
+  subscribeInventory: (listener: (state: ItemCounterSource) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -167,6 +170,7 @@ export interface OverlaySurfaceSink {
   sendBossFight(state: OverlayBossFightState | undefined): void;
   sendGearRating(state: OverlayGearRatingState): void;
   sendDamageTaken(state: OverlayDamageTakenState): void;
+  sendItemCounter(state: OverlayItemCounterState): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -287,6 +291,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendDamageTaken(next));
   });
+  let inventorySource: ItemCounterSource = { known: false, items: [] };
+  let lastItemCounterJson = "";
+  const unsubscribeInventory = options.subscribeInventory((next) => {
+    inventorySource = next;
+    publishItemCounter();
+  });
   let gearRating: OverlayGearRatingState = { slots: [] };
   let lastGearRatingJson = "";
   const unsubscribeGearRating = options.subscribeGearRating((next) => {
@@ -365,6 +375,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setMinimapLootChanceFilter,
     setMinimapRange,
     setTimerConfig,
+    setItemCounterItems,
     toggleTimer: toggleTimerNow,
     resetTimer: resetTimerNow,
     timerState: (): OverlayTimerState => timer,
@@ -400,6 +411,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeBossFight();
       unsubscribeGearRating();
       unsubscribeDamageTaken();
+      unsubscribeInventory();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);
@@ -467,6 +479,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       minimapRange: settings.minimapRange,
       timerMode: settings.timerMode,
       timerDurationSeconds: settings.timerDurationSeconds,
+      itemCounterItems: settings.itemCounterItems,
+      itemCounterChoices: inventorySource.items.filter((item) => item.count > 0).map((item) => item.name),
     };
   }
 
@@ -543,6 +557,23 @@ export async function createOverlayController(options: OverlayControllerOptions)
     return timer;
   }
 
+  function setItemCounterItems(items: string[]): OverlayItemCounterState {
+    settings = normalizeOverlaySettings({ ...settings, itemCounterItems: items }, displays);
+    persist();
+    publishItemCounter();
+    return itemCounterState(settings.itemCounterItems, inventorySource);
+  }
+
+  /** The bag changes on every pickup, but only a change to a followed item is worth sending. */
+  function publishItemCounter(): void {
+    const next = itemCounterState(settings.itemCounterItems, inventorySource);
+    const json = JSON.stringify(next);
+    if (json === lastItemCounterJson) return;
+    lastItemCounterJson = json;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendItemCounter(next));
+  }
+
   function setTimer(next: OverlayTimerState): void {
     timer = next;
     if (shuttingDown) return;
@@ -614,6 +645,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       ...(bossFight === undefined ? {} : { bossFight }),
       gearRating,
       damageTaken,
+      itemCounter: itemCounterState(settings.itemCounterItems, inventorySource),
     };
   }
 

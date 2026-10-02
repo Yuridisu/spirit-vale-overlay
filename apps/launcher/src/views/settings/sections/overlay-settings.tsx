@@ -51,6 +51,16 @@ export function buildOverlaySettingsSection({ state, busy, actions, t }: Setting
         </div><p class="settings-hint">{t("settings.overlay.timer.hint")}</p></>,
       },
       {
+        id: "overlay-item-counter",
+        searchText: t("settings.overlay.itemCounter.search"),
+        content: <><div class="settings-card"><h2>{t("settings.overlay.itemCounter.label")}</h2>
+          <datalist id="item-counter-choices">{overlay.itemCounterChoices.map((name) => <option key={name} value={name} />)}</datalist>
+          <div class="settings-item-grid">{overlay.itemCounterItems.map((name, slot) => (
+            <label class="settings-field" key={slot}><span>{t("settings.overlay.itemCounter.slot", { slot: slot + 1 })}</span><input class="input" type="text" list="item-counter-choices" maxLength={60} placeholder={t("settings.overlay.itemCounter.placeholder")} disabled={busy} value={name} onChange={(event) => actions.setItemCounterItems(overlay.itemCounterItems.map((current, index) => index === slot ? event.currentTarget.value : current))} /></label>
+          ))}</div>
+        </div><p class="settings-hint">{t("settings.overlay.itemCounter.hint")}</p></>,
+      },
+      {
         id: "visible-elements",
         searchText: `${t("settings.overlay.elements.search")} ${OVERLAY_ELEMENT_IDS.map((id) => elementLabel(t, id)).join(" ")}`,
         content: <><div class="settings-card"><h2>{t("settings.overlay.elements.label")}</h2>{OVERLAY_ELEMENT_IDS.map((id) => {

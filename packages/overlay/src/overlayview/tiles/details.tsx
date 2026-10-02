@@ -1,11 +1,12 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatInteger } from "@svoverlay/ui-kit/format";
-import { damageTakenState, killState, meterState } from "../store.ts";
+import { damageTakenState, itemCounter, killState, meterState } from "../store.ts";
 import { WaitingForDps } from "./common.tsx";
 
 const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
 const KILL_ROW_COLOR = "rgba(190, 74, 69, 0.46)";
 const TAKEN_ROW_COLOR = "rgba(213, 130, 42, 0.5)";
+const ITEM_ROW_COLOR = "rgba(86, 160, 96, 0.46)";
 
 /** The local player's encounter damage, broken down by the skill or attack that dealt it. */
 export function DpsDetailsElement() {
@@ -68,6 +69,31 @@ export function DamageTakenElement() {
           </span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
+    </div>
+  );
+}
+
+/** How many of each followed item the player carries, in the order the slots were filled. */
+export function ItemCounterElement() {
+  const t = useTranslator();
+  const state = itemCounter.value;
+  const rows = state?.rows ?? [];
+  const known = state?.known ?? false;
+  return (
+    <div class="element-content">
+      <div class="party-heading">
+        <h2 class="element-title">{t("overlay.itemCounter.heading")}</h2>
+      </div>
+      {rows.length ? <div class="ranking">{rows.map((row) => (
+        <div class="ranking-row detail-row" key={row.name} style={`--row-fill:100%;--row-color:${ITEM_ROW_COLOR}`}>
+          <span class="ranking-name">{row.name}</span>
+          <span class="detail-values">
+            {row.gained > 0 && <span class="item-gained" title={t("overlay.itemCounter.gained")}>+{formatInteger(row.gained)}</span>}
+            <strong>{known ? formatInteger(row.count) : "?"}</strong>
+          </span>
+        </div>
+      ))}</div> : <span class="detail-empty">{t("overlay.itemCounter.empty")}</span>}
+      {rows.length > 0 && !known && <span class="detail-empty">{t("overlay.itemCounter.unknown")}</span>}
     </div>
   );
 }

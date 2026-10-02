@@ -8,6 +8,11 @@ describe("decodeCharacterRpcPayload", () => {
     const decoded = decodeCharacterRpcPayload(payload, true, new Date("2026-01-01T00:00:00.000Z"));
     expect(decoded.updateType).toBe(4);
     expect(decoded.currentWeight).toBe(71);
+    expect(decoded.inventory).toEqual([
+      { category: "card", itemId: "Fictional Card", count: 7 },
+      { category: "material", itemId: "Fictional Material", count: 11 },
+      { category: "consumable", itemId: "Fictional Potion", count: 13 },
+    ]);
     expect(decoded.snapshot).toMatchObject({
       name: "Example Hero",
       title: "Trailblazer",

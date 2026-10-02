@@ -41,6 +41,7 @@ export interface SettingsActions {
   setMinimapLootChanceFilter(value: number): void;
   setMinimapRange(value: number): void;
   setTimerConfig(mode: TimerMode, durationSeconds: number): void;
+  setItemCounterItems(items: string[]): void;
   setRequiredStatuses(category: RequiredStatusCategory, statusIds: string[]): void;
   importSettings(): void;
   importSetting(kind: SettingsKind): void;

@@ -9,9 +9,11 @@ import type { RequiredStatusCategory } from "./required-statuses.ts";
 export type { StatType, RequiredStatusCategory };
 export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers";
 import type { OverlayTimerState, TimerMode } from "./timer.ts";
+import type { OverlayItemCounterState } from "./item-counter.ts";
+export type { ItemCounterSource, OverlayItemCounterState } from "./item-counter.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating"] as const;
@@ -238,6 +240,7 @@ export interface OverlayViewState {
   bossFight?: OverlayBossFightState;
   gearRating: OverlayGearRatingState;
   damageTaken: OverlayDamageTakenState;
+  itemCounter: OverlayItemCounterState;
 }
 
 export interface OverlayLootToastEvent {
@@ -312,6 +315,10 @@ export interface OverlaySettingsState {
   minimapRange: number;
   timerMode: TimerMode;
   timerDurationSeconds: number;
+  /** The item followed in each counter slot; an empty string is a free slot. */
+  itemCounterItems: string[];
+  /** Items in the bag right now, offered as suggestions when choosing what to follow. */
+  itemCounterChoices: string[];
 }
 
 type OverlaySharedRequests = {
@@ -383,6 +390,7 @@ export type OverlayRpc = {
     bossFightChanged: OverlayBossFightState | undefined;
     gearRatingChanged: OverlayGearRatingState;
     damageTakenChanged: OverlayDamageTakenState;
+    itemCounterChanged: OverlayItemCounterState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

@@ -137,6 +137,7 @@ export type LauncherSettingsRpc = {
     setMinimapLootChanceFilter: { params: { chance: number }; response: SharedSettingsState };
     setMinimapRange: { params: { range: number }; response: SharedSettingsState };
     setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: SharedSettingsState };
+    setItemCounterItems: { params: { items: string[] }; response: SharedSettingsState };
     importSettings: { params: Record<string, never>; response: void };
     importSetting: { params: { kind: SettingsKind }; response: void };
     exportSetting: { params: { kind: SettingsKind }; response: void };

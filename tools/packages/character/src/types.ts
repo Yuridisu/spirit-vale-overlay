@@ -123,6 +123,13 @@ export interface CharacterRecordValues {
   updatedAt?: string;
 }
 
+/** A stackable item in the bag and how many of it the character carries. */
+export interface CharacterInventoryItem {
+  category: "card" | "material" | "consumable";
+  itemId: string;
+  count: number;
+}
+
 /** Live inventory weight reconstructed from the same character payload used by the game UI. */
 export interface CharacterWeight {
   current: number;
