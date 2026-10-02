@@ -126,7 +126,8 @@ function BossTimerRow(
         <span class="boss-timer-name-text">{timer.bossName}</span>
         {isOwnBossKill(timer, playerName) && <span class="boss-own-kill" aria-label={t("overlay.bossTimers.ownKill")}>✓</span>}
       </span>
-      <span class="boss-timer-channel">{placeLabel}</span>
+      {/* A gravestone seen before the channel list arrives has no place at all; "? ?" is only noise. */}
+      {(timer.region !== undefined || timer.channel !== undefined) && <span class="boss-timer-channel">{placeLabel}</span>}
       <span class="boss-timer-status">{status}</span>
     </div>
   );
