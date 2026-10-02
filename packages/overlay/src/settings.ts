@@ -84,6 +84,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   lootToast: { enabled: false, opacity: 0, x: 579, y: 247, width: 143, height: 150 },
   minimap: { enabled: false, opacity: 0, x: 707, y: 247, width: 245, height: 242 },
   bossTimers: { enabled: false, opacity: 1, x: 1140, y: 225, width: 173, height: 113 },
+  clock: { enabled: false, opacity: 0.6, x: 905, y: 20, width: 110, height: 40 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative

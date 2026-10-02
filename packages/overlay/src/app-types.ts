@@ -9,7 +9,7 @@ import type { RequiredStatusCategory } from "./required-statuses.ts";
 export type { StatType, RequiredStatusCategory };
 export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion"] as const;
@@ -49,11 +49,16 @@ const MIN_ELEMENT_HEIGHTS: Partial<Record<OverlayElementId, number>> = {
   debuffs: MIN_COMPACT_ELEMENT_HEIGHT,
   toggles: MIN_COMPACT_ELEMENT_HEIGHT,
   bossTimers: MIN_COMPACT_ELEMENT_HEIGHT,
+  clock: MIN_BAR_HEIGHT,
+};
+
+const MIN_ELEMENT_WIDTHS: Partial<Record<OverlayElementId, number>> = {
+  clock: 60,
 };
 
 export const ELEMENT_MIN_SIZE: Record<OverlayElementId, ElementSize> = Object.fromEntries(
   OVERLAY_ELEMENT_IDS.map((id) => [id, {
-    width: MIN_ELEMENT_WIDTH,
+    width: MIN_ELEMENT_WIDTHS[id] ?? MIN_ELEMENT_WIDTH,
     height: MIN_ELEMENT_HEIGHTS[id] ?? MIN_ELEMENT_HEIGHT,
   }]),
 ) as Record<OverlayElementId, ElementSize>;

@@ -343,6 +343,7 @@ export const en = {
   "overlay.element.lootToast": "Loot notifications",
   "overlay.element.minimap": "Minimap",
   "overlay.element.bossTimers": "Boss timers",
+  "overlay.element.clock": "Clock",
 
   "rarity.common": "Common",
   "rarity.rare": "Rare",

@@ -9,6 +9,7 @@ import {
 } from "./store.ts";
 import { setLocked, startOverlayTransport } from "./transport.ts";
 import { BossTimersOverlayElement } from "./tiles/boss-timers.tsx";
+import { ClockElement } from "./tiles/clock.tsx";
 import {
   CharacterResourceElement,
   GoldTrackerElement,
@@ -91,6 +92,9 @@ function App() {
         <LootToastElement />
       </OverlayElement>
       <BossTimersOverlayElement locked={next.locked} />
+      <OverlayElement id="clock" locked={next.locked}>
+        <ClockElement />
+      </OverlayElement>
       {!next.locked && <DragGhost surface={next.surface} />}
     </main>
   );

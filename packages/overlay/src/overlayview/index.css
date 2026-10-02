@@ -585,6 +585,25 @@
 }
 .status-cell.expiring .status-remaining { color: rgb(255, 138, 138); }
 
+.overlay-element[data-element-id="clock"] {
+  min-height: 24px;
+  border-radius: 8px;
+}
+/* The digits fill the tile, so resizing the tile is how the clock is sized. */
+.overlay-element[data-element-id="clock"] .overlay-surface { container-type: size; }
+.clock-value {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-size: min(62cqh, 26cqw);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 0 4px rgba(0,0,0,.9);
+}
 .boss-timers {
   display: flex;
   flex-direction: column;
