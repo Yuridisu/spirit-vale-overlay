@@ -17,6 +17,7 @@ import type { CharacterSnapshot, CharacterViewState, InspectedCharacter } from "
 import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
 import { decodeBossGravestone, FishNetEternalTowerTracker } from "@kar-mi/spirit-vale-tools-capture";
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
+import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
 import type {
   CaptureConnectionEvent,
   CapturedFishNetPacket,
@@ -1226,8 +1227,11 @@ export class CaptureCoordinator {
     const chanceThreshold = this.options.getMinimapLootChanceFilter?.() ?? 100;
     for (const event of events) {
       if (event.kind === "removed" || this.toastedLootIds.has(event.drop.objectId)) continue;
-      if (event.drop.displayName === undefined || (event.drop.rarity ?? 0) < threshold) continue;
-      if ((event.drop.lootChance ?? 0) > chanceThreshold) continue;
+      if (event.drop.displayName === undefined) continue;
+      if (!isAlwaysShownLoot(event.drop.displayName)) {
+        if ((event.drop.rarity ?? 0) < threshold) continue;
+        if ((event.drop.lootChance ?? 0) > chanceThreshold) continue;
+      }
       this.toastedLootIds.add(event.drop.objectId);
       const toast: CaptureLootToastEvent = {
         objectId: event.drop.objectId,
