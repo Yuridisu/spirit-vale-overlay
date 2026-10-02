@@ -50,6 +50,17 @@ export function DamageTakenElement() {
           <span class="party-reset-hint">{t("overlay.damageTaken.total", { total: formatCompact(total) })}</span>
         )}
       </div>
+      {killedBy !== undefined && (
+        <div class="killed-by">
+          <span class="killed-by-title">{t("overlay.damageTaken.killedBy", { time: new Date(killedBy.atMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span>
+          <span class="killed-by-who">{killedBy.attacker ?? killedBy.label}</span>
+          <span class="killed-by-how">
+            {killedBy.attacker === undefined
+              ? t("overlay.damageTaken.killedByDamage", { damage: formatCompact(killedBy.damage) })
+              : t("overlay.damageTaken.killedByHit", { label: killedBy.label, damage: formatCompact(killedBy.damage) })}
+          </span>
+        </div>
+      )}
       {rows.length ? <div class="ranking">{rows.map((row) => (
         <div
           class="ranking-row detail-row"
@@ -70,17 +81,6 @@ export function DamageTakenElement() {
           </span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
-      {killedBy !== undefined && (
-        <div class="killed-by">
-          <span class="killed-by-title">{t("overlay.damageTaken.killedBy", { time: new Date(killedBy.atMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span>
-          <span class="killed-by-who">{killedBy.attacker ?? killedBy.label}</span>
-          <span class="killed-by-how">
-            {killedBy.attacker === undefined
-              ? t("overlay.damageTaken.killedByDamage", { damage: formatCompact(killedBy.damage) })
-              : t("overlay.damageTaken.killedByHit", { label: killedBy.label, damage: formatCompact(killedBy.damage) })}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
