@@ -38,6 +38,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendLootToast: () => {},
     sendGearPickup: () => {},
     sendArtifactPickup: () => {},
+    sendTimer: () => {},
   };
 }
 

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { TIMER_MODES, type TimerMode } from "./timer.ts";
 import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
 
@@ -48,6 +49,9 @@ export interface OverlaySettings {
   minimapLootChanceFilter: number;
   /** World units from the player to the radar rim. */
   minimapRange: number;
+  timerMode: TimerMode;
+  /** Target of the countdown, in seconds. */
+  timerDurationSeconds: number;
 }
 
 const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
@@ -60,6 +64,8 @@ const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
   resetGoldTracker: "Ctrl+Shift+7",
   toggleMinimap: "TAB",
   cycleBossRegion: "Ctrl+Shift+8",
+  toggleTimer: "Ctrl+Shift+9",
+  resetTimer: "Ctrl+Shift+0",
 };
 
 const DEFAULT_LOCKED = true;
@@ -87,6 +93,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   clock: { enabled: false, opacity: 0.6, x: 905, y: 20, width: 110, height: 40 },
   gearPickup: { enabled: false, opacity: 0, x: 1190, y: 500, width: 300, height: 260 },
   artifactPickup: { enabled: false, opacity: 0, x: 1190, y: 230, width: 300, height: 260 },
+  timer: { enabled: false, opacity: 0.6, x: 905, y: 70, width: 110, height: 46 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -203,6 +210,8 @@ export function normalizeOverlaySettings(
     minimapRarityFilter: normalizeRarityFilter(source.minimapRarityFilter),
     minimapLootChanceFilter: normalizeLootChanceFilter(source.minimapLootChanceFilter),
     minimapRange: normalizeMinimapRange(source.minimapRange),
+    timerMode: TIMER_MODES.includes(source.timerMode as TimerMode) ? source.timerMode as TimerMode : "countdown",
+    timerDurationSeconds: normalizeTimerDuration(source.timerDurationSeconds),
   };
 }
 
@@ -243,6 +252,14 @@ export const MAX_MINIMAP_RANGE = 600;
 function normalizeMinimapRange(value: unknown): number {
   const number = typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_MINIMAP_RANGE;
   return Math.round(Math.max(MIN_MINIMAP_RANGE, Math.min(MAX_MINIMAP_RANGE, number)));
+}
+
+export const DEFAULT_TIMER_DURATION_SECONDS = 10 * 60;
+export const MAX_TIMER_DURATION_SECONDS = 24 * 60 * 60;
+
+function normalizeTimerDuration(value: unknown): number {
+  const number = typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_TIMER_DURATION_SECONDS;
+  return Math.round(Math.max(1, Math.min(MAX_TIMER_DURATION_SECONDS, number)));
 }
 
 function normalizeLootChanceFilter(value: unknown): number {
@@ -292,6 +309,8 @@ export function normalizeShortcuts(source: Record<string, unknown>): Record<Keyb
     resetGoldTracker: shortcutsSource.resetGoldTracker,
     toggleMinimap: shortcutsSource.toggleMinimap,
     cycleBossRegion: shortcutsSource.cycleBossRegion,
+    toggleTimer: shortcutsSource.toggleTimer,
+    resetTimer: shortcutsSource.resetTimer,
   };
   const shortcuts = {} as Record<KeybindAction, string>;
   for (const action of KEYBIND_ACTIONS) {

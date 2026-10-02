@@ -84,6 +84,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
         setMinimapRarityFilter: ({ rarity }) => controller.setMinimapRarityFilter(rarity),
         setMinimapLootChanceFilter: ({ chance }) => controller.setMinimapLootChanceFilter(chance),
         setMinimapRange: ({ range }) => controller.setMinimapRange(range),
+        setTimerConfig: ({ mode, durationSeconds }) => controller.setTimerConfig(mode, durationSeconds),
       },
       messages: {
         dragPreview: (preview) => controller.relayDragPreview(preview),
@@ -131,6 +132,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendLootToast: (event) => rpc.send.lootDropped(event),
     sendGearPickup: (event) => rpc.send.gearPickedUp(event),
     sendArtifactPickup: (event) => rpc.send.artifactPickedUp(event),
+    sendTimer: (state) => rpc.send.timerChanged(state),
   };
   controller.registerSurface(sink);
 

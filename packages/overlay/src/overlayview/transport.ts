@@ -22,6 +22,7 @@ import {
   pushArtifactPickup,
   pushGearPickup,
   pushLootToast,
+  timerState,
 } from "./store.ts";
 import type { ElementRect } from "./geometry.ts";
 
@@ -39,6 +40,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     minimapChanged: (next) => { minimapState.value = repairRendererPayload(next); },
     lootDropped: (next) => { pushLootToast(repairRendererPayload(next)); },
     gearPickedUp: (next) => { pushGearPickup(repairRendererPayload(next)); },
+    timerChanged: (next) => { timerState.value = repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
   } },
 });
@@ -56,6 +58,7 @@ export function startOverlayTransport(): void {
       meterState.value = repaired.meter;
       minimapState.value = repaired.minimap;
       applyBossTimers(repaired.bossTimers);
+      timerState.value = repaired.timer;
     });
   });
 }

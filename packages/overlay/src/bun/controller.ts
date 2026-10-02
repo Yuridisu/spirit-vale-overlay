@@ -16,6 +16,8 @@ import { createPassThroughShortcutListener, type PassThroughShortcutListener } f
 import { getForegroundProcess } from "@svoverlay/desktop-platform/win32";
 import { Screen } from "@svoverlay/desktop-runtime";
 
+import { idleTimer, toggleTimer } from "../timer.ts";
+import type { OverlayTimerState, TimerMode } from "../timer.ts";
 import type {
   BossTimerState,
   KeybindAction,
@@ -88,6 +90,8 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   resetGoldTracker: "reset all-time gold",
   toggleMinimap: "show/hide minimap",
   cycleBossRegion: "cycle boss region",
+  toggleTimer: "start/pause timer",
+  resetTimer: "reset timer",
 };
 
 export interface OverlayMinimapSourceState {
@@ -139,6 +143,7 @@ export interface OverlaySurfaceSink {
   sendStatuses(state: OverlayStatusState): void;
   sendMeter(state: OverlayViewState["meter"]): void;
   sendBossTimers(state: BossTimerState): void;
+  sendTimer(state: OverlayTimerState): void;
   sendDragPreview(preview: OverlayDragPreview | undefined): void;
   sendMinimap(state: OverlayMinimapState): void;
   sendLootToast(event: OverlayLootToastEvent): void;
@@ -184,6 +189,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
   let minimapSource: OverlayMinimapSourceState = { self: undefined, loot: [] };
   let lastBossTimersJson: string | undefined;
   let selectedBossRegion: string | undefined;
+  let timer = idleTimer(settings.timerMode, settings.timerDurationSeconds * 1_000);
   let lastBossRegion: string | undefined;
   let lastStatusRevision: number | undefined;
   let lastStatusPublishMs = Number.NEGATIVE_INFINITY;
@@ -305,6 +311,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setMinimapRarityFilter,
     setMinimapLootChanceFilter,
     setMinimapRange,
+    setTimerConfig,
     resetXpTracker: () => {
       options.xp.reset();
       publishCharacter();
@@ -398,6 +405,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       minimapRarityFilter: settings.minimapRarityFilter,
       minimapLootChanceFilter: settings.minimapLootChanceFilter,
       minimapRange: settings.minimapRange,
+      timerMode: settings.timerMode,
+      timerDurationSeconds: settings.timerDurationSeconds,
     };
   }
 
@@ -466,6 +475,20 @@ export async function createOverlayController(options: OverlayControllerOptions)
     return minimapState();
   }
 
+  /** Changing the mode or the target rearms the timer, so a stale run never continues under new rules. */
+  function setTimerConfig(mode: TimerMode, durationSeconds: number): OverlayTimerState {
+    settings = normalizeOverlaySettings({ ...settings, timerMode: mode, timerDurationSeconds: durationSeconds }, displays);
+    persist();
+    setTimer(idleTimer(settings.timerMode, settings.timerDurationSeconds * 1_000));
+    return timer;
+  }
+
+  function setTimer(next: OverlayTimerState): void {
+    timer = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendTimer(timer));
+  }
+
   function overlayCharacterState(): OverlayCharacterState {
     const resources = personalResources(characterState.records);
     const experience = personalExperience(characterState.snapshot, EXPERIENCE_REQUIREMENTS);
@@ -515,6 +538,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       meter: overlayMeterState(record, settings.meterStatType, nowMs, settings.personalDpsMode),
       minimap: minimapState(),
       bossTimers: bossTimerState(),
+      timer,
     };
   }
 
@@ -813,6 +837,10 @@ export async function createOverlayController(options: OverlayControllerOptions)
       if (settings.minimapEnabled) setElementEnabled("minimap", !settings.elements.minimap.enabled);
     } else if (action === "cycleBossRegion") {
       cycleBossRegion();
+    } else if (action === "toggleTimer") {
+      setTimer(toggleTimer(timer, Date.now()));
+    } else if (action === "resetTimer") {
+      setTimer(idleTimer(timer.mode, timer.durationMs));
     }
   }
 

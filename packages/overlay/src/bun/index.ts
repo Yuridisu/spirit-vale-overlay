@@ -6,6 +6,7 @@ import type {
   RequiredStatusCategory,
 } from "../app-types.ts";
 import { displayKey, type OverlayDisplay } from "../display-layout.ts";
+import type { TimerMode } from "../timer.ts";
 import type { OverlaySettings } from "../settings.ts";
 import { createOverlayController, type OverlayControllerOptions } from "./controller.ts";
 import { createOverlaySurface, type OverlaySurface } from "./surface.ts";
@@ -58,6 +59,7 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     setMinimapRarityFilter: (rarity: number) => controller.setMinimapRarityFilter(rarity),
     setMinimapLootChanceFilter: (chance: number) => controller.setMinimapLootChanceFilter(chance),
     setMinimapRange: (range: number) => controller.setMinimapRange(range),
+    setTimerConfig: (mode: TimerMode, durationSeconds: number) => controller.setTimerConfig(mode, durationSeconds),
   };
 
   function scheduleReconcile(): void {

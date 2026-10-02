@@ -52,6 +52,7 @@ import { createCharacterWindow } from "./character-window.ts";
 import { createDeathLogWindow, createDpsWindow } from "@svoverlay/combat";
 import { readCombatLocations } from "@svoverlay/combat/zone-log";
 import { createOverlayWindow } from "@svoverlay/overlay";
+import type { TimerMode } from "@svoverlay/overlay/timer";
 import {
   KEYBIND_ACTIONS,
   type KeybindAction,
@@ -476,6 +477,7 @@ const settingsRpc = BrowserView.defineRPC<LauncherSettingsRpc>({
       setMinimapRarityFilter: overlayAction((o, { rarity }: { rarity: number }) => o.setMinimapRarityFilter(rarity)),
       setMinimapLootChanceFilter: overlayAction((o, { chance }: { chance: number }) => o.setMinimapLootChanceFilter(chance)),
       setMinimapRange: overlayAction((o, { range }: { range: number }) => o.setMinimapRange(range)),
+      setTimerConfig: overlayAction((o, { mode, durationSeconds }: { mode: TimerMode; durationSeconds: number }) => o.setTimerConfig(mode, durationSeconds)),
       importSettings: () => importSettings(),
       importSetting: ({ kind }) => importSetting(kind),
       exportSetting: ({ kind }) => exportSettingAndNotify(kind),

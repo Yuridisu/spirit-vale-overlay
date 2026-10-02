@@ -11,6 +11,7 @@ import type {
   OverlayElementId,
   OverlayElementSettings,
   OverlayGearPickupEvent,
+  OverlayTimerState,
   OverlayLootToastEvent,
   OverlayMeterState,
   OverlayMinimapState,
@@ -59,6 +60,7 @@ export const meterState = signal<OverlayMeterState | undefined>(undefined);
 export const minimapState = signal<OverlayMinimapState | undefined>(undefined);
 export const lootToasts = signal<LootToastCardState[]>([]);
 export const gearPickups = signal<GearPickupCardState[]>([]);
+export const timerState = signal<OverlayTimerState | undefined>(undefined);
 export const artifactPickups = signal<GearPickupCardState[]>([]);
 export const gridEnabled = signal(false);
 export const selectedElementId = signal<OverlayElementId | undefined>(undefined);

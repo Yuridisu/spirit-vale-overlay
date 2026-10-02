@@ -759,6 +759,47 @@
   white-space: nowrap;
 }
 
+.overlay-element[data-element-id="timer"] {
+  min-height: 24px;
+  border-radius: 8px;
+}
+.overlay-element[data-element-id="timer"] .overlay-surface { container-type: size; }
+.timer-tile {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0,0,0,.9);
+}
+.timer-mode {
+  color: rgba(255,255,255,.6);
+  font-size: 9px;
+  font-size: max(8px, 16cqh);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.timer-value {
+  font-size: 18px;
+  font-size: min(58cqh, 24cqw);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.timer-paused .timer-value { color: rgba(255,255,255,.6); }
+.timer-finished { animation: timer-finished .5s ease-in-out infinite alternate; }
+.timer-finished .timer-value,
+.timer-finished .timer-mode { color: rgb(255, 96, 96); }
+@keyframes timer-finished {
+  from { background: rgba(228, 72, 72, 0); }
+  to { background: rgba(228, 72, 72, .55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-finished { animation: none; background: rgba(228, 72, 72, .45); }
+}
 .gear-pickup-stack {
   display: flex;
   flex-direction: column;

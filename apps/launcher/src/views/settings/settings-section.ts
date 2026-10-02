@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import type { Translator } from "@svoverlay/i18n/translate";
 import type { KeybindAction, OverlayElementId, RequiredStatusCategory } from "@svoverlay/overlay/app-types";
+import type { TimerMode } from "@svoverlay/overlay/timer";
 import type { SettingsSectionId, SharedSettingsState } from "../../launcher/types.ts";
 import type { SettingsKind } from "../../desktop/manage-settings.ts";
 
@@ -39,6 +40,7 @@ export interface SettingsActions {
   setMinimapRarityFilter(value: number): void;
   setMinimapLootChanceFilter(value: number): void;
   setMinimapRange(value: number): void;
+  setTimerConfig(mode: TimerMode, durationSeconds: number): void;
   setRequiredStatuses(category: RequiredStatusCategory, statusIds: string[]): void;
   importSettings(): void;
   importSetting(kind: SettingsKind): void;

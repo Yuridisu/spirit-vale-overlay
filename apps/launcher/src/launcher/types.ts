@@ -1,4 +1,5 @@
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
+import type { TimerMode } from "@svoverlay/overlay/timer";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { WindowFrame } from "@svoverlay/ui-kit/window-chrome";
 import type { UiScale } from "@svoverlay/desktop-platform/ui-scale";
@@ -130,6 +131,7 @@ export type LauncherSettingsRpc = {
     setMinimapRarityFilter: { params: { rarity: number }; response: SharedSettingsState };
     setMinimapLootChanceFilter: { params: { chance: number }; response: SharedSettingsState };
     setMinimapRange: { params: { range: number }; response: SharedSettingsState };
+    setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: SharedSettingsState };
     importSettings: { params: Record<string, never>; response: void };
     importSetting: { params: { kind: SettingsKind }; response: void };
     exportSetting: { params: { kind: SettingsKind }; response: void };

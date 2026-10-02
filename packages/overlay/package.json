@@ -8,7 +8,8 @@
     "./required-statuses": "./src/required-statuses.ts",
     "./settings": "./src/settings.ts",
     "./display-layout": "./src/display-layout.ts",
-    "./rarity": "./src/rarity.ts"
+    "./rarity": "./src/rarity.ts",
+    "./timer": "./src/timer.ts"
   },
   "dependencies": {
     "@kar-mi/spirit-vale-tools-character": "workspace:*",

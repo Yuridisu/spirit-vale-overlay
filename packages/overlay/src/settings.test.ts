@@ -68,6 +68,8 @@ describe("overlay settings", () => {
       resetGoldTracker: "Ctrl+Shift+7",
       toggleMinimap: "TAB",
       cycleBossRegion: "Ctrl+Shift+8",
+      toggleTimer: "Ctrl+Shift+9",
+      resetTimer: "Ctrl+Shift+0",
     });
     expect(settings).not.toHaveProperty("personalName");
     expect(settings.elements.dpsChart).toEqual({ enabled: false, opacity: 0.55, x: 780, y: 0, width: 500, height: 200, display: primaryKey });
@@ -272,6 +274,8 @@ describe("overlay settings", () => {
         resetGoldTracker: "Shift+F8",
         toggleMinimap: "F10",
         cycleBossRegion: "Ctrl+F9",
+        toggleTimer: "Ctrl+Shift+9",
+        resetTimer: "Ctrl+Shift+0",
       },
     }, displays);
 
@@ -285,6 +289,8 @@ describe("overlay settings", () => {
       resetGoldTracker: "Shift+F8",
       toggleMinimap: "F10",
       cycleBossRegion: "Ctrl+F9",
+      toggleTimer: "Ctrl+Shift+9",
+      resetTimer: "Ctrl+Shift+0",
     });
   });
 
@@ -301,6 +307,8 @@ describe("overlay settings", () => {
       resetGoldTracker: "Shift+F8",
       toggleMinimap: "F10",
       cycleBossRegion: "Ctrl+F9",
+      toggleTimer: "Ctrl+Shift+9",
+      resetTimer: "Ctrl+Shift+0",
     };
 
     const reset = resetOverlayShortcuts(settings);

@@ -1,9 +1,14 @@
 import { CustomSelect } from "@svoverlay/ui-kit/custom-select";
 import { OVERLAY_ELEMENT_IDS, type OverlayElementId } from "@svoverlay/overlay/app-types";
+import { TIMER_MODES, type TimerMode } from "@svoverlay/overlay/timer";
 import type { Translator } from "@svoverlay/i18n/translate";
 import type { SettingsSection, SettingsSectionContext } from "../settings-section.ts";
 
 const elementLabel = (t: Translator, id: OverlayElementId): string => t(`overlay.element.${id}`);
+
+function clampWhole(value: number, maximum: number): number {
+  return Number.isFinite(value) ? Math.min(maximum, Math.max(0, Math.round(value))) : 0;
+}
 
 export function buildOverlaySettingsSection({ state, busy, actions, t }: SettingsSectionContext): SettingsSection {
   const { overlay } = state;
@@ -34,6 +39,17 @@ export function buildOverlaySettingsSection({ state, busy, actions, t }: Setting
         searchText: t("settings.overlay.homeDisplay.search"),
         content: <><label class="settings-field"><span>{t("settings.overlay.homeDisplay.label")}</span><CustomSelect ariaLabel={t("settings.overlay.homeDisplay.label")} disabled={busy} value={overlay.homeDisplay} options={displayOptions} onChange={actions.setOverlayHomeDisplay} /></label><p class="settings-hint">{t("settings.overlay.homeDisplay.hint")}</p></>,
       }] : []),
+      {
+        id: "overlay-timer",
+        searchText: t("settings.overlay.timer.search"),
+        content: <><div class="settings-card"><h2>{t("settings.overlay.timer.label")}</h2>
+          <label class="settings-field"><span>{t("settings.overlay.timer.mode")}</span><CustomSelect ariaLabel={t("settings.overlay.timer.mode")} disabled={busy} value={overlay.timerMode} options={TIMER_MODES.map((mode) => ({ value: mode, label: t(`overlay.timer.mode.${mode}`) }))} onChange={(mode) => actions.setTimerConfig(mode as TimerMode, overlay.timerDurationSeconds)} /></label>
+          {overlay.timerMode === "countdown" && <div class="settings-row">
+            <label class="settings-field"><span>{t("settings.overlay.timer.minutes")}</span><input class="input" type="number" min="0" max="1439" disabled={busy} value={Math.floor(overlay.timerDurationSeconds / 60)} onChange={(event) => actions.setTimerConfig(overlay.timerMode, clampWhole(event.currentTarget.valueAsNumber, 1439) * 60 + overlay.timerDurationSeconds % 60)} /></label>
+            <label class="settings-field"><span>{t("settings.overlay.timer.seconds")}</span><input class="input" type="number" min="0" max="59" disabled={busy} value={overlay.timerDurationSeconds % 60} onChange={(event) => actions.setTimerConfig(overlay.timerMode, Math.floor(overlay.timerDurationSeconds / 60) * 60 + clampWhole(event.currentTarget.valueAsNumber, 59))} /></label>
+          </div>}
+        </div><p class="settings-hint">{t("settings.overlay.timer.hint")}</p></>,
+      },
       {
         id: "visible-elements",
         searchText: `${t("settings.overlay.elements.search")} ${OVERLAY_ELEMENT_IDS.map((id) => elementLabel(t, id)).join(" ")}`,
