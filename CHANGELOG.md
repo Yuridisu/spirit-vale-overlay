@@ -24,11 +24,13 @@ section as the GitHub Release notes, so write it for the people who use the app.
 - **Boss DPS element.** A meter for boss fights only: which boss, the total damage dealt to it, the
   damage per second, how long the fight has lasted, and every player ranked by their damage to the
   boss. Hits on other monsters are left out. The last fight stays on show until the next one starts.
-- **Damage taken element.** What has hit you this encounter, by the enemy skill or attack that
-  dealt it, with each one's share of the total.
+- **Damage taken element.** What has been hitting you, by the monster and the skill or attack
+  that dealt it, with each one's share of the total. It counts whether or not you are fighting back,
+  and starts over after a minute without being hit or when you change map.
 - **Gear ratings element.** Rates each equipped item's rolled stats out of six stars, in half-star
-  steps, laid out in the two columns of the game's equipment screen. Stretch it over that screen
-  once so each rating sits beside its slot, then show and hide it with `Ctrl+Shift+G`.
+  steps, laid out in the two columns of the game's equipment screen so each rating sits beside its
+  slot. The overlay cannot see that screen open, so `Ctrl+Shift+G` shows the ratings and that key
+  or Escape hides them; bind it to the key that opens your equipment screen to have both together.
 - **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
   it, with each one's share of the total.
 

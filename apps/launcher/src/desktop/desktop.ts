@@ -259,6 +259,7 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeGearPickup: (listener) => capture.subscribeGearPickup((equipment) => listener(describeGearPickup(equipment))),
   subscribeKills: (listener) => capture.subscribeKills(listener),
   subscribeBossFight: (listener) => capture.subscribeBossFight(listener),
+  subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
   subscribeGearRating: (listener) => {
     listener(rateGear(capture.characterState().snapshot));
     return capture.subscribeCharacter((state) => listener(rateGear(state.snapshot)));
@@ -564,7 +565,7 @@ launcherLifecycle.add(onWindowEvent(launcherWindow, "resize", (event: { data: { 
   const height = Math.max(scaledSize(430), event.data.height);
   if (width !== event.data.width || height !== event.data.height) launcherWindow.setSize(width, height);
 }));
-launcherLifecycle.add(onWindowEvent(launcherWindow, "closeRequested", (event: { data?: { source?: string } }) => {
+launcherLifecycle.add(onWindowEvent(launcherWindow, "closerequested", (event: { data?: { source?: string } }) => {
   console.warn(`[spiritvale-exit] the launcher asked to close (${event.data?.source ?? "unknown"})`);
 }));
 launcherLifecycle.add(onceWindowEvent(launcherWindow, "close", () => void shutdown("launcher window closed")));

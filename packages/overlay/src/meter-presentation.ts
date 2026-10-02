@@ -36,7 +36,6 @@ export function overlayMeterState(
   const chartSource = selected.personal;
   const chart = chartSource?.timeline ?? partyTimeline(selected);
   const personal = record.dps.personal;
-  const tanked = record.tps.detail.personal;
 
   return {
     personalChart: chartSource !== undefined,
@@ -60,7 +59,6 @@ export function overlayMeterState(
         skills: detailSkills(personal.skills),
       },
     }),
-    ...(tanked === undefined ? {} : { taken: { damage: tanked.damage, skills: detailSkills(tanked.skills) } }),
   };
 }
 

@@ -171,11 +171,6 @@ export interface OverlayMeterState {
     /** The encounter's damage by skill or attack, largest first. */
     skills: OverlayMeterSkill[];
   };
-  /** What hit the local player this encounter, by the enemy skill or attack that did it. */
-  taken?: {
-    damage: number;
-    skills: OverlayMeterSkill[];
-  };
 }
 
 export interface OverlayMeterSkill {
@@ -186,6 +181,12 @@ export interface OverlayMeterSkill {
   contribution: number;
   hits: number;
   critRate?: number;
+}
+
+/** What has hit the local player lately, by attacker and attack, largest first. */
+export interface OverlayDamageTakenState {
+  total: number;
+  rows: Array<{ label: string; attacker?: string; damage: number; hits: number }>;
 }
 
 /** One equipped item's substats rated out of six stars. */
@@ -236,6 +237,7 @@ export interface OverlayViewState {
   kills: OverlayKillState;
   bossFight?: OverlayBossFightState;
   gearRating: OverlayGearRatingState;
+  damageTaken: OverlayDamageTakenState;
 }
 
 export interface OverlayLootToastEvent {
@@ -380,6 +382,7 @@ export type OverlayRpc = {
     killsChanged: OverlayKillState;
     bossFightChanged: OverlayBossFightState | undefined;
     gearRatingChanged: OverlayGearRatingState;
+    damageTakenChanged: OverlayDamageTakenState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

@@ -99,7 +99,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   dpsDetails: { enabled: false, opacity: 0.4, x: 1235, y: 100, width: 251, height: 230 },
   bossMeter: { enabled: false, opacity: 0.5, x: 960, y: 300, width: 270, height: 380 },
   damageTaken: { enabled: false, opacity: 0.4, x: 1235, y: 340, width: 251, height: 230 },
-  gearRating: { enabled: false, opacity: 0, x: 420, y: 250, width: 1080, height: 480 },
+  gearRating: { enabled: false, opacity: 0, x: 112, y: 125, width: 1049, height: 480 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative

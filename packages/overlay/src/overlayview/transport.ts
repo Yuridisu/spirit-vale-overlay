@@ -22,6 +22,7 @@ import {
   pushArtifactPickup,
   pushGearPickup,
   bossFightState,
+  damageTakenState,
   gearRatingState,
   killState,
   pushLootToast,
@@ -46,6 +47,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     timerChanged: (next) => { timerState.value = repairRendererPayload(next); },
     killsChanged: (next) => { killState.value = repairRendererPayload(next); },
     gearRatingChanged: (next) => { gearRatingState.value = repairRendererPayload(next); },
+    damageTakenChanged: (next) => { damageTakenState.value = repairRendererPayload(next); },
     bossFightChanged: (next) => { bossFightState.value = next === undefined ? undefined : repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
   } },
@@ -67,6 +69,7 @@ export function startOverlayTransport(): void {
       timerState.value = repaired.timer;
       killState.value = repaired.kills;
       gearRatingState.value = repaired.gearRating;
+      damageTakenState.value = repaired.damageTaken;
       bossFightState.value = repaired.bossFight;
     });
   });

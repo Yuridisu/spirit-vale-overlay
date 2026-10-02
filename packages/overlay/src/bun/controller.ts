@@ -27,6 +27,7 @@ import type {
   OverlayDragPreview,
   OverlayElementId,
   OverlayBossFightState,
+  OverlayDamageTakenState,
   OverlayGearPickupEvent,
   OverlayGearRatingState,
   OverlayKillState,
@@ -132,6 +133,8 @@ export interface OverlayControllerOptions {
   subscribeBossFight: (listener: (state: OverlayBossFightState | undefined) => void) => () => void;
   /** Calls the listener at once with the current ratings, then whenever the equipment changes. */
   subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
+  /** Calls the listener at once with the current tally, then on every change. */
+  subscribeDamageTaken: (listener: (state: OverlayDamageTakenState) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -163,6 +166,7 @@ export interface OverlaySurfaceSink {
   sendKills(state: OverlayKillState): void;
   sendBossFight(state: OverlayBossFightState | undefined): void;
   sendGearRating(state: OverlayGearRatingState): void;
+  sendDamageTaken(state: OverlayDamageTakenState): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -203,6 +207,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
   let minimapSource: OverlayMinimapSourceState = { self: undefined, loot: [] };
   let lastBossTimersJson: string | undefined;
   let selectedBossRegion: string | undefined;
+  // The ratings sit over the game's equipment screen, which is never open when the app starts.
+  if (settings.elements.gearRating.enabled) {
+    settings = {
+      ...settings,
+      elements: { ...settings.elements, gearRating: { ...settings.elements.gearRating, enabled: false } },
+    };
+  }
   let timer = idleTimer(settings.timerMode, settings.timerDurationSeconds * 1_000);
   let lastBossRegion: string | undefined;
   let lastStatusRevision: number | undefined;
@@ -269,6 +280,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (!element.enabled) return;
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendGearPickup(event));
+  });
+  let damageTaken: OverlayDamageTakenState = { total: 0, rows: [] };
+  const unsubscribeDamageTaken = options.subscribeDamageTaken((next) => {
+    damageTaken = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendDamageTaken(next));
   });
   let gearRating: OverlayGearRatingState = { slots: [] };
   let lastGearRatingJson = "";
@@ -382,6 +399,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeKills();
       unsubscribeBossFight();
       unsubscribeGearRating();
+      unsubscribeDamageTaken();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);
@@ -595,6 +613,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       kills: killState,
       ...(bossFight === undefined ? {} : { bossFight }),
       gearRating,
+      damageTaken,
     };
   }
 
@@ -873,6 +892,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown || shortcutsSuspended) return;
     if (action === "lockOnEscape") {
       if (!settings.locked) updateLocked(true);
+      // Escape leaves the game's equipment screen, so the ratings that sit over it go too.
+      else if (settings.elements.gearRating.enabled) setElementEnabled("gearRating", false);
     } else if (action === "toggleLock") updateLocked(!settings.locked);
     else if (action === "toggleOverlayVisible") setOverlayVisibleManually(!overlayVisible);
     else if (action === "cycleMeterStatType") cycleMeterStatType();

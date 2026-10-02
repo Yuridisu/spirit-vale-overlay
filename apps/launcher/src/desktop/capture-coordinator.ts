@@ -20,6 +20,7 @@ import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
 import { LootOwnership } from "./loot-ownership.ts";
 import { BossFightTracker, type BossFightState } from "./boss-fight.ts";
+import { DamageTakenTracker, type DamageTakenState } from "./damage-taken.ts";
 import type {
   CaptureConnectionEvent,
   CapturedFishNetPacket,
@@ -188,6 +189,9 @@ export class CaptureCoordinator {
   private readonly killListeners = new Set<(state: CaptureKillState) => void>();
   private readonly bossFightListeners = new Set<(state: BossFightState | undefined) => void>();
   private readonly bossFight = new BossFightTracker();
+  private readonly damageTakenListeners = new Set<(state: DamageTakenState) => void>();
+  private readonly damageTaken = new DamageTakenTracker();
+  private damageTakenTimer?: ClockTimer;
   private bossFightTimer?: ClockTimer;
   /** Local kills by monster name since the last map change. */
   private readonly killCounts = new Map<string, number>();
@@ -421,6 +425,38 @@ export class CaptureCoordinator {
     return () => this.gearPickupListeners.delete(listener);
   }
 
+  subscribeDamageTaken(listener: (state: DamageTakenState) => void): () => void {
+    this.damageTakenListeners.add(listener);
+    listener(this.damageTaken.state());
+    return () => this.damageTakenListeners.delete(listener);
+  }
+
+  /** Feeds the hits that land on the local player to the tally; dodged, missed and blocked ones did no damage. */
+  private trackDamageTaken(events: readonly FishNetCombatEvent[]): void {
+    let changed = false;
+    for (const event of events) {
+      if ((event.kind !== "damage" && event.kind !== "death") || event.team === 0) continue;
+      if (event.value <= 0 || !this.isLocalRewardActor(event.targetId)) continue;
+      const attacker = this.mobs.get(event.actorId)?.displayName;
+      this.damageTaken.observe(
+        { label: event.sourceLabel, ...(attacker === undefined ? {} : { attacker }), damage: event.value },
+        this.clock.now(),
+      );
+      changed = true;
+    }
+    if (!changed || this.damageTakenTimer !== undefined) return;
+    this.damageTakenTimer = this.clock.setTimeout(() => {
+      this.damageTakenTimer = undefined;
+      this.publishDamageTaken();
+    }, BOSS_FIGHT_PUBLISH_MS);
+    this.damageTakenTimer.unref?.();
+  }
+
+  private publishDamageTaken(): void {
+    const state = this.damageTaken.state();
+    for (const listener of this.damageTakenListeners) listener(state);
+  }
+
   subscribeBossFight(listener: (state: BossFightState | undefined) => void): () => void {
     this.bossFightListeners.add(listener);
     listener(this.bossFight.state(this.clock.now()));
@@ -523,6 +559,10 @@ export class CaptureCoordinator {
     if (this.bossFight.state(this.clock.now()) !== undefined) {
       this.bossFight.reset();
       this.publishBossFight();
+    }
+    if (this.damageTaken.state().total > 0) {
+      this.damageTaken.reset();
+      this.publishDamageTaken();
     }
     this.killRewards.clear();
     if (this.killCounts.size === 0) return;
@@ -637,6 +677,8 @@ export class CaptureCoordinator {
     this.minimapTimer = undefined;
     if (this.bossFightTimer !== undefined) this.clock.clearTimeout(this.bossFightTimer);
     this.bossFightTimer = undefined;
+    if (this.damageTakenTimer !== undefined) this.clock.clearTimeout(this.damageTakenTimer);
+    this.damageTakenTimer = undefined;
     this.resetTrackers("full");
     this.rewards.reset();
     this.rewardAttributor.reset();
@@ -1061,6 +1103,7 @@ export class CaptureCoordinator {
       for (const event of events) this.statusTracker.consume(event, observedAtMs);
       this.countLocalKills(events);
       this.trackBossFight(events);
+      this.trackDamageTaken(events);
       this.scheduleActiveStatusExpiry();
       handled ||= identities.length > 0 || events.length > 0;
       for (const event of identities) this.combatLog?.log("combat.actorIdentity", jsonObject(event));

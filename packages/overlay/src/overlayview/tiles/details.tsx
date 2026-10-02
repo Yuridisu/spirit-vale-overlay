@@ -1,6 +1,6 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatInteger } from "@svoverlay/ui-kit/format";
-import { killState, meterState } from "../store.ts";
+import { damageTakenState, killState, meterState } from "../store.ts";
 import { WaitingForDps } from "./common.tsx";
 
 const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
@@ -33,31 +33,38 @@ export function DpsDetailsElement() {
   );
 }
 
-/** The damage the local player has taken this encounter, by the enemy skill or attack that dealt it. */
+/** The damage the local player has been taking, by the monster and the skill or attack that dealt it. */
 export function DamageTakenElement() {
   const t = useTranslator();
-  const taken = meterState.value?.taken;
-  const skills = taken?.skills ?? [];
-  const top = Math.max(1, ...skills.map((skill) => skill.damage));
+  const taken = damageTakenState.value;
+  const rows = taken?.rows ?? [];
+  const total = taken?.total ?? 0;
+  const top = Math.max(1, ...rows.map((row) => row.damage));
   return (
     <div class="element-content">
       <div class="party-heading">
         <h2 class="element-title">{t("overlay.damageTaken.heading")}</h2>
-        {taken !== undefined && taken.damage > 0 && (
-          <span class="party-reset-hint">{t("overlay.damageTaken.total", { total: formatCompact(taken.damage) })}</span>
+        {total > 0 && (
+          <span class="party-reset-hint">{t("overlay.damageTaken.total", { total: formatCompact(total) })}</span>
         )}
       </div>
-      {skills.length ? <div class="ranking">{skills.map((skill) => (
+      {rows.length ? <div class="ranking">{rows.map((row) => (
         <div
           class="ranking-row detail-row"
-          key={skill.sourceId}
-          style={`--row-fill:${skill.damage / top * 100}%;--row-color:${TAKEN_ROW_COLOR}`}
-          title={t("overlay.damageTaken.tooltip", { hits: formatInteger(skill.hits) })}
+          key={`${row.attacker ?? ""}/${row.label}`}
+          style={`--row-fill:${row.damage / top * 100}%;--row-color:${TAKEN_ROW_COLOR}`}
         >
-          <span class="ranking-name">{skill.label}</span>
+          <span class="kill-name">
+            <span class="ranking-name">{row.label}</span>
+            <span class="kill-rewards">
+              {row.attacker === undefined
+                ? t("overlay.damageTaken.hits", { hits: formatInteger(row.hits) })
+                : t("overlay.damageTaken.source", { attacker: row.attacker, hits: formatInteger(row.hits) })}
+            </span>
+          </span>
           <span class="detail-values">
-            <strong>{formatCompact(skill.damage)}</strong>
-            <span class="detail-share">{Math.round(skill.contribution * 100)}%</span>
+            <strong>{formatCompact(row.damage)}</strong>
+            <span class="detail-share">{Math.round(row.damage / Math.max(1, total) * 100)}%</span>
           </span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
