@@ -12,7 +12,7 @@ Taken from `bjb2/valecompanion` at commit `a6661a6` (release v0.8.0).
 
 | Here | There | Changes |
 | --- | --- | --- |
-| `src/core/` | `src/core/` | Imports point at this repository's tools packages. The item catalog is bundled instead of read from disk. |
+| `src/core/` | `src/core/` | Imports point at this repository's tools packages. The item catalog is bundled instead of read from disk. Storage transfers are read under this repository's RPC name. Materials and consumables are given a market value. |
 | `src/shared/` | `src/shared/` | `pickup-overlay.ts` is cut down to the one type the loot session uses. |
 | `src/market/` | `src/backend/market-*.ts` | Imports only. |
 | `src/sounds.ts` | `src/backend/sounds.ts` | Imports only. |

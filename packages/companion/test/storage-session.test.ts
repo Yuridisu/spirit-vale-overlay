@@ -46,7 +46,11 @@ test("bag and storage both retain materials, consumables, and cosmetics", () => 
     session.consumeInventory(inventory);
     const items = session.bag();
     expect(items).toHaveLength(3);
-    for (const item of items) expect(priceItem(item, [{ itemId: item.itemId, unitPrice: 999, stats: [], refine: 0, artifactSlot: null }])).toBeNull();
+    // Stacks are worth their count at the unit price; a cosmetic is one of a kind and stays unpriced.
+    const price = (kind: string) => priceItem(items.find((item) => item.kind === kind)!, [{ itemId: "any", unitPrice: 999, stats: [], refine: 0, artifactSlot: null }]);
+    expect(price("material")).toEqual({ low: 999 * 12, median: 999 * 12, tier: "unit", listings: 1 });
+    expect(price("consumable")).toEqual({ low: 999 * 4, median: 999 * 4, tier: "unit", listings: 1 });
+    expect(price("cosmetic")).toBeNull();
     expect(items.find(item => item.kind === "material")?.count).toBe(12);
     expect(items.find(item => item.kind === "consumable")?.count).toBe(4);
     expect(items.find(item => item.kind === "cosmetic")).toMatchObject({ uid: "cosmetic-uid", refine: 3, favorite: true });
