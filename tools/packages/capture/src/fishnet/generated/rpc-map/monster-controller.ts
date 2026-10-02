@@ -6,23 +6,6 @@ import type { FishNetRpcDefinition, FishNetSyncTypeDefinition } from "../../sche
 
 export const monsterControllerRpcs = [
   {
-    "wireHash": 7,
-    "packetKind": "observersRpc",
-    "methodName": "TrainingDummyBeginHealTimer",
-    "parameters": [
-      {
-        "name": "mapId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "index",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      }
-    ]
-  },
-  {
     "wireHash": 0,
     "packetKind": "serverRpc",
     "methodName": "TraverseShipCaptain",
@@ -125,6 +108,23 @@ export const monsterControllerRpcs = [
       },
       {
         "name": "instanceId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      }
+    ]
+  },
+  {
+    "wireHash": 7,
+    "packetKind": "observersRpc",
+    "methodName": "TrainingDummyBeginHealTimer",
+    "parameters": [
+      {
+        "name": "mapId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "index",
         "typeName": "System.Int32",
         "codec": "packedInt32"
       }

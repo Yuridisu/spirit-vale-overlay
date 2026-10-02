@@ -74,6 +74,11 @@ export const skillsComponentRpcs = [
   },
   {
     "wireHash": 3,
+    "packetKind": "targetRpc",
+    "methodName": "ResetDamageCooldowns_T"
+  },
+  {
+    "wireHash": 4,
     "packetKind": "observersRpc",
     "methodName": "AutoCast_C",
     "parameters": [
@@ -186,7 +191,7 @@ export const skillsComponentRpcs = [
     ]
   },
   {
-    "wireHash": 4,
+    "wireHash": 5,
     "packetKind": "observersRpc",
     "methodName": "CastInterrupt_C",
     "parameters": [
@@ -198,12 +203,12 @@ export const skillsComponentRpcs = [
     ]
   },
   {
-    "wireHash": 5,
+    "wireHash": 6,
     "packetKind": "observersRpc",
     "methodName": "CastCancel_C"
   },
   {
-    "wireHash": 6,
+    "wireHash": 7,
     "packetKind": "observersRpc",
     "methodName": "CastBegin_C",
     "parameters": [
@@ -326,12 +331,12 @@ export const skillsComponentRpcs = [
     ]
   },
   {
-    "wireHash": 7,
+    "wireHash": 8,
     "packetKind": "observersRpc",
     "methodName": "CastComplete_C"
   },
   {
-    "wireHash": 8,
+    "wireHash": 9,
     "packetKind": "observersRpc",
     "methodName": "ScatterEffect_C",
     "parameters": [
@@ -348,7 +353,7 @@ export const skillsComponentRpcs = [
     ]
   },
   {
-    "wireHash": 9,
+    "wireHash": 10,
     "packetKind": "observersRpc",
     "methodName": "ToggleBegin_C",
     "parameters": [

@@ -7796,6 +7796,16 @@ export const playerSaveRpcs = [
   },
   {
     "wireHash": 132,
+    "packetKind": "serverRpc",
+    "methodName": "RequestPvpStatues_Rpc"
+  },
+  {
+    "wireHash": 133,
+    "packetKind": "targetRpc",
+    "methodName": "RequestPvpStatues_T"
+  },
+  {
+    "wireHash": 134,
     "packetKind": "targetRpc",
     "methodName": "ShowMessage_T",
     "parameters": [
@@ -7807,7 +7817,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 133,
+    "wireHash": 135,
     "packetKind": "targetRpc",
     "methodName": "ConfigureEacSession_T",
     "parameters": [
@@ -7828,7 +7838,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 134,
+    "wireHash": 136,
     "packetKind": "serverRpc",
     "methodName": "RegisterEacClient_S",
     "parameters": [
@@ -7848,7 +7858,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 135,
+    "wireHash": 137,
     "packetKind": "targetRpc",
     "methodName": "ConfirmEacClientRegistration_T",
     "parameters": [
@@ -7869,7 +7879,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 136,
+    "wireHash": 138,
     "packetKind": "serverRpc",
     "methodName": "SubmitEacClientMessage_S",
     "parameters": [
@@ -7889,7 +7899,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 137,
+    "wireHash": 139,
     "packetKind": "targetRpc",
     "methodName": "ReceiveEacServerMessage_T",
     "parameters": [
@@ -7909,7 +7919,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 138,
+    "wireHash": 140,
     "packetKind": "serverRpc",
     "methodName": "ReportEacClientState_S",
     "parameters": [
@@ -7947,7 +7957,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 139,
+    "wireHash": 141,
     "packetKind": "targetRpc",
     "methodName": "ShutdownClientForEacFailure_T",
     "parameters": [
@@ -7963,7 +7973,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 140,
+    "wireHash": 142,
     "packetKind": "targetRpc",
     "methodName": "RequestHardwareTelemetry_T",
     "parameters": [
@@ -7979,7 +7989,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 141,
+    "wireHash": 143,
     "packetKind": "serverRpc",
     "methodName": "SubmitHardwareTelemetry_S",
     "parameters": [
@@ -7999,7 +8009,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 142,
+    "wireHash": 144,
     "packetKind": "targetRpc",
     "methodName": "ShowInstancedMapRecovery_T",
     "parameters": [
@@ -8016,7 +8026,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 143,
+    "wireHash": 145,
     "packetKind": "serverRpc",
     "methodName": "RetryInstancedMap_S",
     "parameters": [
@@ -8028,7 +8038,7 @@ export const playerSaveRpcs = [
     ]
   },
   {
-    "wireHash": 144,
+    "wireHash": 146,
     "packetKind": "serverRpc",
     "methodName": "AbandonInstancedMap_S",
     "parameters": [

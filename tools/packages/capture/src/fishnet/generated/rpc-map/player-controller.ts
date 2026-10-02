@@ -6,6 +6,114 @@ import type { FishNetRpcDefinition, FishNetSyncTypeDefinition } from "../../sche
 
 export const playerControllerRpcs = [
   {
+    "wireHash": 0,
+    "packetKind": "serverRpc",
+    "methodName": "TraverseShipCaptain",
+    "parameters": [
+      {
+        "name": "npcId",
+        "typeName": "System.String",
+        "codec": "stringUtf8Packed"
+      }
+    ]
+  },
+  {
+    "wireHash": 1,
+    "packetKind": "targetRpc",
+    "methodName": "ClientPrepareTransfer"
+  },
+  {
+    "wireHash": 2,
+    "packetKind": "targetRpc",
+    "methodName": "ClientSwitchServer",
+    "parameters": [
+      {
+        "name": "hosts",
+        "typeName": "System.String[]"
+      },
+      {
+        "name": "ports",
+        "typeName": "System.UInt16[]"
+      }
+    ]
+  },
+  {
+    "wireHash": 3,
+    "packetKind": "observersRpc",
+    "methodName": "TraverseObservers",
+    "parameters": [
+      {
+        "name": "mapId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "dto",
+        "typeName": "BaseUnitController+TraverseDto"
+      }
+    ]
+  },
+  {
+    "wireHash": 4,
+    "packetKind": "targetRpc",
+    "methodName": "TraverseActive",
+    "parameters": [
+      {
+        "name": "mapId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "dto",
+        "typeName": "BaseUnitController+TraverseDto"
+      },
+      {
+        "name": "receipt",
+        "typeName": "System.UInt64",
+        "codec": "packedUInt64"
+      }
+    ]
+  },
+  {
+    "wireHash": 5,
+    "packetKind": "serverRpc",
+    "methodName": "ConfirmMapState",
+    "parameters": [
+      {
+        "name": "mapId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "instanceId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "receipt",
+        "typeName": "System.UInt64",
+        "codec": "packedUInt64"
+      }
+    ]
+  },
+  {
+    "wireHash": 6,
+    "packetKind": "serverRpc",
+    "methodName": "ClientMapLoadFailed",
+    "parameters": [
+      {
+        "name": "mapId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      },
+      {
+        "name": "instanceId",
+        "typeName": "System.Int32",
+        "codec": "packedInt32"
+      }
+    ]
+  },
+  {
     "wireHash": 7,
     "packetKind": "serverRpc",
     "methodName": "ChatRoom_Create_S",
@@ -307,6 +415,21 @@ export const playerControllerRpcs = [
   {
     "wireHash": 24,
     "packetKind": "serverRpc",
+    "methodName": "SetInspectedTarget"
+  },
+  {
+    "wireHash": 25,
+    "packetKind": "targetRpc",
+    "methodName": "GrantFreeCam_T"
+  },
+  {
+    "wireHash": 26,
+    "packetKind": "targetRpc",
+    "methodName": "RedrawMonsterPopup_T"
+  },
+  {
+    "wireHash": 27,
+    "packetKind": "serverRpc",
     "methodName": "Inspect",
     "parameters": [
       {
@@ -317,7 +440,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 25,
+    "wireHash": 28,
     "packetKind": "targetRpc",
     "methodName": "InspectVisiblePlayer_T",
     "parameters": [
@@ -1579,7 +1702,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 26,
+    "wireHash": 29,
     "packetKind": "targetRpc",
     "methodName": "Inspect_T",
     "parameters": [
@@ -2836,7 +2959,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 27,
+    "wireHash": 30,
     "packetKind": "targetRpc",
     "methodName": "ValidateObjectState_T",
     "parameters": [
@@ -2853,7 +2976,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 28,
+    "wireHash": 31,
     "packetKind": "serverRpc",
     "methodName": "ConfirmObjectState",
     "parameters": [
@@ -2870,7 +2993,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 29,
+    "wireHash": 32,
     "packetKind": "targetRpc",
     "methodName": "DrawMessage",
     "parameters": [
@@ -2882,7 +3005,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 30,
+    "wireHash": 33,
     "packetKind": "serverRpc",
     "methodName": "ReviveSelf",
     "parameters": [
@@ -2894,27 +3017,27 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 31,
+    "wireHash": 34,
     "packetKind": "targetRpc",
     "methodName": "ReviveWaitingForTrade_T"
   },
   {
-    "wireHash": 32,
+    "wireHash": 35,
     "packetKind": "observersRpc",
     "methodName": "Revive_C"
   },
   {
-    "wireHash": 33,
+    "wireHash": 36,
     "packetKind": "serverRpc",
     "methodName": "FullHealByHealer"
   },
   {
-    "wireHash": 34,
+    "wireHash": 37,
     "packetKind": "observersRpc",
     "methodName": "FullHeal_C"
   },
   {
-    "wireHash": 35,
+    "wireHash": 38,
     "packetKind": "targetRpc",
     "methodName": "ChannelList_T",
     "parameters": [
@@ -2935,12 +3058,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 36,
+    "wireHash": 39,
     "packetKind": "observersRpc",
     "methodName": "LevelUp_C"
   },
   {
-    "wireHash": 37,
+    "wireHash": 40,
     "packetKind": "serverRpc",
     "methodName": "UpdateLootFilter_S",
     "parameters": [
@@ -2951,12 +3074,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 38,
+    "wireHash": 41,
     "packetKind": "observersRpc",
     "methodName": "Pickup_C"
   },
   {
-    "wireHash": 39,
+    "wireHash": 42,
     "packetKind": "observersRpc",
     "methodName": "TriggerEmote_C",
     "parameters": [
@@ -2968,17 +3091,17 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 40,
+    "wireHash": 43,
     "packetKind": "observersRpc",
     "methodName": "StopEmote_C"
   },
   {
-    "wireHash": 41,
+    "wireHash": 44,
     "packetKind": "serverRpc",
     "methodName": "WarpHome_Rpc"
   },
   {
-    "wireHash": 42,
+    "wireHash": 45,
     "packetKind": "targetRpc",
     "methodName": "WarpFailed_T",
     "parameters": [
@@ -2990,7 +3113,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 43,
+    "wireHash": 46,
     "packetKind": "targetRpc",
     "methodName": "DrawText_T",
     "parameters": [
@@ -3002,7 +3125,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 44,
+    "wireHash": 47,
     "packetKind": "serverRpc",
     "methodName": "SendPartyInvite",
     "parameters": [
@@ -3014,7 +3137,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 45,
+    "wireHash": 48,
     "packetKind": "serverRpc",
     "methodName": "RequestJoinParty",
     "parameters": [
@@ -3026,7 +3149,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 46,
+    "wireHash": 49,
     "packetKind": "targetRpc",
     "methodName": "ShowPartyInvite_T",
     "parameters": [
@@ -3043,7 +3166,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 47,
+    "wireHash": 50,
     "packetKind": "targetRpc",
     "methodName": "ShowJoinRequest_T",
     "parameters": [
@@ -3065,7 +3188,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 48,
+    "wireHash": 51,
     "packetKind": "serverRpc",
     "methodName": "AcceptPartyInvite",
     "parameters": [
@@ -3077,7 +3200,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 49,
+    "wireHash": 52,
     "packetKind": "serverRpc",
     "methodName": "AcceptPartyRequestJoin",
     "parameters": [
@@ -3094,7 +3217,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 50,
+    "wireHash": 53,
     "packetKind": "serverRpc",
     "methodName": "DeclinePartyInvite",
     "parameters": [
@@ -3106,7 +3229,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 51,
+    "wireHash": 54,
     "packetKind": "serverRpc",
     "methodName": "DeclinePartyRequestJoin",
     "parameters": [
@@ -3123,17 +3246,17 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 52,
+    "wireHash": 55,
     "packetKind": "serverRpc",
     "methodName": "CreateParty"
   },
   {
-    "wireHash": 53,
+    "wireHash": 56,
     "packetKind": "serverRpc",
     "methodName": "LeaveParty_S"
   },
   {
-    "wireHash": 54,
+    "wireHash": 57,
     "packetKind": "targetRpc",
     "methodName": "UpdateParty_T",
     "parameters": [
@@ -3144,7 +3267,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 55,
+    "wireHash": 58,
     "packetKind": "serverRpc",
     "methodName": "KickFromParty",
     "parameters": [
@@ -3156,7 +3279,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 56,
+    "wireHash": 59,
     "packetKind": "serverRpc",
     "methodName": "ETCastKickVote",
     "parameters": [
@@ -3173,7 +3296,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 57,
+    "wireHash": 60,
     "packetKind": "targetRpc",
     "methodName": "ShowETKickVote_T",
     "parameters": [
@@ -3190,7 +3313,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 58,
+    "wireHash": 61,
     "packetKind": "serverRpc",
     "methodName": "PromotePartyLeader",
     "parameters": [
@@ -3202,7 +3325,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 59,
+    "wireHash": 62,
     "packetKind": "serverRpc",
     "methodName": "SetPartyName",
     "parameters": [
@@ -3214,7 +3337,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 60,
+    "wireHash": 63,
     "packetKind": "serverRpc",
     "methodName": "SetPartyExp",
     "parameters": [
@@ -3225,7 +3348,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 61,
+    "wireHash": 64,
     "packetKind": "serverRpc",
     "methodName": "SetPartyDrops",
     "parameters": [
@@ -3236,7 +3359,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 62,
+    "wireHash": 65,
     "packetKind": "serverRpc",
     "methodName": "SetPartyLevelRange",
     "parameters": [
@@ -3253,7 +3376,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 63,
+    "wireHash": 66,
     "packetKind": "serverRpc",
     "methodName": "SetPartyPublic",
     "parameters": [
@@ -3265,12 +3388,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 64,
+    "wireHash": 67,
     "packetKind": "serverRpc",
     "methodName": "RequestPartyList_S"
   },
   {
-    "wireHash": 65,
+    "wireHash": 68,
     "packetKind": "targetRpc",
     "methodName": "RequestPartyList_T",
     "parameters": [
@@ -3281,7 +3404,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 66,
+    "wireHash": 69,
     "packetKind": "serverRpc",
     "methodName": "SendTradeRequest",
     "parameters": [
@@ -3293,7 +3416,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 67,
+    "wireHash": 70,
     "packetKind": "targetRpc",
     "methodName": "SendTradeRequest_T",
     "parameters": [
@@ -3305,7 +3428,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 68,
+    "wireHash": 71,
     "packetKind": "serverRpc",
     "methodName": "AcceptTradeRequest",
     "parameters": [
@@ -3317,17 +3440,17 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 69,
+    "wireHash": 72,
     "packetKind": "serverRpc",
     "methodName": "CancelTrade_S"
   },
   {
-    "wireHash": 70,
+    "wireHash": 73,
     "packetKind": "targetRpc",
     "methodName": "CancelTrade_T"
   },
   {
-    "wireHash": 71,
+    "wireHash": 74,
     "packetKind": "targetRpc",
     "methodName": "BeginTrade_T",
     "parameters": [
@@ -3342,7 +3465,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 72,
+    "wireHash": 75,
     "packetKind": "serverRpc",
     "methodName": "UpdateTrade_S",
     "parameters": [
@@ -3353,7 +3476,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 73,
+    "wireHash": 76,
     "packetKind": "targetRpc",
     "methodName": "UpdateTrade_T",
     "parameters": [
@@ -3368,12 +3491,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 74,
+    "wireHash": 77,
     "packetKind": "targetRpc",
     "methodName": "CompleteTradeBegin_T"
   },
   {
-    "wireHash": 75,
+    "wireHash": 78,
     "packetKind": "targetRpc",
     "methodName": "CompleteTrade_T",
     "parameters": [
@@ -3385,7 +3508,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 76,
+    "wireHash": 79,
     "packetKind": "serverRpc",
     "methodName": "RequestVendorItemList_S",
     "parameters": [
@@ -3415,7 +3538,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 77,
+    "wireHash": 80,
     "packetKind": "targetRpc",
     "methodName": "RequestVendorItemList_T",
     "parameters": [
@@ -3427,12 +3550,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 78,
+    "wireHash": 81,
     "packetKind": "serverRpc",
     "methodName": "RequestVendingOverview_S"
   },
   {
-    "wireHash": 79,
+    "wireHash": 82,
     "packetKind": "targetRpc",
     "methodName": "RequestVendingOverview_T",
     "parameters": [
@@ -3444,12 +3567,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 80,
+    "wireHash": 83,
     "packetKind": "serverRpc",
     "methodName": "RequestVendingStallStatus_S"
   },
   {
-    "wireHash": 81,
+    "wireHash": 84,
     "packetKind": "targetRpc",
     "methodName": "RequestVendingStallStatus_T",
     "parameters": [
@@ -3488,12 +3611,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 82,
+    "wireHash": 85,
     "packetKind": "serverRpc",
     "methodName": "RequestInstanceStatus_S"
   },
   {
-    "wireHash": 83,
+    "wireHash": 86,
     "packetKind": "targetRpc",
     "methodName": "RequestInstanceStatus_T",
     "parameters": [
@@ -3504,7 +3627,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 84,
+    "wireHash": 87,
     "packetKind": "serverRpc",
     "methodName": "RequestVendingStallListings_S",
     "parameters": [
@@ -3516,7 +3639,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 85,
+    "wireHash": 88,
     "packetKind": "targetRpc",
     "methodName": "RequestVendingStallListings_T",
     "parameters": [
@@ -3528,7 +3651,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 86,
+    "wireHash": 89,
     "packetKind": "observersRpc",
     "methodName": "SpawnVendingStall_C",
     "parameters": [
@@ -3540,7 +3663,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 87,
+    "wireHash": 90,
     "packetKind": "targetRpc",
     "methodName": "SpawnVendingStall_T",
     "parameters": [
@@ -3552,7 +3675,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 88,
+    "wireHash": 91,
     "packetKind": "observersRpc",
     "methodName": "DespawnVendingStall_C",
     "parameters": [
@@ -3564,7 +3687,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 89,
+    "wireHash": 92,
     "packetKind": "targetRpc",
     "methodName": "DespawnVendingStall_T",
     "parameters": [
@@ -3576,7 +3699,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 90,
+    "wireHash": 93,
     "packetKind": "targetRpc",
     "methodName": "LoadVendingStalls_T",
     "parameters": [
@@ -3588,7 +3711,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 91,
+    "wireHash": 94,
     "packetKind": "serverRpc",
     "methodName": "SendEmoji",
     "parameters": [
@@ -3599,7 +3722,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 92,
+    "wireHash": 95,
     "packetKind": "observersRpc",
     "methodName": "SendEmoji_C",
     "parameters": [
@@ -3610,12 +3733,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 93,
+    "wireHash": 96,
     "packetKind": "targetRpc",
     "methodName": "SendLimitReached"
   },
   {
-    "wireHash": 94,
+    "wireHash": 97,
     "packetKind": "serverRpc",
     "methodName": "SendChat",
     "parameters": [
@@ -3640,7 +3763,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 95,
+    "wireHash": 98,
     "packetKind": "observersRpc",
     "methodName": "BroadcastChat",
     "parameters": [
@@ -3652,7 +3775,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 96,
+    "wireHash": 99,
     "packetKind": "targetRpc",
     "methodName": "ReceiveChat",
     "parameters": [
@@ -3663,7 +3786,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 97,
+    "wireHash": 100,
     "packetKind": "targetRpc",
     "methodName": "ReceiveAnnouncement",
     "parameters": [
@@ -3675,7 +3798,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 98,
+    "wireHash": 101,
     "packetKind": "targetRpc",
     "methodName": "ReceiveSystemMessageLoc_T",
     "parameters": [
@@ -3711,7 +3834,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 99,
+    "wireHash": 102,
     "packetKind": "serverRpc",
     "methodName": "Debug_SpawnMonster",
     "parameters": [
@@ -3723,7 +3846,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 100,
+    "wireHash": 103,
     "packetKind": "serverRpc",
     "methodName": "Debug_ETSetFloor",
     "parameters": [
@@ -3735,37 +3858,37 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 101,
+    "wireHash": 104,
     "packetKind": "serverRpc",
     "methodName": "Debug_ETEnter"
   },
   {
-    "wireHash": 102,
+    "wireHash": 105,
     "packetKind": "serverRpc",
     "methodName": "Debug_ETNextFloor"
   },
   {
-    "wireHash": 103,
+    "wireHash": 106,
     "packetKind": "serverRpc",
     "methodName": "Debug_ETAdvanceTenFloors"
   },
   {
-    "wireHash": 104,
+    "wireHash": 107,
     "packetKind": "serverRpc",
     "methodName": "Debug_ETSpawnShadow"
   },
   {
-    "wireHash": 105,
+    "wireHash": 108,
     "packetKind": "serverRpc",
     "methodName": "ETEnter"
   },
   {
-    "wireHash": 106,
+    "wireHash": 109,
     "packetKind": "serverRpc",
     "methodName": "ETLeave"
   },
   {
-    "wireHash": 107,
+    "wireHash": 110,
     "packetKind": "targetRpc",
     "methodName": "ETUpdateRun",
     "parameters": [
@@ -3781,7 +3904,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 108,
+    "wireHash": 111,
     "packetKind": "targetRpc",
     "methodName": "ETAdvanceFloor",
     "parameters": [
@@ -3798,12 +3921,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 109,
+    "wireHash": 112,
     "packetKind": "serverRpc",
     "methodName": "ETAdvanceFloor_S"
   },
   {
-    "wireHash": 110,
+    "wireHash": 113,
     "packetKind": "serverRpc",
     "methodName": "PvpEnterQueue",
     "parameters": [
@@ -3814,27 +3937,27 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 111,
+    "wireHash": 114,
     "packetKind": "serverRpc",
     "methodName": "PvpLeaveQueue"
   },
   {
-    "wireHash": 112,
+    "wireHash": 115,
     "packetKind": "serverRpc",
     "methodName": "PvpForfeit"
   },
   {
-    "wireHash": 113,
+    "wireHash": 116,
     "packetKind": "serverRpc",
     "methodName": "PvpEnterSkirmish"
   },
   {
-    "wireHash": 114,
+    "wireHash": 117,
     "packetKind": "serverRpc",
     "methodName": "PvpRequestQueueStatus"
   },
   {
-    "wireHash": 115,
+    "wireHash": 118,
     "packetKind": "serverRpc",
     "methodName": "PvpEnterArenaMatch",
     "parameters": [
@@ -3846,12 +3969,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 116,
+    "wireHash": 119,
     "packetKind": "serverRpc",
     "methodName": "RequestPvpQueueTransfer"
   },
   {
-    "wireHash": 117,
+    "wireHash": 120,
     "packetKind": "targetRpc",
     "methodName": "PvpUpdateMatch",
     "parameters": [
@@ -3867,17 +3990,17 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 118,
+    "wireHash": 121,
     "packetKind": "serverRpc",
     "methodName": "AcceptSession"
   },
   {
-    "wireHash": 119,
+    "wireHash": 122,
     "packetKind": "serverRpc",
     "methodName": "DeclineSession"
   },
   {
-    "wireHash": 120,
+    "wireHash": 123,
     "packetKind": "targetRpc",
     "methodName": "UpdateSession",
     "parameters": [
@@ -3888,7 +4011,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 121,
+    "wireHash": 124,
     "packetKind": "targetRpc",
     "methodName": "DrawTitle",
     "parameters": [
@@ -3900,7 +4023,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 122,
+    "wireHash": 125,
     "packetKind": "serverRpc",
     "methodName": "Debug_Status",
     "parameters": [
@@ -3917,22 +4040,22 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 123,
+    "wireHash": 126,
     "packetKind": "serverRpc",
     "methodName": "Debug_Kill"
   },
   {
-    "wireHash": 124,
+    "wireHash": 127,
     "packetKind": "serverRpc",
     "methodName": "Debug_Revive"
   },
   {
-    "wireHash": 125,
+    "wireHash": 128,
     "packetKind": "serverRpc",
     "methodName": "Debug_KillCurrentMapMonsters"
   },
   {
-    "wireHash": 126,
+    "wireHash": 129,
     "packetKind": "serverRpc",
     "methodName": "Guild_Create_S",
     "parameters": [
@@ -3944,7 +4067,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 127,
+    "wireHash": 130,
     "packetKind": "serverRpc",
     "methodName": "Guild_Rename_S",
     "parameters": [
@@ -3956,7 +4079,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 128,
+    "wireHash": 131,
     "packetKind": "serverRpc",
     "methodName": "Guild_Disband_S",
     "parameters": [
@@ -3968,7 +4091,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 129,
+    "wireHash": 132,
     "packetKind": "serverRpc",
     "methodName": "Guild_Invite_S",
     "parameters": [
@@ -3980,7 +4103,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 130,
+    "wireHash": 133,
     "packetKind": "serverRpc",
     "methodName": "Guild_InviteById_S",
     "parameters": [
@@ -3992,7 +4115,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 131,
+    "wireHash": 134,
     "packetKind": "serverRpc",
     "methodName": "Guild_AcceptInvite_S",
     "parameters": [
@@ -4004,7 +4127,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 132,
+    "wireHash": 135,
     "packetKind": "serverRpc",
     "methodName": "Guild_DeclineInvite_S",
     "parameters": [
@@ -4016,7 +4139,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 133,
+    "wireHash": 136,
     "packetKind": "serverRpc",
     "methodName": "Guild_Kick_S",
     "parameters": [
@@ -4028,12 +4151,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 134,
+    "wireHash": 137,
     "packetKind": "serverRpc",
     "methodName": "Guild_Leave_S"
   },
   {
-    "wireHash": 135,
+    "wireHash": 138,
     "packetKind": "serverRpc",
     "methodName": "Guild_LeaveAndPass_S",
     "parameters": [
@@ -4045,7 +4168,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 136,
+    "wireHash": 139,
     "packetKind": "serverRpc",
     "methodName": "Guild_Transfer_S",
     "parameters": [
@@ -4057,7 +4180,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 137,
+    "wireHash": 140,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetMemberRank_S",
     "parameters": [
@@ -4074,7 +4197,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 138,
+    "wireHash": 141,
     "packetKind": "serverRpc",
     "methodName": "Guild_EditRank_S",
     "parameters": [
@@ -4106,12 +4229,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 139,
+    "wireHash": 142,
     "packetKind": "serverRpc",
     "methodName": "Guild_AddRank_S"
   },
   {
-    "wireHash": 140,
+    "wireHash": 143,
     "packetKind": "serverRpc",
     "methodName": "Guild_RemoveRank_S",
     "parameters": [
@@ -4123,7 +4246,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 141,
+    "wireHash": 144,
     "packetKind": "serverRpc",
     "methodName": "Guild_MoveRank_S",
     "parameters": [
@@ -4140,7 +4263,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 142,
+    "wireHash": 145,
     "packetKind": "serverRpc",
     "methodName": "Guild_SpendSkill_S",
     "parameters": [
@@ -4152,7 +4275,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 143,
+    "wireHash": 146,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetNotice_S",
     "parameters": [
@@ -4169,7 +4292,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 144,
+    "wireHash": 147,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetDiscord_S",
     "parameters": [
@@ -4181,7 +4304,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 145,
+    "wireHash": 148,
     "packetKind": "serverRpc",
     "methodName": "Guild_StorageTransaction_S",
     "parameters": [
@@ -4202,12 +4325,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 146,
+    "wireHash": 149,
     "packetKind": "serverRpc",
     "methodName": "Guild_OpenStorage_S"
   },
   {
-    "wireHash": 147,
+    "wireHash": 150,
     "packetKind": "serverRpc",
     "methodName": "Guild_CloseStorage_S",
     "parameters": [
@@ -4224,7 +4347,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 148,
+    "wireHash": 151,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetEmblem_S",
     "parameters": [
@@ -4236,7 +4359,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 149,
+    "wireHash": 152,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetCustomEmblem_S",
     "parameters": [
@@ -4247,7 +4370,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 150,
+    "wireHash": 153,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestEmblem_S",
     "parameters": [
@@ -4259,7 +4382,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 151,
+    "wireHash": 154,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetNameColor_S",
     "parameters": [
@@ -4271,7 +4394,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 152,
+    "wireHash": 155,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetMuted_S",
     "parameters": [
@@ -4283,7 +4406,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 153,
+    "wireHash": 156,
     "packetKind": "serverRpc",
     "methodName": "Guild_SetRecruitment_S",
     "parameters": [
@@ -4300,7 +4423,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 154,
+    "wireHash": 157,
     "packetKind": "serverRpc",
     "methodName": "Guild_Apply_S",
     "parameters": [
@@ -4317,7 +4440,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 155,
+    "wireHash": 158,
     "packetKind": "serverRpc",
     "methodName": "Guild_CancelApplication_S",
     "parameters": [
@@ -4329,7 +4452,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 156,
+    "wireHash": 159,
     "packetKind": "serverRpc",
     "methodName": "Guild_AcceptApplication_S",
     "parameters": [
@@ -4341,7 +4464,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 157,
+    "wireHash": 160,
     "packetKind": "serverRpc",
     "methodName": "Guild_RejectApplication_S",
     "parameters": [
@@ -4353,7 +4476,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 158,
+    "wireHash": 161,
     "packetKind": "serverRpc",
     "methodName": "Guild_Browse_S",
     "parameters": [
@@ -4370,12 +4493,12 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 159,
+    "wireHash": 162,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestPending_S"
   },
   {
-    "wireHash": 160,
+    "wireHash": 163,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestAuditLog_S",
     "parameters": [
@@ -4387,7 +4510,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 161,
+    "wireHash": 164,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestStorageLog_S",
     "parameters": [
@@ -4399,17 +4522,17 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 162,
+    "wireHash": 165,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestPresence_S"
   },
   {
-    "wireHash": 163,
+    "wireHash": 166,
     "packetKind": "serverRpc",
     "methodName": "Guild_RequestRefresh_S"
   },
   {
-    "wireHash": 164,
+    "wireHash": 167,
     "packetKind": "targetRpc",
     "methodName": "GuildStorageLockResult_T",
     "parameters": [
@@ -4446,7 +4569,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 165,
+    "wireHash": 168,
     "packetKind": "targetRpc",
     "methodName": "GuildStorageBatchResult_T",
     "parameters": [
@@ -5089,7 +5212,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 166,
+    "wireHash": 169,
     "packetKind": "targetRpc",
     "methodName": "UpdateGuild_T",
     "parameters": [
@@ -5100,7 +5223,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 167,
+    "wireHash": 170,
     "packetKind": "targetRpc",
     "methodName": "GuildEmblemResult_T",
     "parameters": [
@@ -5121,7 +5244,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 168,
+    "wireHash": 171,
     "packetKind": "targetRpc",
     "methodName": "GuildInvite_T",
     "parameters": [
@@ -5143,7 +5266,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 169,
+    "wireHash": 172,
     "packetKind": "targetRpc",
     "methodName": "GuildBrowseResults_T",
     "parameters": [
@@ -5159,7 +5282,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 170,
+    "wireHash": 173,
     "packetKind": "targetRpc",
     "methodName": "GuildPendingResults_T",
     "parameters": [
@@ -5170,7 +5293,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 171,
+    "wireHash": 174,
     "packetKind": "targetRpc",
     "methodName": "GuildAuditResults_T",
     "parameters": [
@@ -5186,7 +5309,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 172,
+    "wireHash": 175,
     "packetKind": "targetRpc",
     "methodName": "GuildStorageLogResults_T",
     "parameters": [
@@ -5202,7 +5325,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 173,
+    "wireHash": 176,
     "packetKind": "targetRpc",
     "methodName": "GuildPresenceResults_T",
     "parameters": [
@@ -5213,7 +5336,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 174,
+    "wireHash": 177,
     "packetKind": "serverRpc",
     "methodName": "ReportPlayer",
     "parameters": [
@@ -5225,7 +5348,7 @@ export const playerControllerRpcs = [
     ]
   },
   {
-    "wireHash": 175,
+    "wireHash": 178,
     "packetKind": "serverRpc",
     "methodName": "ReportChatMessage",
     "parameters": [
@@ -5243,114 +5366,6 @@ export const playerControllerRpcs = [
         "name": "message",
         "typeName": "System.String",
         "codec": "stringUtf8Packed"
-      }
-    ]
-  },
-  {
-    "wireHash": 0,
-    "packetKind": "serverRpc",
-    "methodName": "TraverseShipCaptain",
-    "parameters": [
-      {
-        "name": "npcId",
-        "typeName": "System.String",
-        "codec": "stringUtf8Packed"
-      }
-    ]
-  },
-  {
-    "wireHash": 1,
-    "packetKind": "targetRpc",
-    "methodName": "ClientPrepareTransfer"
-  },
-  {
-    "wireHash": 2,
-    "packetKind": "targetRpc",
-    "methodName": "ClientSwitchServer",
-    "parameters": [
-      {
-        "name": "hosts",
-        "typeName": "System.String[]"
-      },
-      {
-        "name": "ports",
-        "typeName": "System.UInt16[]"
-      }
-    ]
-  },
-  {
-    "wireHash": 3,
-    "packetKind": "observersRpc",
-    "methodName": "TraverseObservers",
-    "parameters": [
-      {
-        "name": "mapId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "dto",
-        "typeName": "BaseUnitController+TraverseDto"
-      }
-    ]
-  },
-  {
-    "wireHash": 4,
-    "packetKind": "targetRpc",
-    "methodName": "TraverseActive",
-    "parameters": [
-      {
-        "name": "mapId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "dto",
-        "typeName": "BaseUnitController+TraverseDto"
-      },
-      {
-        "name": "receipt",
-        "typeName": "System.UInt64",
-        "codec": "packedUInt64"
-      }
-    ]
-  },
-  {
-    "wireHash": 5,
-    "packetKind": "serverRpc",
-    "methodName": "ConfirmMapState",
-    "parameters": [
-      {
-        "name": "mapId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "instanceId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "receipt",
-        "typeName": "System.UInt64",
-        "codec": "packedUInt64"
-      }
-    ]
-  },
-  {
-    "wireHash": 6,
-    "packetKind": "serverRpc",
-    "methodName": "ClientMapLoadFailed",
-    "parameters": [
-      {
-        "name": "mapId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
-      },
-      {
-        "name": "instanceId",
-        "typeName": "System.Int32",
-        "codec": "packedInt32"
       }
     ]
   }

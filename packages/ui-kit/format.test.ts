@@ -38,7 +38,11 @@ describe("formatMeasuredAt", () => {
   });
 
   test("includes the date once the measurement is from another day", () => {
-    expect(formatMeasuredAt("2026-08-05T09:15:00.000Z", now)).toMatch(/[A-Za-z]{3}\s\d+\s/);
+    // Compared against the same instant seen on its own day, so the test holds in any system locale.
+    const timeOnly = formatMeasuredAt("2026-08-05T09:15:00.000Z", new Date("2026-08-05T18:30:00.000Z"));
+    const dated = formatMeasuredAt("2026-08-05T09:15:00.000Z", now);
+    expect(dated.endsWith(` ${timeOnly}`)).toBe(true);
+    expect(dated.slice(0, -timeOnly.length)).toMatch(/5/);
   });
 
   test("says so rather than rendering an invalid date", () => {
