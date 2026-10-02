@@ -15,6 +15,7 @@ const VIEW_SOURCES: Record<string, string> = {
   rewardsview: "packages/rewards/src/rewardsview",
   catalogview: "packages/rewards/src/catalogview",
   buildexportview: "packages/build-export/src/buildexportview",
+  companionview: "packages/companion/src/companionview",
 };
 
 export async function bundle(options: {
@@ -86,6 +87,31 @@ async function buildView(options: {
   const jsPath = path.join(destination, "index.js");
   const js = options.rewrite(await readFile(jsPath, "utf8"));
   await writeFile(jsPath, js);
+}
+
+/**
+ * The companion's own pages. They are served by the backend over loopback rather than loaded as a
+ * view, so they are built onto disk beside it instead of into the resource bundle.
+ */
+export async function buildCompanionRenderer(options: { workspace: string; outdir: string }): Promise<void> {
+  const source = path.join(options.workspace, "packages/companion");
+  await mkdir(options.outdir, { recursive: true });
+  await bundle({ entrypoint: path.join(source, "src/renderer/index.tsx"), outdir: options.outdir, target: "browser" });
+  const catalog = await Bun.build({
+    entrypoints: [path.join(source, "src/shared/item-catalog.ts")],
+    outdir: options.outdir,
+    target: "browser",
+    format: "esm",
+    naming: "item-catalog.[ext]",
+  });
+  if (!catalog.success) throw new AggregateError(catalog.logs, "Build failed: companion item catalog");
+  await Promise.all([
+    copyFile(path.join(source, "src/renderer/index.html"), path.join(options.outdir, "index.html")),
+    copyFile(path.join(source, "src/renderer/index.css"), path.join(options.outdir, "index.css")),
+    copyFile(path.join(source, "src/renderer/market.html"), path.join(options.outdir, "market.html")),
+    copyFile(path.join(source, "assets/catalog.json"), path.join(options.outdir, "catalog.json")),
+    cp(path.join(source, "assets/fonts"), path.join(options.outdir, "fonts"), { recursive: true }),
+  ]);
 }
 
 export async function copyViewAssets(options: {

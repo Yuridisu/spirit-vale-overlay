@@ -20,6 +20,7 @@ test("environment-root storage remains beneath the extracted application root", 
     actorIdentitiesPath: path.join(root, "data", "actor-identities.json"),
     bossTimersPath: path.join(root, "data", "boss-timers.json"),
     bossFightsPath: path.join(root, "data", "boss-fights.json"),
+    companionDirectory: path.join(root, "data", "companion"),
   });
 });
 

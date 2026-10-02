@@ -6,7 +6,7 @@ import {
   bundledHotkeyHelperPath,
   bundledRuntimePath,
 } from "@svoverlay/desktop-platform/bundle-layout";
-import { bundle, buildViews, copyViewAssets } from "./build-shared.ts";
+import { bundle, buildCompanionRenderer, buildViews, copyViewAssets } from "./build-shared.ts";
 
 const appRoot = path.resolve(import.meta.dir, "..");
 const workspace = path.resolve(appRoot, "../..");
@@ -25,6 +25,7 @@ await bundle({
   target: "bun",
 });
 await buildViews({ workspace, viewsDir: views });
+await buildCompanionRenderer({ workspace, outdir: path.join(extensions, "companion") });
 await copyViewAssets({ workspace, viewsDir: views, resourcesDir: resources });
 
 await copyFile(process.execPath, path.join(appRoot, bundledRuntimePath()));

@@ -6,7 +6,7 @@
 > 2026 and invited others to take it over. This fork carries it on: it follows game updates and
 > adds fixes and features. It is not affiliated with the original author or with the game.
 
-Spirit Vale Overlay is a passive Windows companion app for live combat, character, reward, and in-game overlay information. It uses your existing Npcap installation in non-promiscuous mode and never sends, modifies, drops, or injects game traffic. Disclaimer for packet capture dps tools, packet capture is based on proxmity, so dps for other players will go down when out of range.
+Spirit Vale Overlay is a passive Windows companion app for live combat, character, reward, loot, market, and in-game overlay information. It uses your existing Npcap installation in non-promiscuous mode and never sends, modifies, drops, or injects game traffic. The only thing it ever uploads is market listings, and only if you turn that on. Disclaimer for packet capture dps tools, packet capture is based on proxmity, so dps for other players will go down when out of range.
 
 **[Installation guide →](https://yuridisu.github.io/spirit-vale-overlay/install/)** · [Troubleshooting](https://yuridisu.github.io/spirit-vale-overlay/troubleshooting/) · [Report an issue](https://github.com/Yuridisu/spirit-vale-overlay/issues)
 
@@ -16,6 +16,11 @@ The same guides live in this repository: [docs/install/index.md](docs/install/in
 > The capture, decoding, and catalog packages that used to live in
 > [spirit-vale-tools](https://github.com/kar-mi/spirit-vale-tools) are now part of this repository,
 > under [tools/](tools/).
+
+> The Companion window (bag, loot rules, gold sessions and market) is
+> [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2, brought in with the author's
+> agreement. See [packages/companion/README.md](packages/companion/README.md) for what came from
+> where, and for what it sends to the market service when you opt in.
 
 > **Default overlay hotkeys:** `Ctrl+Shift+1` locks or unlocks the overlay, `Ctrl+Shift+2` resets the
 > session, `Ctrl+Shift+3` opens the live death log, `Ctrl+Shift+4` shows or hides the overlay,

@@ -19,6 +19,7 @@
     "@svoverlay/desktop-platform": "workspace:*",
     "@svoverlay/i18n": "workspace:*",
     "@svoverlay/overlay": "workspace:*",
+    "@svoverlay/companion": "workspace:*",
     "@svoverlay/rewards": "workspace:*",
     "@svoverlay/ui-kit": "workspace:*",
     "preact": "^10.29.7"

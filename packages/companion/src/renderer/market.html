@@ -1,0 +1,2149 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ValeMarket — observed SpiritVale listings</title>
+<meta name="description" content="Observed active SpiritVale market listings from ValeMarket contributors. Not sale history.">
+<meta name="theme-color" content="#111713">
+<link rel="preload" href="fonts/atkinson-hyperlegible-next-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/crimson-pro-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Crimson Pro';font-style:normal;font-weight:200 900;font-display:swap;src:url('fonts/crimson-pro-latin.woff2') format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible Next';font-style:normal;font-weight:200 800;font-display:swap;src:url('fonts/atkinson-hyperlegible-next-latin.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('fonts/jetbrains-mono-latin.woff2') format('woff2')}
+:root{
+  color-scheme:dark;
+  --font-display:'Crimson Pro',Georgia,serif;
+  --font-body:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --bg:#0f1411;--panel:#1a221c;--panel2:#151c17;--line:#2b3830;--line2:#3c4e43;
+  --ink:#d2dad4;--ink-strong:#e7ede8;--dim:#9fb0a4;--faint:#7c8d83;
+  --acc:#5fd39a;--acc2:#8fb6a4;--gold:#d9b24a;--warn:#e0a85f;
+  --bg-grad-top:#16211a;--header-bg:rgba(15,20,17,.92);
+  --hover:#28332b;--chaos-ink:#c9a6ff;
+  --inspect:440px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%,var(--bg-grad-top) 0%,var(--bg) 60%);
+  color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;
+  display:flex;flex-direction:column;min-height:100%;
+}
+a{color:var(--acc);text-decoration:none}
+a:hover{text-decoration:underline}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+header{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;
+  padding:10px 20px;background:var(--header-bg);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);flex:none;
+}
+.brand{display:flex;align-items:baseline;gap:14px;flex:none}
+.logo{font-family:var(--font-display);font-weight:700;letter-spacing:.06em;font-size:18px;color:var(--ink-strong)}
+.logo .sv{color:var(--acc)}
+.cta{color:var(--dim);font-size:12.5px;font-weight:600}
+.cta:hover{color:var(--acc);text-decoration:none}
+.refresh-button{border:0;background:transparent;padding:4px 0;color:var(--faint);font-size:11px;font-weight:600;white-space:nowrap}
+.refresh-button:hover{color:var(--acc)}
+.refresh-button:disabled{cursor:wait;opacity:.55}
+#q{
+  flex:1 1 240px;max-width:460px;background:var(--panel2);border:1px solid var(--line2);
+  color:var(--ink);border-radius:9px;padding:8px 12px;
+}
+#q:focus{outline:none;border-color:var(--acc)}
+.meta{margin-left:auto;color:var(--faint);font-size:11.5px;font-family:var(--font-mono);text-align:right}
+.toolbar{
+  display:flex;flex-direction:column;gap:8px;
+  padding:10px 20px 12px;border-bottom:1px solid var(--line);flex:none;
+}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field span{
+  color:var(--faint);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+}
+.field select{
+  background:var(--panel2);border:1px solid var(--line2);color:var(--ink);
+  border-radius:8px;padding:6px 28px 6px 10px;min-width:148px;
+  appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 55%,calc(100% - 9px) 55%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.field select:focus{outline:none;border-color:var(--acc)}
+.count{margin-left:auto;align-self:center;color:var(--faint);font-size:12px;font-family:var(--font-mono)}
+.combo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 6px 4px 10px;border-radius:999px;border:1px solid var(--acc);
+  background:#1c3f30;color:#dfffe8;font-size:12px;font-weight:600;
+}
+.pill.chaos{background:#24183a;border-color:var(--chaos-ink);color:#eadbff}
+.pill .x{border:0;background:transparent;color:inherit;padding:0 4px;font-size:14px;line-height:1;opacity:.75}
+.pill .mag{
+  display:inline-flex;align-items:center;gap:3px;
+  border-left:1px solid rgba(223,255,232,.28);padding-left:6px;
+  color:#b7e7c8;font-weight:500;
+}
+.pill .line-count{display:flex;align-items:center;gap:5px;border-left:1px solid var(--line);padding-left:8px;font-size:11px;color:var(--dim)}
+.pill .line-count select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:3px;min-height:26px}
+.pill .mag i{font-style:normal;font-size:11px;opacity:.8}
+.pill .mag input{
+  width:3.4em;background:transparent;border:0;color:inherit;
+  font-family:var(--font-mono);font-size:11.5px;padding:0;font-weight:600;
+}
+.pill .mag input:focus{outline:none}
+.pill .mag input::-webkit-outer-spin-button,
+.pill .mag input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pill .mag input[type=number]{-moz-appearance:textfield}
+.add{position:relative;flex:1 1 180px;min-width:160px;max-width:280px}
+.add input{
+  width:100%;background:var(--panel2);border:1px solid var(--line2);color:var(--ink);
+  border-radius:8px;padding:6px 10px;
+}
+.add input:focus{outline:none;border-color:var(--acc)}
+.suggest{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:8px;
+  max-height:240px;overflow:auto;padding:4px;
+}
+.suggest button{
+  display:flex;justify-content:space-between;width:100%;
+  background:transparent;border:0;color:var(--ink);padding:6px 8px;border-radius:6px;text-align:left;
+}
+.suggest button:hover,.suggest button.on{background:var(--hover)}
+.suggest .n{color:var(--faint);font-family:var(--font-mono);font-size:11px}
+.chip{
+  padding:4px 10px;border-radius:20px;border:1px solid var(--line2);
+  background:var(--panel2);color:var(--dim);font-size:12px;font-weight:600;
+}
+.chip.on{background:#1c3f30;border-color:var(--acc);color:#dfffe8}
+.workspace{flex:1;display:flex;min-height:0}
+.board{flex:1;overflow:auto;min-width:0}
+.list{padding:4px 12px 80px}
+.row{
+  display:grid;grid-template-columns:42px minmax(0,1fr) auto;
+  gap:12px;align-items:center;width:100%;text-align:left;
+  padding:8px 10px;border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:inherit;border-radius:0;
+}
+.row:hover{background:var(--hover)}
+.row.on{background:rgba(95,211,154,.08)}
+.ic{
+  width:42px;height:42px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;font-size:12px;
+  color:var(--acc2);flex:none;
+}
+.ic img{width:100%;height:100%;object-fit:cover;display:block}
+.name{min-width:0}
+.name .cn{display:block;font-weight:600;color:var(--ink-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.name .cm{display:block;color:var(--faint);font-size:11.5px;margin-top:1px}
+.ask{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.ask .hi{display:block;color:var(--acc);font-weight:600;font-size:13.5px}
+.ask .lo{display:block;color:var(--dim);font-size:11px;margin-top:1px}
+.mark{color:var(--gold);font-size:10.5px;font-weight:700;letter-spacing:.04em}
+.ok{color:var(--acc);font-size:10.5px;font-weight:700;letter-spacing:.04em}
+.inspect{
+  width:var(--inspect);flex:none;border-left:1px solid var(--line);
+  background:rgba(15,20,17,.55);overflow:auto;display:flex;flex-direction:column;
+}
+.inspect.empty{color:var(--faint);padding:48px 28px;font-size:13px;line-height:1.55}
+.inspect.empty strong{display:block;color:var(--ink-strong);font-size:15px;margin-bottom:6px}
+.ih{
+  display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:start;
+  padding:16px 16px 12px;border-bottom:1px solid var(--line);
+}
+.ih .ic{width:48px;height:48px}
+.ih h1{margin:0;font-size:18px;font-weight:650;color:var(--ink-strong);line-height:1.25}
+.ih .sub{color:var(--faint);font-size:12px;margin-top:4px}
+.ih .sub a{margin-left:8px}
+.close{
+  background:transparent;border:1px solid var(--line2);color:var(--dim);
+  width:32px;height:32px;border-radius:8px;
+}
+.summary{padding:12px 16px;border-bottom:1px solid var(--line);color:var(--dim);font-size:12.5px}
+.summary b{color:var(--ink-strong);font-family:var(--font-mono);font-weight:600}
+.age{display:block;margin-top:4px;font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.quart{
+  display:flex;justify-content:space-between;gap:8px;padding:10px 16px 12px;border-bottom:1px solid var(--line);
+  font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+}
+.quart span{display:flex;flex:1 1 0;min-width:0;flex-direction:column;gap:2px}
+.quart i{font-style:normal;color:var(--faint);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+.quart b{color:var(--ink-strong);font-weight:600;font-size:13.5px}
+.quart .mid b{color:var(--acc)}
+.stat-signals{padding:9px 16px 10px;border-bottom:1px solid var(--line)}
+.stat-signals-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stat-signals-head h2{margin:0;color:var(--ink-strong);font:700 9px var(--font-mono);letter-spacing:.06em;text-transform:uppercase}
+.stat-signals-head span{color:var(--faint);font:9px var(--font-mono);text-transform:uppercase}
+.stat-signals-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 8px;margin-top:7px}
+.stat-signal{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+.stat-signal span{overflow:hidden;color:var(--dim);font-size:10.5px;text-overflow:ellipsis;white-space:nowrap}
+.stat-signal b{color:var(--acc);font:650 10.5px var(--font-mono);white-space:nowrap}
+.stat-signal b.down{color:#ed887e}
+.stat-signals-note{margin-top:6px;color:var(--faint);font-size:9.5px}
+.price-history{border-bottom:1px solid var(--line)}
+.history-head{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px 16px 4px}
+.history-head h2{margin:0;color:var(--ink-strong);font-size:12px}
+.history-head p{margin:2px 0 0;color:var(--faint);font-size:10.5px}
+.history-change{color:var(--acc);font:650 11px var(--font-mono);white-space:nowrap}
+.history-change.down{color:#ed887e}
+.history-chart{padding:0 12px 6px}
+.history-chart svg{display:block;width:100%;height:auto}
+.history-grid{stroke:var(--line);stroke-width:1}
+.history-axis{fill:var(--faint);font:8px var(--font-mono)}
+.history-band{fill:rgba(95,211,154,.14)}
+.history-area{fill:url(#price-history-fill)}
+.history-line{fill:none;stroke:var(--acc);stroke-width:2;vector-effect:non-scaling-stroke}
+.history-volume{fill:#35483c}
+.history-legend{padding:0 16px 10px;color:var(--faint);font:8px var(--font-mono)}
+.history-legend i{display:inline-block;width:14px;height:2px;margin:0 5px 2px 10px;background:var(--acc)}
+.history-legend i:first-child{margin-left:0}
+.history-legend i.fill{height:7px;background:rgba(95,211,154,.15)}
+.history-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.history-stats span{min-width:0;padding:8px 10px;border-left:1px solid var(--line)}
+.history-stats span:first-child{border-left:0}
+.history-stats i{display:block;color:var(--faint);font:normal 8px var(--font-mono);letter-spacing:.04em;text-transform:uppercase}
+.history-stats b{display:block;margin-top:2px;overflow:hidden;color:var(--ink-strong);font:600 10px var(--font-mono);text-overflow:ellipsis}
+.history-state{min-height:118px;display:grid;place-items:center;padding:20px 16px;color:var(--faint);font-size:11.5px;text-align:center}
+.history-state button{margin-left:6px;padding:3px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--panel2);color:var(--dim)}
+.modes{display:flex;gap:6px;padding:10px 16px 0}
+.vlist{padding:6px 12px 40px}
+.group{margin:12px 4px 4px;color:var(--faint);font-size:11.5px}
+.group b{color:var(--ink-strong);font-weight:650}
+.vrow{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px 12px;
+  padding:12px 4px;border-bottom:1px solid var(--line);align-items:start;
+}
+.vmeta{
+  grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;align-items:baseline;font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+}
+.vmeta .p{grid-column:2;color:var(--acc);font-size:15px;font-weight:650;white-space:nowrap}
+.vmeta .p small{color:var(--faint);font:700 9px var(--font-body);letter-spacing:.06em;text-transform:uppercase}
+.vmeta .s{grid-column:1;grid-row:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--faint);font-size:10.5px}
+.stats{
+  grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px 8px;line-height:1.25;
+}
+.stat{
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;
+  margin:0;padding:6px 8px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel2);color:var(--dim);font-size:11.5px;
+}
+.stat:only-child{grid-column:1/-1}
+.stat b{flex:none;color:var(--acc2);font:650 11.5px var(--font-mono)}
+.stats.single-stat .stat{grid-column:1/-1}
+.enhancement-rail{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding-top:1px}
+.enhance{
+  display:inline-flex;align-items:baseline;gap:4px;min-width:0;padding:3px 6px;
+  border:1px solid #5e4e28;border-radius:999px;background:rgba(217,178,74,.08);
+  color:var(--gold);font-size:10.5px;line-height:1.2;
+}
+.enhance-label{color:var(--faint);font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.enhance b{min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--ink-strong);font:650 10.5px var(--font-mono)}
+.chaos{align-self:center;color:var(--chaos-ink);font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+@media(max-width:520px){.stats{grid-template-columns:1fr}}
+.price-label{margin-right:7px;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.08em}
+.depth{padding:12px 16px;border-bottom:1px solid var(--line)}
+.depth h2{margin:0 0 8px;color:var(--ink-strong);font-size:12px}
+.depth h2 small{color:var(--faint);font-weight:400}
+.depth-level{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 16px;align-items:baseline;
+  padding:8px 0;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11.5px;
+}
+.depth-level:first-of-type .depth-price{color:var(--acc);font-weight:700}
+.depth-count{justify-self:end;color:var(--dim);white-space:nowrap;text-align:right}
+.depth-age{grid-column:1/-1;color:var(--faint);font-size:10px}
+.depth-totals{display:flex;gap:8px;padding-top:10px}
+.depth-total{flex:1;padding:7px 8px;border-radius:6px;background:var(--panel2)}
+.depth-total i{display:block;color:var(--faint);font-style:normal;font-size:9px;letter-spacing:.05em;text-transform:uppercase}
+.depth-total b{color:var(--ink-strong);font:600 12px var(--font-mono)}
+.recent-supply{padding:12px 16px;border-bottom:1px solid var(--line)}
+.recent-supply h2{margin:0 0 4px;color:var(--ink-strong);font-size:13px}
+.recent-supply h2 small{color:var(--faint);font-weight:400}
+.fresh-note{margin:0 0 10px;color:var(--dim);font-size:11.5px}
+.fresh-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+.fresh-summary span{padding:8px;background:#1c3f30;border:1px solid #3f9368;border-radius:7px}
+.fresh-summary i{display:block;color:#b7e7c8;font-style:normal;font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.fresh-summary b{display:block;margin-top:2px;color:#dfffe8;font:700 15px var(--font-mono)}
+.fresh-section{margin-top:12px}
+.fresh-section h3{margin:0 0 4px;color:var(--ink-strong);font-size:11px}
+.fresh-section h3 small{color:var(--faint);font-weight:400}
+.fresh-row{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font:11.5px var(--font-mono)}
+.fresh-row .bar{height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+.fresh-row .bar i{display:block;height:100%;border-radius:inherit;background:#3f9368}
+.fresh-row .count{margin:0;color:var(--dim)}
+.fresh-row .age{grid-column:1/-1;color:var(--faint);font-size:10px}
+.fresh-row.old{opacity:.48}
+.fresh-row.old .bar i{background:var(--warn)}
+.more{
+  display:block;width:100%;margin:12px 0;padding:8px;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:8px;color:var(--dim);
+}
+.empty,.status{color:var(--faint);padding:40px 16px;text-align:center}
+@media(max-width:900px){
+  header{flex-wrap:wrap}
+  .meta{margin-left:0;width:100%;text-align:left}
+  #q{max-width:none;flex:1 1 100%}
+  .sorts{margin-left:0}
+  .inspect{
+    position:fixed;inset:auto 0 0 0;width:auto;height:min(78vh,720px);
+    border-left:0;border-top:1px solid var(--line);background:var(--bg);z-index:40;
+    box-shadow:0 -16px 40px rgba(0,0,0,.35);
+  }
+  .inspect.empty{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+.collector-toggle{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);color:var(--dim);font-size:12px;font-weight:600}
+.collector-toggle:hover,.collector-toggle[aria-expanded="true"]{border-color:var(--acc);color:var(--ink-strong)}
+.capture-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.capture-dot.capturing{background:var(--acc);box-shadow:0 0 0 4px rgba(95,211,154,.12)}
+.capture-dot.waiting-for-game{background:var(--gold)}
+.capture-dot.error,.capture-dot.capture-unavailable{background:var(--warn)}
+.capture-panel{position:fixed;z-index:60;top:58px;right:20px;width:min(340px,calc(100vw - 40px));padding:16px;background:#151c17;border:1px solid var(--line2);border-radius:10px;box-shadow:0 18px 60px rgba(0,0,0,.5)}
+.capture-panel[hidden]{display:none}
+.capture-head{display:flex;align-items:start;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.capture-head strong{display:block;color:var(--ink-strong);font-size:14px}
+.capture-head span{display:block;margin-top:3px;color:var(--faint);font-size:11px}
+.capture-close{width:28px;height:28px;border:1px solid var(--line2);border-radius:7px;background:transparent;color:var(--dim);font-size:17px;line-height:1}
+.capture-state{display:flex;gap:9px;padding:14px 0}
+.capture-state .capture-dot{margin-top:5px}
+.capture-state strong,.capture-state span{display:block}
+.capture-state strong{color:var(--ink-strong);font-size:12.5px}
+.capture-state span{margin-top:2px;color:var(--faint);font-size:11px}
+.capture-setting{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid var(--line)}
+.capture-setting[hidden]{display:none}
+.capture-setting strong,.capture-setting small{display:block}
+.capture-setting strong{font-size:12.5px}
+.capture-setting small{margin-top:2px;color:var(--faint);font-size:10.5px}
+.capture-setting input[type="checkbox"]{appearance:none;width:34px;height:19px;margin:0;border:1px solid var(--line2);border-radius:20px;background:#253129}
+.capture-setting input[type="checkbox"]::after{content:"";display:block;width:13px;height:13px;margin:2px;border-radius:50%;background:var(--faint);transition:transform .14s ease}
+.capture-setting input[type="checkbox"]:checked{background:#1c3f30;border-color:var(--acc)}
+.capture-setting input[type="checkbox"]:checked::after{transform:translateX(15px);background:var(--acc)}
+.capture-setting select{max-width:190px;min-width:0;padding:6px 8px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);color:var(--ink);font-size:11px}
+.capture-diagnostics{display:flex;align-items:center;gap:9px;padding:11px 0;border-top:1px solid var(--line)}
+.capture-diagnostics button{flex:none;padding:6px 9px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);color:var(--ink);font-size:11px;font-weight:600}
+.capture-diagnostics button:hover{border-color:var(--acc);color:var(--ink-strong)}
+.capture-diagnostics button:disabled{cursor:wait;opacity:.55}
+.capture-diagnostics span{min-width:0;color:var(--faint);font-size:10.5px;overflow-wrap:anywhere}
+.capture-warning{margin:10px 0 0;color:var(--warn);font-size:11px}
+.capture-note{margin:12px 0 0;color:var(--faint);font-size:10.5px;line-height:1.5}
+@media(max-width:700px){.collector-toggle #collector-brief{display:none}.capture-panel{top:104px}}
+.own{color:var(--gold);font-weight:700}
+.bag-section{border-bottom:1px solid var(--line)}
+.bag-section .history-head{padding:12px 16px 2px}
+.bag-section .vlist{padding:2px 12px 10px}
+.bag-section .vrow{border-color:rgba(217,178,74,.28)}
+.bag-section .vmeta .p{color:var(--gold)}
+.bag-section .vmeta .p.approx{color:var(--dim);font-weight:500}
+.bag-section .bag-empty{padding:4px 16px 12px;color:var(--faint);font-size:11px}
+#collector-toggle,#collector-panel{display:none!important}
+.logo{cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="logo"><span class="sv">Vale</span>Market</span>
+    <button class="collector-toggle" id="collector-toggle" type="button" aria-expanded="false" aria-controls="collector-panel"><span class="capture-dot" id="collector-dot"></span><span id="collector-brief">Contributor off</span></button>
+    <a class="cta" href="https://spiritvalers.com/" target="_blank" rel="noopener">SpiritValers Wiki ↗</a>
+  </div>
+  <input id="q" type="search" placeholder="Search items…" autocomplete="off" spellcheck="false">
+  <div class="meta" id="meta">loading snapshot…</div>
+  <button class="refresh-button" id="refresh-data" type="button" aria-label="Refresh market data">↻ Refresh</button>
+</header>
+<section class="capture-panel" id="collector-panel" hidden>
+  <div class="capture-head">
+    <div><strong>Passive contributor</strong><span id="collector-backend">Packet capture · protocol v2</span></div>
+    <button class="capture-close" id="collector-close" type="button" aria-label="Close contributor settings">×</button>
+  </div>
+  <div class="capture-state">
+    <span class="capture-dot" id="collector-panel-dot"></span>
+    <div><strong id="collector-detail">Connecting to desktop service</strong><span id="collector-counts">Market browsing remains available</span><span id="collector-diagnostics"></span><span id="collector-filtering"></span></div>
+  </div>
+  <label class="capture-setting">
+    <span><strong>Share observations</strong><small>On by default</small></span>
+    <input id="collector-enabled" type="checkbox">
+  </label>
+  <label class="capture-setting">
+    <span><strong>Capture adapter</strong><small id="collector-device-status">Automatic chooses the active default route</small></span>
+    <select id="collector-device"><option value="">Automatic</option></select>
+  </label>
+  <label class="capture-setting" id="collector-mode-row" hidden>
+    <span><strong>Linux capture</strong><small>Automatic prefers dumpcap, then direct libpcap</small></span>
+    <select id="collector-mode">
+      <option value="auto">Automatic</option>
+      <option value="dumpcap">dumpcap</option>
+      <option value="libpcap">Direct libpcap</option>
+    </select>
+  </label>
+  <div class="capture-diagnostics">
+    <button id="collector-export" type="button">Export diagnostics</button>
+    <span id="collector-export-status" aria-live="polite"></span>
+  </div>
+  <p class="capture-warning" id="collector-warning" hidden></p>
+  <p class="capture-note">Uploads only normalized market listings. No account, character, seller, buyer, packet, or installation-path data. If another tool uploads to ValeMarket, enable contribution in only one app.</p>
+</section>
+<div class="toolbar" id="toolbar">
+  <div class="bar">
+    <label class="field"><span>Kind</span>
+      <select id="f-kind"></select>
+    </label>
+    <label class="field" id="slot-wrap"><span>Slot</span>
+      <select id="f-slot"></select>
+    </label>
+    <label class="field"><span>Sort</span>
+      <select id="f-sort"></select>
+    </label>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="combo">
+    <div class="pills" id="pills"></div>
+    <div class="add">
+      <input id="statq" type="search" placeholder="Add a stat — Agi, Multistrike…" autocomplete="off" spellcheck="false">
+      <div class="suggest" id="suggest" hidden></div>
+    </div>
+  </div>
+</div>
+<div class="workspace">
+  <div class="board">
+    <div class="list" id="list"><div class="status">Fetching public snapshot…</div></div>
+  </div>
+  <aside class="inspect empty" id="inspect" hidden>
+    <strong>Pick an item</strong>
+    Filter by slot and substats, then open a row. Equipment is individual rolls, not a median.
+  </aside>
+</div>
+<script type="module">
+import { catalogKey, LOOT_CATALOG_KINDS, MARKET_CATALOG_KINDS } from "./item-catalog.js";
+const API = "https://market-api.spiritvalers.com";
+const KINDS = [
+  { id: "All", label: "All" },
+  { id: "Equipment", label: "Equipment" },
+  { id: "Card", label: "Cards" },
+  { id: "Gem", label: "Gems" },
+  { id: "Artifact", label: "Artifacts" },
+  { id: "Material", label: "Materials" },
+  { id: "Consumable", label: "Consumables" },
+  { id: "Cosmetic", label: "Cosmetics" },
+];
+const SORTS = [
+  { id: "seen", label: "Seen" },
+  { id: "cheap", label: "Cheap" },
+  { id: "listed", label: "Listed" },
+  { id: "name", label: "Name" },
+];
+const SECTIONS = ["Weapon", "Armor", "Accessory", "Offhand", "Grimoire"];
+const SLOTS = {
+  Weapon: ["Sword", "Dagger", "Axe", "Spear", "Mace", "Wand", "Bow", "Pistol", "Rifle", "Shotgun", "Scythe", "Katar", "Twinblade", "GatlingGun", "Launcher"],
+  Armor: ["Head", "Chest", "Legs", "Feet"],
+  Accessory: ["Accessory", "Back", "Eyewear"],
+  Offhand: ["Book", "Shield"],
+  Grimoire: ["Grimoire"],
+};
+const SLOT_LABEL = {
+  GatlingGun: "Gatling",
+  Accessory: "Ring / glove",
+  Back: "Back",
+  Eyewear: "Eyewear",
+  Book: "Book",
+};
+const ART_SLOTS = { 0: "Rune", 1: "Jewel", 2: "Scroll", 3: "Relic" };
+const ART_SLOT_IDS = Object.values(ART_SLOTS);
+const FUNGIBLE = new Set(["Card", "Gem", "Material", "Consumable"]);
+const DEFAULT_CARD_ICON = "icons/card.webp";
+const PAGE = 40;
+const FAMILY_CAP = 12;
+const STAT_LABEL = {
+  Agi: "Agi",
+  Atk: "Atk",
+  AtkMult: "Atk %",
+  AtkSpd: "Attack Speed",
+  AtkSpdLimit: "Attack Speed Limit",
+  CastRange: "Cast Range",
+  CastSpd: "Cast Speed",
+  Chain: "Auto-Attack Chain",
+  CooldownRecovery: "Cooldown Recovery",
+  Crit: "Crit",
+  CritDamage: "Crit Damage",
+  DamageFromMagic: "Damage from Magic",
+  DamageFromMelee: "Damage from Melee",
+  DamageMagic: "Magic Damage",
+  DamageMelee: "Melee Damage",
+  DamageRanged: "Ranged Damage",
+  Def: "Def",
+  DefMult: "Def %",
+  Dex: "Dex",
+  DoubleAttack: "Multistrike",
+  HealingReceived: "Healing Received",
+  HpMult: "Hp %",
+  HpRegenMult: "Hp Regen %",
+  Int: "Int",
+  Leech: "Health Leech",
+  Luk: "Luk",
+  Matk: "Matk",
+  MatkMult: "Matk %",
+  Mdef: "Mdef",
+  MdefMult: "Mdef %",
+  MoveSpd: "Movement Speed",
+  MpCost: "Mp Cost",
+  MpMult: "Mp %",
+  MpRegenMult: "Mp Regen %",
+  PerfectDodge: "Perfect Dodge",
+  Str: "Str",
+  Vit: "Vit",
+};
+
+function statLabel(name) {
+  return STAT_LABEL[name] || String(name).replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+function fingerprintKey(itemType, itemId, artifactSlot) {
+  return JSON.stringify([itemType, itemId, artifactSlot]);
+}
+
+function statSearchText(name) {
+  return `${name} ${statLabel(name)}`.toLowerCase();
+}
+
+function parseStatFilter(token) {
+  const match = /^([A-Za-z][A-Za-z0-9]*)(?:(?::|>=)(-?\d+(?:\.\d+)?))?(?:~([123]))?$/.exec(String(token).trim());
+  if (!match) return null;
+  return { name: match[1], min: match[2] == null ? null : Number(match[2]), count: Number(match[3] || 1) };
+}
+
+function encodeStatFilter(filter) {
+  const base = filter.min == null ? filter.name : `${filter.name}:${filter.min}`;
+  return (filter.count || 1) > 1 ? `${base}~${filter.count}` : base;
+}
+
+function hasStatFilter(name) {
+  return state.stats.some((filter) => filter.name === name);
+}
+
+function statNumeric(stat) {
+  return typeof stat.displayValue === "number" ? stat.displayValue : null;
+}
+
+function variantHasFilter(variant, filter) {
+  const hits = (variant.stats || []).filter((stat) => {
+    if (stat.name !== filter.name) return false;
+    if (filter.min == null) return true;
+    const value = statNumeric(stat);
+    return value != null && value >= filter.min;
+  });
+  return hits.length >= (filter.count || 1);
+}
+
+function percentileDisc(sorted, p) {
+  return sorted[Math.ceil(p * sorted.length) - 1];
+}
+
+function quartilesOf(variants) {
+  if (!variants.length) return null;
+  if (variants.length === 1) {
+    const row = variants[0];
+    if (!Number.isFinite(row.p25) || !Number.isFinite(row.p75)) return null;
+    return { low: row.low, p25: row.p25, median: row.median, p75: row.p75, high: row.high };
+  }
+  const prices = variants.map((row) => row.median).filter(Number.isFinite).sort((left, right) => left - right);
+  if (prices.length === 0) return null;
+  return {
+    low: Math.min(...variants.map((row) => row.low)),
+    p25: percentileDisc(prices, 0.25),
+    median: percentileDisc(prices, 0.5),
+    p75: percentileDisc(prices, 0.75),
+    high: Math.max(...variants.map((row) => row.high)),
+  };
+}
+
+function quartileStrip(quartiles) {
+  if (!quartiles) return "";
+  const price = (value) => `<b title="${money(value)}">${moneyShort(value)}</b>`;
+  return `<div class="quart" title="Observed listing prices. Discrete P25 / median / P75.">
+    <span><i>Low</i>${price(quartiles.low)}</span>
+    <span><i>P25</i>${price(quartiles.p25)}</span>
+    <span class="mid"><i>Median</i>${price(quartiles.median)}</span>
+    <span><i>P75</i>${price(quartiles.p75)}</span>
+    <span><i>High</i>${price(quartiles.high)}</span>
+  </div>`;
+}
+function priceHistoryKey(item) {
+  return `${item.itemType}:${item.id}`;
+}
+
+function hourlyPriceHistory(rows) {
+  return rows.map((row) => {
+    const time = Date.parse(row.bucketStart);
+    const prices = [row.low, row.p25, row.median, row.p75, row.high];
+    if (!Number.isFinite(time) || !prices.every(Number.isFinite)
+        || !Number.isSafeInteger(row.listingCount) || row.listingCount < 0) {
+      throw new Error("invalid hourly price point");
+    }
+    return {
+      time,
+      low: row.low,
+      p25: row.p25,
+      median: row.median,
+      p75: row.p75,
+      high: row.high,
+      volume: row.listingCount,
+    };
+  });
+}
+
+function historyWithCurrent(points, view) {
+  if (!view?.quartiles) return points;
+  const current = {
+    time: Math.floor(Date.parse(state.manifest.generatedAt) / 3_600_000) * 3_600_000,
+    low: view.quartiles.low,
+    p25: view.quartiles.p25,
+    median: view.quartiles.median,
+    p75: view.quartiles.p75,
+    high: view.quartiles.high,
+    volume: view.listingCount,
+  };
+  if (!points.length) return [current];
+  if (points[points.length - 1].time === current.time) return [...points.slice(0, -1), current];
+  return [...points, current];
+}
+
+function historySpan(points) {
+  const hours = Math.max(1, Math.round((points[points.length - 1].time - points[0].time) / 3_600_000));
+  return hours < 24 ? `${hours}h observed` : `${Math.max(1, Math.round(hours / 24))}d observed`;
+}
+
+function priceHistorySvg(points, item) {
+  const width = 408;
+  const height = 172;
+  const pad = { left: 47, right: 8, top: 10, bottom: 24 };
+  let minimum = Math.min(...points.map((point) => point.low));
+  let maximum = Math.max(...points.map((point) => point.high));
+  if (minimum === maximum) {
+    const margin = Math.max(1, minimum * .05);
+    minimum -= margin;
+    maximum += margin;
+  }
+  const firstTime = points[0].time;
+  const lastTime = points[points.length - 1].time;
+  const x = (time) => pad.left + (time - firstTime) / (lastTime - firstTime) * (width - pad.left - pad.right);
+  const y = (value) => pad.top + (maximum - value) / (maximum - minimum) * (height - pad.top - pad.bottom);
+  const path = (key) => points.map((point, index) =>
+    `${index ? "L" : "M"}${x(point.time).toFixed(1)},${y(point[key]).toFixed(1)}`).join(" ");
+  const band = `${points.map((point, index) =>
+    `${index ? "L" : "M"}${x(point.time).toFixed(1)},${y(point.p75).toFixed(1)}`).join(" ")} ${
+    [...points].reverse().map((point) => `L${x(point.time).toFixed(1)},${y(point.p25).toFixed(1)}`).join(" ")} Z`;
+  const maximumVolume = Math.max(1, ...points.map((point) => point.volume));
+  const span = lastTime - firstTime;
+  const timeLabel = (time) => span >= 3 * 86_400_000
+    ? new Date(time).toLocaleDateString(undefined, { weekday: "short" })
+    : new Date(time).toLocaleTimeString(undefined, { hour: "numeric" });
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(item.name)} hourly median asking price">
+    <defs><linearGradient id="price-history-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fd39a" stop-opacity=".18"/><stop offset="1" stop-color="#5fd39a" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${[0, .5, 1].map((step) => {
+      const lineY = pad.top + step * (height - pad.top - pad.bottom);
+      const value = maximum - step * (maximum - minimum);
+      return `<line class="history-grid" x1="${pad.left}" x2="${width - pad.right}" y1="${lineY}" y2="${lineY}"/>
+        <text class="history-axis" x="${pad.left - 6}" y="${lineY + 3}" text-anchor="end">${moneyShort(value)}</text>`;
+    }).join("")}
+    ${points.map((point) => {
+      const barHeight = point.volume / maximumVolume * 25;
+      return `<rect class="history-volume" x="${x(point.time) - 1}" y="${height - pad.bottom - barHeight}" width="2" height="${barHeight}"/>`;
+    }).join("")}
+    <path class="history-band" d="${band}"/>
+    <path class="history-area" d="${path("median")} L${x(lastTime)},${height - pad.bottom} L${x(firstTime)},${height - pad.bottom} Z"/>
+    <path class="history-line" d="${path("median")}"/>
+    ${[0, .25, .5, .75, 1].map((step) => {
+      const time = firstTime + span * step;
+      return `<text class="history-axis" x="${pad.left + (width - pad.left - pad.right) * step}" y="${height - 7}" text-anchor="${step === 0 ? "start" : step === 1 ? "end" : "middle"}">${timeLabel(time)}</text>`;
+    }).join("")}
+  </svg>`;
+}
+
+function priceHistorySection(item, view) {
+  const entry = state.priceHistory.get(priceHistoryKey(item));
+  if (!entry || entry.status === "loading") {
+    return `<section class="price-history"><div class="history-head"><div><h2>Price over time</h2><p>Hourly median · rolling 7 days</p></div></div>
+      <div class="history-state">Loading observed price history…</div></section>`;
+  }
+  if (entry.status === "error") {
+    return `<section class="price-history"><div class="history-head"><div><h2>Price over time</h2><p>Hourly median · rolling 7 days</p></div></div>
+      <div class="history-state">Price history is temporarily unavailable.<button type="button" data-history-retry="1">Retry</button></div></section>`;
+  }
+  const points = historyWithCurrent(entry.points, view);
+  if (points.length < 2) {
+    return `<section class="price-history"><div class="history-head"><div><h2>Price over time</h2><p>Hourly median · rolling 7 days</p></div></div>
+      <div class="history-state">More observations are needed before a trend can be drawn.</div></section>`;
+  }
+  const change = (points[points.length - 1].median / points[0].median - 1) * 100;
+  const medians = points.map((point) => point.median).sort((left, right) => left - right);
+  return `<section class="price-history">
+    <div class="history-head"><div><h2>Price over time</h2><p>Hourly median · ${historySpan(points)} of rolling 7d</p></div>
+      <b class="history-change${change < 0 ? " down" : ""}">${change >= 0 ? "+" : ""}${change.toFixed(1)}%</b></div>
+    <div class="history-chart">${priceHistorySvg(points, item)}</div>
+    <div class="history-legend"><i></i> median<i class="fill"></i> P25–P75 <span>· bars are observed listings</span></div>
+    <div class="history-stats">
+      <span><i>Window low</i><b title="${money(Math.min(...points.map((point) => point.low)))}">${moneyShort(Math.min(...points.map((point) => point.low)))}</b></span>
+      <span><i>Window median</i><b title="${money(percentileDisc(medians, .5))}">${moneyShort(percentileDisc(medians, .5))}</b></span>
+      <span><i>Window high</i><b title="${money(Math.max(...points.map((point) => point.high)))}">${moneyShort(Math.max(...points.map((point) => point.high)))}</b></span>
+    </div>
+  </section>`;
+}
+
+async function ensurePriceHistory(item) {
+  const key = priceHistoryKey(item);
+  if (state.priceHistory.has(key)) return;
+  state.priceHistory.set(key, { status: "loading" });
+  try {
+    const response = await fetch(`${API}/v2/markets/global/items/${item.itemType}/${encodeURIComponent(item.id)}/price-history`);
+    if (!response.ok) throw new Error(`price history ${response.status}`);
+    const body = await response.json();
+    if (body.marketId !== "global" || body.itemType !== item.itemType || body.itemId !== item.id
+        || body.interval !== "hour" || body.windowSeconds !== 604800 || !Array.isArray(body.points)) {
+      throw new Error("invalid price history response");
+    }
+    state.priceHistory.set(key, { status: "ready", points: hourlyPriceHistory(body.points) });
+  } catch {
+    state.priceHistory.set(key, { status: "error" });
+  }
+  if (state.open === item.key) renderInspector();
+}
+
+function priceDepthOf(variants) {
+  const provided = variants.map((variant) => variant.depth).filter((depth) => depth?.levels?.length);
+  if (provided.length === 1) return provided[0];
+  const byPrice = new Map();
+  for (const variant of variants) {
+    if (!Number.isFinite(variant.low)) continue;
+    const quantity = Number.isSafeInteger(variant.quantity) && variant.quantity >= 0 ? variant.quantity : 0;
+    const level = byPrice.get(variant.low) || {
+      price: variant.low,
+      listingCount: 0,
+      unitCount: 0,
+      firstSeenAt: variant.firstSeenAt,
+      lastSeenAt: variant.lastSeenAt,
+    };
+    level.listingCount += variant.listingCount;
+    level.unitCount += quantity;
+    if (variant.firstSeenAt && (!level.firstSeenAt || variant.firstSeenAt < level.firstSeenAt)) level.firstSeenAt = variant.firstSeenAt;
+    if (variant.lastSeenAt && (!level.lastSeenAt || variant.lastSeenAt > level.lastSeenAt)) level.lastSeenAt = variant.lastSeenAt;
+    byPrice.set(variant.low, level);
+  }
+  const levels = [...byPrice.values()].sort((left, right) => left.price - right.price);
+  if (!levels.length) return null;
+  const floor = levels[0].price;
+  const within = (percent) => levels
+    .filter((level) => level.price * 100 <= floor * (100 + percent))
+    .reduce((total, level) => ({
+      listingCount: total.listingCount + level.listingCount,
+      unitCount: total.unitCount + level.unitCount,
+    }), { listingCount: 0, unitCount: 0 });
+  return {
+    levels: levels.slice(0, 12),
+    totalLevels: levels.length,
+    withinFivePercent: within(5),
+    withinTenPercent: within(10),
+  };
+}
+
+function freshRow(level, maximumUnits, old) {
+  const width = Math.max(4, Math.round(level.unitCount / Math.max(1, maximumUnits) * 100));
+  const listingText = `${level.listingCount} listing${level.listingCount === 1 ? "" : "s"}`;
+  const unitText = `${level.unitCount} unit${level.unitCount === 1 ? "" : "s"}`;
+  return `<div class="fresh-row${old ? " old" : ""}"><b title="${money(level.price)}">${moneyShort(level.price)}</b>`
+    + `<span class="bar"><i style="width:${width}%"></i></span>`
+    + `<span class="count">${listingText} · ${unitText}</span>`
+    + `<span class="age">newest listing ${ageHTML(level.lastSeenAt)}</span></div>`;
+}
+
+function recentSupplyDetails(depth) {
+  const recent = depth.recent;
+  const windowHours = recent.windowSeconds / 3_600;
+  const levels = recent.levels;
+  const maximumUnits = Math.max(1, ...levels.map((level) => level.unitCount));
+  const floor = levels[0] || null;
+  const summary = `<div class="fresh-summary">`
+    + `<span><i>Recent floor</i><b>${floor ? moneyShort(floor.price) : "\u2014"}</b></span>`
+    + `<span><i>Recent observed supply</i><b>${recent.unitCount} units</b></span>`
+    + `<span><i>Recent listings</i><b>${recent.listingCount}</b></span></div>`;
+  const note = `<p class="fresh-note">All eligible listings with a game-server timestamp in the last ${windowHours}h feed the supply totals. The newest 15 minutes are intentionally held before publication; price rows show the 12 cheapest recent levels.</p>`;
+  const recentRows = levels.length
+    ? levels.map((level) => freshRow(level, maximumUnits, false)).join("")
+    : `<p class="fresh-note">No eligible listings were observed in this window.</p>`;
+  const historicalRows = depth.levels.map((level) => freshRow(level, maximumUnits, true)).join("");
+  return `<section class="recent-supply"><h2>Recent observed supply <small>past ${windowHours}h</small></h2>${note}${summary}`
+    + `<div class="fresh-section"><h3>Recent low-price depth <small>${Math.min(12, levels.length)} price levels</small></h3>${recentRows}</div>`
+    + `<details class="fresh-section"><summary>Earlier low-price observations (${depth.levels.length})</summary>${historicalRows}</details>`
+    + `</section>`;
+}
+
+function depthDetails(depth) {
+  if (!depth) {
+    return `<div class="depth"><h2>Price depth <small>not available in this snapshot</small></h2></div>`;
+  }
+  if (depth.recent) return recentSupplyDetails(depth);
+  const unitText = (count) => `${count} unit${count === 1 ? "" : "s"}`;
+  const listingText = (count) => `${count} listing${count === 1 ? "" : "s"}`;
+  const depthScope = depth.totalLevels > depth.levels.length
+    ? `${depth.levels.length} cheapest of ${depth.totalLevels} levels`
+    : "observed active listings";
+  return `<div class="depth"><h2>Unit-price depth <small>${depthScope}</small></h2>`
+    + depth.levels.map((level) =>
+      `<div class="depth-level"><b class="depth-price" title="${money(level.price)}">${moneyShort(level.price)}</b>`
+        + `<span class="depth-count">${listingText(level.listingCount)} · ${unitText(level.unitCount)}</span>`
+        + `<small class="depth-age">oldest listing ${ageHTML(level.firstSeenAt)} · newest listing ${ageHTML(level.lastSeenAt)}</small></div>`
+    ).join("")
+    + `<div class="depth-totals"><span class="depth-total"><i>At low</i><b>${unitText(depth.levels[0].unitCount)}</b></span>`
+    + `<span class="depth-total"><i>Within 5%</i><b>${unitText(depth.withinFivePercent.unitCount)}</b></span>`
+    + `<span class="depth-total"><i>Within 10%</i><b>${unitText(depth.withinTenPercent.unitCount)}</b></span></div></div>`;
+}
+
+
+const state = {
+  catalog: {},
+  items: [],
+  byId: new Map(),
+  manifest: null,
+  kind: "All",
+  query: "",
+  sort: "seen",
+  section: null,
+  slot: null,
+  stats: [],
+  chaos: false,
+  open: null,
+  family: false,
+  shown: PAGE,
+  priceHistory: new Map(),
+  statFingerprints: new Map(),
+  statFingerprintGeneratedAt: null,
+};
+const $ = (id) => document.getElementById(id);
+const DESKTOP_API = window.location.origin;
+let desktopState = null;
+let collectorBusy = false;
+let devicesLoadedAt = 0;
+let diagnosticsBusy = false;
+
+function logClientEvent(event, error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+  void fetch(`${DESKTOP_API}/v1/logs/client`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      level: "error",
+      event,
+      message: message.slice(0, 2_000),
+      ...(stack ? { stack: stack.slice(0, 4_000) } : {}),
+    }),
+  }).catch(() => {});
+}
+
+window.addEventListener("error", (event) => {
+  if (event.error !== undefined) logClientEvent("frontend.runtime.error", event.error);
+  else if (event.message) logClientEvent("frontend.runtime.error", event.message);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  logClientEvent("frontend.runtime.unhandled_rejection", event.reason);
+});
+
+function collectorPhaseClass(state) {
+  return state?.phase || "";
+}
+
+function renderCollector() {
+  const phase = collectorPhaseClass(desktopState);
+  for (const id of ["collector-dot", "collector-panel-dot"]) {
+    $(id).className = `capture-dot ${phase}`;
+  }
+  $("collector-brief").textContent = !desktopState
+    ? "Desktop service unavailable"
+    : desktopState.phase === "capturing"
+      ? "Contributing"
+      : desktopState.contributionEnabled
+        ? "Contributor waiting"
+        : "Contributor off";
+  $("collector-detail").textContent = desktopState?.detail || "Connecting to desktop service";
+  $("collector-counts").textContent = desktopState
+    ? `${desktopState.observationsPrepared.toLocaleString()} prepared · ${desktopState.observationsUploaded.toLocaleString()} uploaded · ${desktopState.queuedBatches.toLocaleString()} queued`
+    : "Market browsing remains available";
+  $("collector-diagnostics").textContent = desktopState
+    ? `${desktopState.packetsObserved.toLocaleString()} game packets · ${(desktopState.marketEventsDecoded ?? 0).toLocaleString()} market events · ${(desktopState.searchRequestsDecoded ?? 0).toLocaleString()} search requests · ${(desktopState.listingEventsDecoded ?? 0).toLocaleString()} listing responses`
+      + ((desktopState.automaticCaptureRestarts ?? 0) > 0 ? ` · ${desktopState.automaticCaptureRestarts.toLocaleString()} automatic route restarts` : "")
+      + ((desktopState.lateSessionResponsesRecovered ?? 0) > 0 ? ` · ${desktopState.lateSessionResponsesRecovered.toLocaleString()} late-session responses recovered` : "")
+      + ((desktopState.lateSessionRecoveryCandidates ?? 0) > 0 ? ` · ${desktopState.lateSessionRecoveryCandidates.toLocaleString()} late-session links checked` : "")
+      + ((desktopState.lateSessionRecoveryPayloadCandidates ?? 0) > 0 ? ` · ${desktopState.lateSessionRecoveryPayloadCandidates.toLocaleString()} string payload candidates` : "")
+      + ((desktopState.lateSessionRecoveryDecodeRejected ?? 0) > 0 ? ` · ${desktopState.lateSessionRecoveryDecodeRejected.toLocaleString()} response payloads rejected` : "")
+    : "";
+  const droppedFlows = desktopState?.droppedFlows ?? [];
+  const unattributedPackets = droppedFlows.reduce((total, flow) => total + flow.packets, 0);
+  const gameTrafficFlows = droppedFlows.filter((flow) => flow.verdict === "game traffic").length;
+  $("collector-filtering").textContent = desktopState
+    ? `${(desktopState.listingsDecoded ?? 0).toLocaleString()} listings decoded · ${(desktopState.observationsNormalized ?? 0).toLocaleString()} normalized · ${(desktopState.normalizationDropped ?? 0).toLocaleString()} dropped · ${(desktopState.duplicatesSuppressed ?? 0).toLocaleString()} duplicates`
+      + ((desktopState.normalizationErrors ?? 0) > 0 ? ` · ${desktopState.normalizationErrors.toLocaleString()} errors` : "")
+      + ((desktopState.unresolvedInboundRpcLinks ?? 0) > 0 ? ` · ${desktopState.unresolvedInboundRpcLinks.toLocaleString()} unresolved inbound links` : "")
+      + ((desktopState.fragmentedMessagesReassembled ?? 0) > 0 ? ` · ${desktopState.fragmentedMessagesReassembled.toLocaleString()} fragmented messages restored` : "")
+      + ((desktopState.fragmentAssembliesDropped ?? 0) > 0 ? ` · ${desktopState.fragmentAssembliesDropped.toLocaleString()} incomplete fragmented messages` : "")
+      + ((desktopState.objectSpawnPacketsObserved ?? 0) > 0 || (desktopState.bulkSpawnPacketsObserved ?? 0) > 0
+        ? ` · ${(desktopState.objectSpawnsDecoded ?? 0).toLocaleString()}/${(desktopState.objectSpawnPacketsObserved ?? 0).toLocaleString()} object spawns decoded · ${(desktopState.rpcLinkRegistrationsObserved ?? 0).toLocaleString()} link registrations · ${(desktopState.bulkSpawnPacketsObserved ?? 0).toLocaleString()} bulk spawns · ${(desktopState.resolvedInboundRpcLinks ?? 0).toLocaleString()} resolved inbound links`
+        : "")
+      + ((desktopState.unresolvedInboundRpcLinkIds?.length ?? 0) > 0 ? ` · unresolved IDs ${desktopState.unresolvedInboundRpcLinkIds.join(", ")}` : "")
+      + (unattributedPackets > 0 ? ` · ${unattributedPackets.toLocaleString()} unattributed (${gameTrafficFlows} game-like flows)` : "")
+    : "";
+  const captureAdapter = desktopState?.captureAdapter;
+  const captureBackend = desktopState?.captureBackend;
+  $("collector-backend").textContent = captureBackend
+    ? `${captureBackend.name} · protocol v2`
+    : "Packet capture · protocol v2";
+  $("collector-mode-row").hidden = captureBackend?.platform !== "linux";
+  $("collector-mode").value = desktopState?.linuxCaptureMode || "auto";
+  $("collector-device-status").textContent = captureAdapter
+    ? `${captureAdapter.selection === "automatic" ? "Automatic" : "Manual"} · ${captureAdapter.description}`
+    : "Automatic chooses the active default route";
+  const automaticOption = $("collector-device").options[0];
+  if (automaticOption) {
+    automaticOption.textContent = captureAdapter?.selection === "automatic"
+      ? `Automatic — ${captureAdapter.description}`
+      : "Automatic";
+  }
+  $("collector-enabled").checked = desktopState?.contributionEnabled === true;
+  $("collector-enabled").disabled = collectorBusy || !desktopState;
+  $("collector-device").disabled = collectorBusy || captureBackend?.availability !== "ready";
+  $("collector-mode").disabled = collectorBusy || captureBackend?.platform !== "linux";
+  $("collector-export").disabled = diagnosticsBusy || !desktopState;
+  const warning = desktopState?.warning;
+  $("collector-warning").hidden = !warning;
+  $("collector-warning").textContent = warning || "";
+}
+
+async function loadCaptureDevices() {
+  if (Date.now() - devicesLoadedAt < 15_000 || desktopState?.captureBackend?.availability !== "ready") return;
+  const response = await fetch(`${DESKTOP_API}/v1/devices`, { cache: "no-store" });
+  if (!response.ok) return;
+  const body = await response.json();
+  const select = $("collector-device");
+  select.replaceChildren();
+  const automatic = document.createElement("option");
+  automatic.value = "";
+  automatic.textContent = desktopState?.captureAdapter?.selection === "automatic"
+    ? `Automatic — ${desktopState.captureAdapter.description}`
+    : "Automatic";
+  select.append(automatic);
+  for (const device of body.devices || []) {
+    if (device.loopback || (!device.automaticCandidate && device.name !== desktopState?.deviceName)) continue;
+    const option = document.createElement("option");
+    option.value = device.name;
+    option.textContent = `${device.description || device.name}${device.automaticCandidate ? "" : " (inactive)"}`;
+    select.append(option);
+  }
+  select.value = desktopState?.deviceName || "";
+  devicesLoadedAt = Date.now();
+}
+
+async function pollCollector() {
+  try {
+    const response = await fetch(`${DESKTOP_API}/v1/state`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`desktop ${response.status}`);
+    desktopState = await response.json();
+    renderCollector();
+    await loadCaptureDevices();
+  } catch {
+    desktopState = null;
+    devicesLoadedAt = 0;
+    renderCollector();
+  }
+}
+
+async function updateCollector(settings) {
+  collectorBusy = true;
+  renderCollector();
+  try {
+    const response = await fetch(`${DESKTOP_API}/v1/settings`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    if (!response.ok) throw new Error(`desktop ${response.status}`);
+    desktopState = await response.json();
+    devicesLoadedAt = 0;
+    await loadCaptureDevices();
+  } finally {
+    collectorBusy = false;
+    renderCollector();
+  }
+}
+
+async function exportDiagnostics() {
+  diagnosticsBusy = true;
+  $("collector-export-status").textContent = "Preparing…";
+  renderCollector();
+  try {
+    const response = await fetch(`${DESKTOP_API}/v1/diagnostics/export`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    if (!response.ok) throw new Error(`desktop ${response.status}`);
+    const result = await response.json();
+    $("collector-export-status").textContent = "Saved";
+    if (globalThis.valeMarketDesktop?.openDiagnostics !== undefined) {
+      await globalThis.valeMarketDesktop.openDiagnostics(result.path);
+    } else {
+      $("collector-export-status").textContent = `Saved to ${result.path}`;
+    }
+  } catch (error) {
+    logClientEvent("frontend.diagnostics.export_failed", error);
+    $("collector-export-status").textContent = `Export failed: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    diagnosticsBusy = false;
+    renderCollector();
+  }
+}
+
+$("collector-toggle").addEventListener("click", () => {
+  const panel = $("collector-panel");
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) {
+    devicesLoadedAt = 0;
+    void loadCaptureDevices();
+  }
+  $("collector-toggle").setAttribute("aria-expanded", String(!panel.hidden));
+});
+$("collector-close").addEventListener("click", () => {
+  $("collector-panel").hidden = true;
+  $("collector-toggle").setAttribute("aria-expanded", "false");
+});
+$("collector-enabled").addEventListener("change", (event) => {
+  void updateCollector({ contributionEnabled: event.target.checked });
+});
+$("collector-device").addEventListener("change", (event) => {
+  void updateCollector({ deviceName: event.target.value || null });
+});
+$("collector-mode").addEventListener("change", (event) => {
+  void updateCollector({ linuxCaptureMode: event.target.value });
+});
+$("collector-export").addEventListener("click", () => {
+  void exportDiagnostics();
+});
+
+
+// ---- Vale Companion bag bridge (messages from the desktop shell) ----
+let bagByItem = new Map();
+let pendingOpen = null;
+
+function receiveBag(bag) {
+  bagByItem = new Map();
+  for (const item of bag) {
+    const key = catalogKey(LOOT_CATALOG_KINDS[item.kind], item.itemId);
+    const group = bagByItem.get(key) || [];
+    group.push(item);
+    bagByItem.set(key, group);
+  }
+  if (state.items.length) {
+    renderList();
+    renderInspector();
+  }
+}
+
+function unitsOf(copies) {
+  let units = 0;
+  for (const copy of copies) units += copy.count > 0 ? copy.count : 1;
+  return units;
+}
+
+// Listings comparable to one set of stat lines, strictest tier first. Each tier also
+// carries the pill filters that express it, so opening the market and pricing a bag
+// copy agree on what "comparable" means.
+function comparableTiers(item, slot, lines) {
+  const pool = slot === null ? item.variants : item.variants.filter((variant) => ART_SLOTS[variant.artifactSlot] === slot);
+  const key = lines.map((line) => statLabel(line.stat)).sort().join(" · ") || "no stats";
+  const family = pool.filter((variant) => familyKey(variant) === key);
+  const filters = lines.map((line) => ({ name: line.stat, min: line.printed }));
+  const atLeast = family.filter((variant) => filters.every((filter) => variantHasFilter(variant, filter)));
+  return [
+    { variants: atLeast, filters, label: "comparable", detail: "cheapest ask for a roll at least as good as yours" },
+    { variants: family, filters: filters.map((filter) => ({ name: filter.name, min: null })), label: "same lines", detail: "cheapest ask with the same stat lines but different values" },
+    { variants: pool, filters: [], label: "other lines", detail: "cheapest ask for this item with different stat lines" },
+  ];
+}
+
+function bagCopyRow(item, copy) {
+  const lines = copy.lines || [];
+  const stats = lines.map((line) =>
+    formatStat({ name: line.stat, valueText: line.printed == null ? "—" : String(line.printed) })
+    + (line.isChaos ? ' <span class="chaos">chaos</span>' : "")).join("");
+  const slot = copy.kind === "artifact" ? copy.type : null;
+  const tier = comparableTiers(item, slot, lines.filter((line) => !line.isChaos)).find((entry) => entry.variants.length);
+  let low = Infinity;
+  for (const variant of tier?.variants || []) if (variant.low < low) low = variant.low;
+  const approx = tier !== undefined && tier.label !== "comparable";
+  const price = tier ? `${approx ? "~" : ""}${money(low)}` : "—";
+  const basis = tier ? `${tier.label} · ${tier.variants.length} listing${tier.variants.length === 1 ? "" : "s"}` : "no listing of this item";
+  const detail = tier ? `${tier.detail} (${tier.variants.length})` : "Nothing of this item is listed right now";
+  return `<div class="vrow">
+    ${stats || copy.refine > 0 ? `<div class="stats${lines.length === 1 ? " single-stat" : ""}">${stats}${enhancementHTML({ refine: copy.refine })}</div>` : ""}
+    <div class="vmeta" title="${escapeHtml(detail)}"><span class="p${approx ? " approx" : ""}">${price}</span><span class="s">${escapeHtml(basis)}</span></div>
+  </div>`;
+}
+
+function bagSection(item, view) {
+  const copies = bagByItem.get(item.key) || [];
+  if (copies.length === 0) return "";
+  if (item.fungible) {
+    const units = unitsOf(copies);
+    const unit = view ? (view.quartiles?.p25 ?? view.median) : null;
+    const worth = unit === null ? "" : ` · ≈ ${moneyShort(unit * units)} at P25`;
+    return `<section class="bag-section"><div class="history-head"><div><h2>In your bag</h2><p>${units.toLocaleString()} unit${units === 1 ? "" : "s"}${worth}</p></div></div></section>`;
+  }
+  return `<section class="bag-section"><div class="history-head"><div><h2>In your bag</h2><p>${copies.length} cop${copies.length === 1 ? "y" : "ies"} · asking prices of comparable listings, not sales</p></div></div>
+    <div class="vlist">${copies.map((copy) => bagCopyRow(item, copy)).join("")}</div></section>`;
+}
+
+function openFromCompanion(message) {
+  Object.assign(state, readUrl(new URLSearchParams(message.search)), { sort: state.sort });
+  const item = state.byId.get(state.open);
+  if (item) {
+    const slot = ART_SLOT_IDS.includes(state.slot) ? state.slot : null;
+    const lines = state.stats.map((filter) => ({ stat: filter.name, printed: filter.min }));
+    const tier = comparableTiers(item, slot, lines).find((entry) => entry.variants.length);
+    state.stats = tier ? tier.filters : [];
+  } else {
+    state.open = null;
+    state.query = message.name;
+  }
+  $("q").value = state.query;
+  openItem(state.open);
+  $("list").querySelector(".row.on")?.scrollIntoView({ block: "center" });
+}
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin || event.source !== window.parent) return;
+  const message = event.data;
+  if (message?.type === "valecompanion:bag") {
+    receiveBag(Array.isArray(message.bag) ? message.bag : []);
+  } else if (message?.type === "valecompanion:market-open" && typeof message.search === "string") {
+    if (state.items.length) openFromCompanion(message);
+    else pendingOpen = message;
+  }
+});
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+
+function money(n) {
+  return Number(n).toLocaleString("en-US");
+}
+
+function moneyShort(n) {
+  const value = Number(n);
+  const units = ["", "K", "M", "B", "T"];
+  let index = 0;
+  let scaled = value;
+  while (Math.abs(scaled) >= 1000 && index < units.length - 1) {
+    scaled /= 1000;
+    index++;
+  }
+  const rounded = Math.round(scaled * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}${units[index]}`;
+}
+
+function hoursAgo(iso) {
+  if (!iso) return null;
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 3_600_000));
+}
+
+function ago(iso) {
+  const hours = hoursAgo(iso);
+  if (hours === null) return "—";
+  if (hours < 1) return "<1h";
+  if (hours < 48) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+function expiryHTML(iso) {
+  if (!iso) return "";
+  const milliseconds = new Date(iso).getTime() - Date.now();
+  if (!Number.isFinite(milliseconds)) return "";
+  if (milliseconds <= 0) return `<span title="${when(iso)}">expired</span>`;
+  const hours = Math.ceil(milliseconds / 3_600_000);
+  const relative = hours < 1 ? "<1h" : hours < 48 ? `${hours}h` : `${Math.ceil(hours / 24)}d`;
+  return `<span title="${when(iso)}">expires in ${relative}</span>`;
+}
+
+
+function ageHTML(iso) {
+  const relative = ago(iso);
+  return relative === "—" ? relative : `<span title="${when(iso)}">${relative} ago</span>`;
+}
+
+function when(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short", day: "numeric", hour: "2-digit", timeZone: "UTC",
+  }) + " UTC";
+}
+
+function initials(name) {
+  return String(name || "?").split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+}
+
+function catalogOf(id, listing) {
+  const kind = MARKET_CATALOG_KINDS[listing?.itemType];
+  const known = kind ? state.catalog[catalogKey(kind, id)] : undefined;
+  if (known) return known;
+  if (listing?.itemType === 5) {
+    return {
+      name: listing.displayName || id,
+      kind: "Card",
+      icon: DEFAULT_CARD_ICON,
+      wiki: null,
+    };
+  }
+  return { name: listing?.displayName || id, kind: kind || "Other", icon: null, wiki: null };
+}
+
+function slotLabel(slot) {
+  return SLOT_LABEL[slot] || slot;
+}
+
+function iconHTML(item) {
+  if (!item.icon) return initials(item.name);
+  return `<img src="${item.icon}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${initials(item.name)}'))">`;
+}
+
+function formatStat(stat) {
+  const label = statLabel(stat.name);
+  if (stat.valueText) return `<span class="stat">${escapeHtml(label)} <b>${escapeHtml(stat.valueText)}</b></span>`;
+  const sign = stat.displayValue > 0 ? "+" : "";
+  return `<span class="stat">${escapeHtml(label)} <b>${sign}${stat.displayValue}</b></span>`;
+}
+function enhancementHTML(enhancements) {
+  if (!enhancements || typeof enhancements !== "object") return "";
+  const tags = [];
+  const refine = Number.isSafeInteger(enhancements.refine) ? enhancements.refine : 0;
+  const starting = Number.isSafeInteger(enhancements.startingPotential) ? enhancements.startingPotential : 0;
+  const spent = Number.isSafeInteger(enhancements.spentPotential) ? enhancements.spentPotential : 0;
+  if (refine > 0) {
+    tags.push(`<span class="enhance"><span class="enhance-label">Refine</span><b>+${refine}</b></span>`);
+  }
+  if (starting > 0) {
+    tags.push(`<span class="enhance"><span class="enhance-label">Potential</span><b>${Math.max(0, starting - spent)}/${starting}</b></span>`);
+  }
+  for (const card of Array.isArray(enhancements.cards) ? enhancements.cards : []) {
+    tags.push(`<span class="enhance"><span class="enhance-label">Card</span><b>${escapeHtml(card)}</b></span>`);
+  }
+  for (const gem of Array.isArray(enhancements.gems) ? enhancements.gems : []) {
+    const gemRefine = Number.isSafeInteger(gem?.refine) && gem.refine > 0 ? ` +${gem.refine}` : "";
+    tags.push(`<span class="enhance"><span class="enhance-label">Gem</span><b>${escapeHtml(gem?.itemId || "Unknown")}${gemRefine}</b></span>`);
+  }
+  return tags.length
+    ? `<span class="enhancement-rail" aria-label="Enhancements">${tags.join("")}</span>`
+    : "";
+}
+
+
+function statHay(stat) {
+  const value = stat.valueText ?? stat.displayValue;
+  return `${statSearchText(stat.name)} ${value} ${stat.name}${value}`;
+}
+
+function variantHay(variant) {
+  const slot = ART_SLOTS[variant.artifactSlot] || "";
+  const enhancements = variant.enhancements || {};
+  const enhancementText = [
+    enhancements.refine > 0 ? `refine +${enhancements.refine}` : "",
+    enhancements.startingPotential > 0
+      ? `potential ${Math.max(0, enhancements.startingPotential - enhancements.spentPotential)}/${enhancements.startingPotential}`
+      : "",
+    ...(Array.isArray(enhancements.cards) ? enhancements.cards : []),
+    ...(Array.isArray(enhancements.gems) ? enhancements.gems.map((gem) => `${gem.itemId} +${gem.refine}`) : []),
+  ].filter(Boolean).join(" ");
+  return `${(variant.stats || []).map(statHay).join(" ")} ${enhancementText} ${variant.chaos ? "chaos" : ""} ${slot}`.toLowerCase();
+}
+
+function familyKey(variant) {
+  return (variant.stats || []).map((stat) => statLabel(stat.name)).sort().join(" · ") || "no stats";
+}
+
+function tokens(query) {
+  return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+function matchesHay(hay, toks) {
+  return toks.every((token) => hay.includes(token));
+}
+
+function isFungible(kind) {
+  return FUNGIBLE.has(kind);
+}
+
+function variantMatches(variant, item) {
+  if (state.slot && ART_SLOT_IDS.includes(state.slot)) {
+    if (ART_SLOTS[variant.artifactSlot] !== state.slot) return false;
+  } else if (state.slot && item.kind === "Artifact") {
+    if (ART_SLOTS[variant.artifactSlot] !== state.slot) return false;
+  }
+  if (state.chaos && !variant.chaos) return false;
+  if (state.stats.length && !state.stats.every((filter) => variantHasFilter(variant, filter))) {
+    return false;
+  }
+  return true;
+}
+
+function itemMatchesBase(item, toks) {
+  if (state.kind !== "All" && item.kind !== state.kind) return false;
+  if (state.section && item.section !== state.section) return false;
+  if (state.slot && !ART_SLOT_IDS.includes(state.slot) && item.slot !== state.slot) return false;
+  if (toks.length && !matchesHay(item.hay, toks)) return false;
+  return true;
+}
+
+function matchingVariants(item) {
+  const rows = item.variants.filter((variant) => variantMatches(variant, item));
+  const toks = tokens(state.query);
+  if (!toks.length) return rows;
+  const hits = rows.filter((variant) => matchesHay(variant.hay, toks));
+  return hits.length ? hits : rows;
+}
+
+function viewOf(item) {
+  const variants = matchingVariants(item);
+  if (variants.length === 0) return null;
+  let low = Infinity;
+  let high = -Infinity;
+  let listings = 0;
+  let lastSeenAt = "";
+  let firstSeenAt = "";
+  let confirmed = false;
+  let units = 0;
+  const mids = [];
+  for (const variant of variants) {
+    if (variant.low < low) low = variant.low;
+    if (variant.high > high) high = variant.high;
+    listings += variant.listingCount;
+    units += Number.isSafeInteger(variant.quantity) && variant.quantity >= 0
+      ? variant.quantity
+      : variant.listingCount;
+    if (!lastSeenAt || variant.lastSeenAt > lastSeenAt) lastSeenAt = variant.lastSeenAt;
+    if (variant.firstSeenAt && (!firstSeenAt || variant.firstSeenAt < firstSeenAt)) firstSeenAt = variant.firstSeenAt;
+    if (variant.published) confirmed = true;
+    mids.push(variant.median);
+  }
+  mids.sort((left, right) => left - right);
+  return {
+    low,
+    high,
+    median: mids[Math.floor((mids.length - 1) / 2)],
+    listingCount: listings,
+    unitCount: units,
+    variantCount: variants.length,
+    lastSeenAt,
+    firstSeenAt: firstSeenAt || lastSeenAt,
+    confirmed,
+    quartiles: quartilesOf(variants),
+    depth: item.fungible ? priceDepthOf(variants) : null,
+  };
+}
+
+function filtered() {
+  const toks = tokens(state.query);
+  const rows = [];
+  for (const item of state.items) {
+    if (!itemMatchesBase(item, toks)) continue;
+    const view = viewOf(item);
+    if (!view) continue;
+    rows.push({ item, view });
+  }
+  rows.sort((left, right) => {
+    if (state.sort === "cheap") return left.view.low - right.view.low || left.item.name.localeCompare(right.item.name);
+    if (state.sort === "listed") return right.view.listingCount - left.view.listingCount || left.item.name.localeCompare(right.item.name);
+    if (state.sort === "name") return left.item.name.localeCompare(right.item.name);
+    const seen = (right.view.lastSeenAt || "").localeCompare(left.view.lastSeenAt || "");
+    return seen || right.view.listingCount - left.view.listingCount || left.item.name.localeCompare(right.item.name);
+  });
+  return rows;
+}
+
+function countBy(items, keyFn) {
+  const counts = new Map();
+  for (const item of items) {
+    const key = keyFn(item);
+    if (!key) continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return counts;
+}
+
+function readUrl(params = new URLSearchParams(location.search)) {
+  const kind = KINDS.some((entry) => entry.id === params.get("kind")) ? params.get("kind") : "All";
+  const sort = SORTS.some((entry) => entry.id === params.get("sort")) ? params.get("sort") : "seen";
+  const section = SECTIONS.includes(params.get("section")) ? params.get("section") : null;
+  const slotParam = params.get("slot");
+  const knownSlots = new Set([...Object.values(SLOTS).flat(), ...ART_SLOT_IDS]);
+  const slot = knownSlots.has(slotParam) ? slotParam : null;
+  const stats = (params.get("stats") || "").split(",").map(parseStatFilter).filter(Boolean);
+  return {
+    kind, sort, section, slot, stats,
+    chaos: params.get("chaos") === "1",
+    query: params.get("q") || "",
+    open: params.get("item") || null,
+  };
+}
+
+function writeUrl() {
+  const params = new URLSearchParams();
+  if (state.kind !== "All") params.set("kind", state.kind);
+  if (state.section) params.set("section", state.section);
+  if (state.slot) params.set("slot", state.slot);
+  if (state.stats.length) params.set("stats", state.stats.map(encodeStatFilter).join(","));
+  if (state.chaos) params.set("chaos", "1");
+  if (state.query) params.set("q", state.query);
+  if (state.sort !== "seen") params.set("sort", state.sort);
+  if (state.open) params.set("item", state.open);
+  const next = params.toString();
+  const url = next ? `?${next}` : location.pathname;
+  if (url !== `${location.pathname}${location.search}`) history.replaceState(null, "", url);
+}
+
+function option(value, label, selected) {
+  return `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+}
+
+function slotSelectValue() {
+  if (state.slot && ART_SLOT_IDS.includes(state.slot)) return `art:${state.slot}`;
+  if (state.slot) return `eq:${state.slot}`;
+  if (state.section) return `sec:${state.section}`;
+  return "";
+}
+
+function applySlotValue(value) {
+  if (!value) {
+    state.section = null;
+    state.slot = null;
+    return;
+  }
+  const [kind, name] = value.split(":");
+  if (kind === "sec") {
+    state.section = name;
+    state.slot = null;
+    if (state.kind === "All") state.kind = "Equipment";
+    return;
+  }
+  if (kind === "eq") {
+    state.slot = name;
+    state.section = Object.entries(SLOTS).find(([, slots]) => slots.includes(name))?.[0] || null;
+    if (state.kind === "All") state.kind = "Equipment";
+    return;
+  }
+  state.slot = name;
+  state.section = null;
+  if (state.kind === "All") state.kind = "Artifact";
+}
+
+function availableStats() {
+  const toks = tokens(state.query);
+  const pool = state.items.filter((item) => itemMatchesBase(item, toks));
+  const statCounts = new Map();
+  let chaosCount = 0;
+  for (const item of pool) {
+    const names = new Set();
+    let hasChaos = false;
+    for (const variant of item.variants) {
+      if (state.slot && ART_SLOT_IDS.includes(state.slot) && ART_SLOTS[variant.artifactSlot] !== state.slot) continue;
+      if (variant.chaos) hasChaos = true;
+      for (const stat of variant.stats || []) names.add(stat.name);
+    }
+    if (hasChaos) chaosCount += 1;
+    for (const name of names) {
+      if (hasStatFilter(name)) continue;
+      if (state.stats.every((need) => names.has(need.name))) statCounts.set(name, (statCounts.get(name) || 0) + 1);
+    }
+  }
+  const stats = [...statCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return { stats, chaosCount };
+}
+
+function renderSuggest() {
+  const box = $("suggest");
+  if (!box) return;
+  const query = ($("statq")?.value || "").trim().toLowerCase();
+  if (document.activeElement !== $("statq")) {
+    box.hidden = true;
+    return;
+  }
+  const { stats, chaosCount } = availableStats();
+  const rows = [];
+  if (!state.chaos && "chaos".includes(query || "chaos")) {
+    rows.push({ id: "chaos", label: "Chaos", count: chaosCount, rank: query && "chaos".startsWith(query) ? 0 : 2 });
+  }
+  for (const [name, count] of stats) {
+    const hay = statSearchText(name);
+    if (query && !hay.includes(query)) continue;
+    const label = statLabel(name).toLowerCase();
+    const rank = !query ? 1 : hay === query || label === query ? 0 : label.startsWith(query) || name.toLowerCase().startsWith(query) ? 1 : 2;
+    rows.push({ id: name, label: statLabel(name), count, rank });
+  }
+  rows.sort((a, b) => a.rank - b.rank || b.count - a.count || a.label.localeCompare(b.label));
+  if (rows.length === 0) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = rows.slice(0, 12).map((row, index) =>
+    `<button type="button" class="${index === 0 ? "on" : ""}" data-add="${escapeHtml(row.id)}">${escapeHtml(row.label)}<span class="n">${row.count}</span></button>`
+  ).join("");
+}
+
+function renderToolbar(rows) {
+  const kind = $("f-kind");
+  const slot = $("f-slot");
+  const sort = $("f-sort");
+  if (!kind) return;
+  kind.innerHTML = KINDS.map((entry) => option(entry.id, entry.label, state.kind === entry.id)).join("");
+  sort.innerHTML = SORTS.map((entry) => option(entry.id, entry.label, state.sort === entry.id)).join("");
+
+  const toks = tokens(state.query);
+  const afterKind = state.items.filter((item) =>
+    (state.kind === "All" || item.kind === state.kind) && (!toks.length || matchesHay(item.hay, toks)));
+  const showEquip = state.kind === "All" || state.kind === "Equipment";
+  const showArt = state.kind === "All" || state.kind === "Artifact";
+  $("slot-wrap").hidden = !showEquip && !showArt;
+
+  const sectionCounts = countBy(afterKind, (item) => item.section);
+  const afterSection = afterKind.filter((item) => !state.section || item.section === state.section);
+  const slotCounts = countBy(afterSection, (item) => item.slot);
+  const artCounts = new Map();
+  for (const item of afterKind.filter((entry) => entry.kind === "Artifact")) {
+    const seen = new Set();
+    for (const variant of item.variants) {
+      const name = ART_SLOTS[variant.artifactSlot];
+      if (name) seen.add(name);
+    }
+    for (const name of seen) artCounts.set(name, (artCounts.get(name) || 0) + 1);
+  }
+
+  const groups = [option("", "Any slot", !state.section && !state.slot)];
+  if (showEquip) {
+    for (const section of SECTIONS) {
+      const n = sectionCounts.get(section) || 0;
+      if (!n && state.section !== section) continue;
+      groups.push(option(`sec:${section}`, `${section} · ${n}`, state.section === section && !state.slot));
+      for (const piece of SLOTS[section] || []) {
+        const count = slotCounts.get(piece) || 0;
+        if (!count && state.slot !== piece) continue;
+        groups.push(option(`eq:${piece}`, `\u00a0\u00a0${slotLabel(piece)} · ${count}`, state.slot === piece));
+      }
+    }
+  }
+  if (showArt) {
+    for (const name of ART_SLOT_IDS) {
+      const count = artCounts.get(name) || 0;
+      if (!count && state.slot !== name) continue;
+      groups.push(option(`art:${name}`, `Artifact ${name} · ${count}`, state.slot === name));
+    }
+  }
+  slot.innerHTML = groups.join("");
+  slot.value = slotSelectValue();
+  $("count").textContent = `${rows.length} items`;
+
+  const pillKey = (state.chaos ? "chaos|" : "") + state.stats.map((filter) => filter.name).join(",");
+  const editingMag = document.activeElement?.closest?.(".pill .mag input");
+  if ($("pills").dataset.key !== pillKey || !editingMag) {
+    $("pills").dataset.key = pillKey;
+    $("pills").innerHTML =
+      (state.chaos ? `<span class="pill chaos">Chaos <button type="button" class="x" data-remove-chaos="1" aria-label="Remove Chaos">×</button></span>` : "")
+      + state.stats.map((filter) =>
+        `<span class="pill" data-stat="${escapeHtml(filter.name)}">${escapeHtml(statLabel(filter.name))}`
+        + `<span class="mag"><i>≥</i><input type="number" inputmode="decimal" step="1" placeholder="any" aria-label="${escapeHtml(statLabel(filter.name))} at least" value="${filter.min == null ? "" : escapeHtml(String(filter.min))}"></span>`
+        + `<label class="line-count" title="Each matching line must meet the minimum; lines are not added together.">Lines <select aria-label="${escapeHtml(statLabel(filter.name))} minimum matching lines" data-line-count="1">${[1, 2, 3].map((count) => `<option value="${count}"${(filter.count || 1) === count ? " selected" : ""}>${count}+</option>`).join("")}</select></label>`
+        + `<button type="button" class="x" data-remove-stat="${escapeHtml(filter.name)}" aria-label="Remove ${escapeHtml(statLabel(filter.name))}">×</button></span>`
+      ).join("");
+  }
+  renderSuggest();
+}
+
+function renderMeta() {
+  const manifest = state.manifest;
+  if (!manifest) return;
+  $("meta").innerHTML =
+    `${manifest.totals.listings.toLocaleString()} listings · ${manifest.totals.items} items<br>`
+    + `${when(manifest.generatedAt)} · live community feed`;
+}
+
+function ageLine(item) {
+  const newest = ago(item.lastSeenAt);
+  const oldest = ago(item.firstSeenAt);
+  if (!item.firstSeenAt || item.firstSeenAt === item.lastSeenAt) return `listed ${newest} ago`;
+  return `newest listing ${newest} ago · oldest ${oldest} ago`;
+}
+
+function renderList() {
+  const rows = filtered();
+  renderToolbar(rows);
+  if (rows.length === 0) {
+    $("list").innerHTML = `<div class="empty">Nothing matches.</div>`;
+    return;
+  }
+  $("list").innerHTML = rows.map(({ item, view }) => {
+    const unique = !item.fungible;
+    const target = view.quartiles?.p25 ?? view.median;
+    const p75 = view.quartiles?.p75 ?? view.high;
+    const price = item.fungible
+      ? `<span class="hi"><span class="price-label">P25 · unit</span>${money(target)}</span>`
+        + `<span class="lo">low ${money(view.low)} · P75 ${money(p75)}</span>`
+      : `<span class="hi">${money(view.low)} – ${money(view.high)}</span><span class="lo">${view.variantCount} roll${view.variantCount === 1 ? "" : "s"}</span>`;
+    const mark = view.confirmed
+      ? `<span class="ok">confirmed</span>`
+      : (unique && view.listingCount === 1 ? `<span class="mark">one listing</span>` : `<span class="mark">unconfirmed</span>`);
+    const piece = item.slot ? ` · ${slotLabel(item.slot)}` : "";
+    const count = item.fungible
+      ? `${view.listingCount} listings · ${view.unitCount.toLocaleString()} units`
+      : `${view.listingCount} seen`;
+    const owned = unitsOf(bagByItem.get(item.key) || []);
+    return `
+      <button type="button" class="row${state.open === item.key ? " on" : ""}" data-id="${escapeHtml(item.key)}">
+        <div class="ic">${iconHTML(item)}</div>
+        <div class="name">
+          <span class="cn">${escapeHtml(item.name)}</span>
+          <span class="cm">${escapeHtml(item.kind)}${escapeHtml(piece)} · ${count} · ${ageLine(view)} · ${mark}${owned ? ` · <span class="own">in bag ×${owned.toLocaleString()}</span>` : ""}</span>
+        </div>
+        <div class="ask">${price}</div>
+      </button>`;
+  }).join("");
+}
+
+function statFingerprintSection(item, rows) {
+  if (item.fungible || rows.length === 0) return "";
+  let artifactSlot = null;
+  if (item.itemType === 4) {
+    if (rows.some((row) => !Number.isSafeInteger(row.artifactSlot))) return "";
+    const slots = [...new Set(rows.map((row) => row.artifactSlot))];
+    if (slots.length !== 1) return "";
+    [artifactSlot] = slots;
+  }
+  const fingerprint = state.statFingerprints.get(fingerprintKey(item.itemType, item.id, artifactSlot));
+  if (!fingerprint || !Array.isArray(fingerprint.stats)) return "";
+  const signals = fingerprint.stats
+    .filter((stat) => (stat.confidence === "high" || stat.confidence === "medium")
+      && typeof stat.stat === "string" && Number.isFinite(stat.premiumPct))
+    .sort((left, right) => Math.abs(right.premiumPct) - Math.abs(left.premiumPct))
+    .slice(0, 4);
+  if (signals.length === 0) return "";
+  const scope = artifactSlot == null ? "All rolls" : `${ART_SLOTS[artifactSlot]} rolls`;
+  const signalRows = signals.map((stat) => {
+    const label = statLabel(stat.stat);
+    const lift = `${stat.premiumPct >= 0 ? "+" : ""}${Math.round(stat.premiumPct)}%`;
+    const prevalence = Number.isFinite(stat.prevalencePct) ? Math.round(stat.prevalencePct) : null;
+    const title = `${label}: ${lift} matched asking-price lift`
+      + `${prevalence == null ? "" : `; present on ${prevalence}% of listings`}; ${stat.confidence} confidence`;
+    return `<div class="stat-signal" title="${escapeHtml(title)}"><span>${escapeHtml(label)}</span>`
+      + `<b class="${stat.premiumPct < 0 ? "down" : ""}">${lift}</b></div>`;
+  }).join("");
+  const freshness = state.statFingerprintGeneratedAt ? ` · observed ${ago(state.statFingerprintGeneratedAt)} ago` : "";
+  return `<section class="stat-signals" aria-label="Observed stat price signals">
+    <div class="stat-signals-head"><h2>Stat price signals · ${escapeHtml(scope)}</h2><span>observed</span></div>
+    <div class="stat-signals-grid">${signalRows}</div>
+    <div class="stat-signals-note">Matched asking-price lift · not sales or combat value${freshness}</div>
+  </section>`;
+}
+
+function renderInspector() {
+  const pane = $("inspect");
+  const item = state.open ? state.byId.get(state.open) : null;
+  if (!item) {
+    pane.hidden = false;
+    pane.className = "inspect empty";
+    pane.innerHTML = `<strong>Pick an item</strong>Filter by slot and substats, then open a row. Equipment is individual rolls, not a median.`;
+    return;
+  }
+  const rows = matchingVariants(item);
+  const view = viewOf(item);
+  const filteredBySearch = tokens(state.query).length > 0 || state.stats.length || state.chaos;
+  const shown = rows.slice(0, state.shown);
+  pane.hidden = false;
+  pane.className = "inspect";
+  const wiki = item.wiki ? `<a href="${escapeHtml(item.wiki)}" target="_blank" rel="noopener">View on SpiritValers ↗</a>` : "";
+  const confirm = view?.confirmed ? `<span class="ok">confirmed</span>` : `<span class="mark">unconfirmed</span>`;
+  const piece = item.slot ? ` · ${slotLabel(item.slot)}` : "";
+  const summary = !view
+    ? "No rolls match these filters."
+    : item.fungible
+    ? `Unit P25 <b title="${money(view.quartiles?.p25 ?? view.median)}">${moneyShort(view.quartiles?.p25 ?? view.median)}</b> · low ${moneyShort(view.low)} · P75 ${moneyShort(view.quartiles?.p75 ?? view.high)} · ${view.listingCount} listings · ${view.unitCount.toLocaleString()} units`
+    : `<b>${view.variantCount}</b> of ${item.variantCount} rolls · ${money(view.low)} – ${money(view.high)}`;
+
+  let body = "";
+  if (item.fungible && item.variants.length <= 1 && !item.variants.some((variant) => variant.stats?.length)) {
+    body = view.depth ? "" : `<div class="vlist"><div class="vrow"><div class="stats">Same item, any copy.</div>
+      <div class="vmeta"><span class="p" title="${money(view.quartiles?.p25 ?? view.median)}">${moneyShort(view.quartiles?.p25 ?? view.median)}</span>
+      <span class="s">${view.listingCount} listings · newest ${ago(view.lastSeenAt)} ago</span></div></div></div>`;
+  } else if (state.family) {
+    const groups = new Map();
+    for (const variant of rows) {
+      const key = familyKey(variant);
+      const group = groups.get(key) || [];
+      group.push(variant);
+      groups.set(key, group);
+    }
+    const ordered = [...groups.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, FAMILY_CAP);
+    body = `<div class="vlist">${ordered.map(([key, group]) => {
+      const lows = group.map((variant) => variant.low);
+      return `<div class="group"><b>${escapeHtml(key)}</b> · ${group.length} · ${money(Math.min(...lows))} – ${money(Math.max(...group.map((variant) => variant.high)))}</div>`
+        + group.slice(0, 16).map(variantRow).join("")
+        + (group.length > 16 ? `<div class="group">${group.length - 16} more in this family</div>` : "");
+    }).join("")}
+    ${groups.size > FAMILY_CAP ? `<div class="group">${groups.size - FAMILY_CAP} more stat families</div>` : ""}
+    </div>`;
+  } else {
+    body = `<div class="vlist">${shown.map(variantRow).join("")}`
+      + (rows.length > shown.length
+        ? `<button type="button" class="more" data-more="1">Show ${Math.min(PAGE, rows.length - shown.length)} more · ${rows.length - shown.length} left</button>`
+        : "")
+      + `</div>`;
+  }
+
+  pane.innerHTML = `
+    <div class="ih">
+      <div class="ic">${iconHTML(item)}</div>
+      <div>
+        <h1>${escapeHtml(item.name)}</h1>
+        <div class="sub">${escapeHtml(item.kind)}${escapeHtml(piece)} · ${confirm}${wiki}</div>
+      </div>
+      <button type="button" class="close" data-close="1" aria-label="Close">×</button>
+    </div>
+    <div class="summary">${summary}${filteredBySearch ? " · filtered rolls" : ""}
+      <span class="age">oldest listing ${ageHTML(view?.firstSeenAt)} · newest listing ${ageHTML(view?.lastSeenAt)}</span>
+    </div>
+    ${bagSection(item, view)}
+    ${quartileStrip(view?.quartiles)}
+    ${statFingerprintSection(item, rows)}
+    ${item.fungible && view ? priceHistorySection(item, view) : ""}
+    ${item.fungible ? depthDetails(view?.depth) : ""}
+    ${item.fungible ? "" : `<div class="modes">
+      <button type="button" class="chip${state.family ? "" : " on"}" data-family="0">All rolls</button>
+      <button type="button" class="chip${state.family ? " on" : ""}" data-family="1">Same rolls</button>
+    </div>`}
+    ${body}`;
+  if (item.fungible && view) void ensurePriceHistory(item);
+}
+
+function variantRow(variant) {
+  const slot = variant.artifactSlot == null ? "" : ART_SLOTS[variant.artifactSlot] || "slot " + variant.artifactSlot;
+  const unique = variant.listingCount === 1;
+  const stacked = Number.isSafeInteger(variant.quantity) && variant.quantity > 1;
+  const price = unique || variant.low === variant.high
+    ? money(variant.low)
+    : `${money(variant.low)} – ${money(variant.high)}`;
+  const mark = variant.published
+    ? "confirmed"
+    : unique ? "one listing" : `${variant.listingCount} listings`;
+  const stack = stacked ? ` · stack ×${variant.quantity.toLocaleString()}` : "";
+  const statRows = variant.stats || [];
+  const stats = statRows.length ? statRows.map(formatStat).join("") : "";
+  const enhancements = enhancementHTML(variant.enhancements);
+  const details = [
+    stats,
+    variant.chaos ? '<span class="chaos">chaos</span>' : "",
+    slot ? `<span>${escapeHtml(slot)}</span>` : "",
+  ].filter(Boolean).join(" · ");
+  const span = variant.firstSeenAt && variant.firstSeenAt !== variant.lastSeenAt
+    ? `newest ${ago(variant.lastSeenAt)} ago · oldest ${ago(variant.firstSeenAt)} ago`
+    : `listed ${ago(variant.lastSeenAt)} ago`;
+  const expiry = expiryHTML(variant.expiresAt);
+  return `<div class="vrow">
+    ${details || enhancements ? `<div class="stats${statRows.length === 1 ? " single-stat" : ""}">${details}${enhancements}</div>` : ""}
+    <div class="vmeta"><span class="p">${price}${stacked ? " <small>each</small>" : ""}</span><span class="s">${mark}${stack} · ${span}${expiry ? ` · ${expiry}` : ""}</span></div>
+  </div>`;
+}
+
+function render() {
+  writeUrl();
+  renderList();
+  renderInspector();
+}
+
+function openItem(id) {
+  state.open = id;
+  state.shown = PAGE;
+  state.family = false;
+  render();
+  if (matchMedia("(max-width:900px)").matches) $("inspect").scrollTop = 0;
+}
+
+function addFilter(id) {
+  if (id === "chaos") state.chaos = true;
+  else if (!hasStatFilter(id)) state.stats = [...state.stats, { name: id, min: null }];
+  $("statq").value = "";
+  state.shown = PAGE;
+  render();
+  $("statq").focus();
+}
+
+$("f-kind").addEventListener("change", (event) => {
+  state.kind = event.target.value;
+  if (state.kind !== "All" && state.kind !== "Equipment") {
+    if (!ART_SLOT_IDS.includes(state.slot)) {
+      state.section = null;
+      state.slot = null;
+    }
+  }
+  if (state.kind !== "All" && state.kind !== "Artifact" && ART_SLOT_IDS.includes(state.slot)) {
+    state.slot = null;
+  }
+  state.shown = PAGE;
+  render();
+});
+
+$("f-slot").addEventListener("change", (event) => {
+  applySlotValue(event.target.value);
+  state.shown = PAGE;
+  render();
+});
+
+$("f-sort").addEventListener("change", (event) => {
+  state.sort = event.target.value;
+  render();
+});
+
+$("toolbar").addEventListener("click", (event) => {
+  if (event.target.closest(".pill .mag, .pill .line-count")) return;
+  const add = event.target.closest("[data-add]");
+  if (add) { addFilter(add.dataset.add); return; }
+  const dropStat = event.target.closest("[data-remove-stat]");
+  if (dropStat) {
+    state.stats = state.stats.filter((filter) => filter.name !== dropStat.dataset.removeStat);
+    state.shown = PAGE;
+    render();
+    return;
+  }
+  if (event.target.closest("[data-remove-chaos]")) {
+    state.chaos = false;
+    state.shown = PAGE;
+    render();
+  }
+});
+
+$("toolbar").addEventListener("change", (event) => {
+  const field = event.target.closest("[data-line-count]");
+  if (!field) return;
+  const filter = state.stats.find((entry) => entry.name === field.closest("[data-stat]")?.dataset.stat);
+  if (!filter) return;
+  filter.count = Number(field.value);
+  state.shown = PAGE;
+  render();
+});
+
+$("toolbar").addEventListener("input", (event) => {
+  const field = event.target.closest(".pill .mag input");
+  if (!field) return;
+  const name = field.closest("[data-stat]")?.dataset.stat;
+  const filter = state.stats.find((entry) => entry.name === name);
+  if (!filter) return;
+  const raw = field.value.trim();
+  const next = raw === "" || raw === "-" || raw === "." || raw === "-." ? null : Number(raw);
+  filter.min = Number.isFinite(next) ? next : null;
+  state.shown = PAGE;
+  writeUrl();
+  renderList();
+  renderInspector();
+});
+
+$("statq").addEventListener("input", renderSuggest);
+$("statq").addEventListener("focus", renderSuggest);
+$("statq").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const first = $("suggest").querySelector("[data-add]");
+    if (first) addFilter(first.dataset.add);
+  }
+  if (event.key === "Escape") $("suggest").hidden = true;
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".add")) $("suggest").hidden = true;
+});
+
+$("list").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-id]");
+  if (!row) return;
+  openItem(state.open === row.dataset.id ? null : row.dataset.id);
+});
+
+$("inspect").addEventListener("click", (event) => {
+  if (event.target.dataset.close) { state.open = null; render(); return; }
+  if (event.target.dataset.historyRetry) {
+    const item = state.open ? state.byId.get(state.open) : null;
+    if (item) {
+      state.priceHistory.delete(priceHistoryKey(item));
+      renderInspector();
+    }
+    return;
+  }
+  if (event.target.dataset.more) { state.shown += PAGE; renderInspector(); return; }
+  if (event.target.dataset.family !== undefined) {
+    state.family = event.target.dataset.family === "1";
+    state.shown = PAGE;
+    renderInspector();
+  }
+});
+
+$("q").addEventListener("input", (event) => {
+  state.query = event.target.value;
+  state.shown = PAGE;
+  render();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.ctrlKey && (event.key === "1" || event.key === "2")) {
+    event.preventDefault();
+    window.parent.postMessage({
+      type: "valecompanion:module",
+      module: event.key === "1" ? "loot" : "market",
+    }, window.location.origin);
+    return;
+  }
+  if (event.ctrlKey && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    window.parent.postMessage({ type: "valecompanion:switcher" }, window.location.origin);
+    return;
+  }
+  if (event.key === "/" && event.target.tagName !== "INPUT" && event.target.tagName !== "TEXTAREA") {
+    event.preventDefault();
+    $("q").focus();
+    $("q").select();
+  }
+  if (event.key === "Escape" && state.open) {
+    state.open = null;
+    render();
+  }
+});
+
+window.addEventListener("popstate", () => {
+  Object.assign(state, readUrl());
+  $("q").value = state.query;
+  render();
+});
+
+
+
+async function fetchAllListings(refresh = false) {
+  // The desktop collector owns the snapshot download and cache; the frame reads its copy.
+  const response = await fetch(`${DESKTOP_API}/v1/market/snapshot${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`market snapshot ${response.status}`);
+  const body = await response.json();
+  if (body?.marketId !== "global" || !Array.isArray(body.listings)
+      || typeof body.generatedAt !== "string" || !Number.isFinite(Date.parse(body.generatedAt))) {
+    throw new Error("market API returned an invalid response");
+  }
+  const now = Date.now();
+  const listings = body.listings.filter((listing) =>
+    listing.expiresAt === null || (typeof listing.expiresAt === "string" && Date.parse(listing.expiresAt) > now));
+  return { listings, generatedAt: body.generatedAt };
+}
+let fingerprintCache = null;
+let fingerprintEtag = null;
+let fingerprintNextCheck = 0;
+async function fetchStatFingerprints() {
+  if (fingerprintCache && Date.now() - Date.parse(fingerprintCache.generatedAt) > 24 * 60 * 60 * 1_000) {
+    fingerprintCache = null;
+    fingerprintEtag = null;
+  }
+  if (Date.now() < fingerprintNextCheck) return fingerprintCache;
+  fingerprintNextCheck = Date.now() + 2 * 60 * 1_000;
+  try {
+    const response = await fetch(`${API}/v2/markets/global/stat-fingerprints`, { headers: fingerprintEtag ? { "If-None-Match": fingerprintEtag } : {} });
+    if (response.status === 304 && fingerprintCache) {
+      fingerprintNextCheck = Date.now() + 30 * 60 * 1_000;
+      return fingerprintCache;
+    }
+    if (!response.ok) return fingerprintCache;
+    const body = await response.json();
+    const generatedAt = Date.parse(body?.generatedAt);
+    if (body?.marketId !== "global" || body.modelVersion !== 1 || !Array.isArray(body.items)
+        || !Number.isFinite(generatedAt) || Date.now() - generatedAt > 24 * 60 * 60 * 1_000) {
+      return null;
+    }
+    fingerprintCache = body;
+    fingerprintEtag = response.headers.get("etag");
+    fingerprintNextCheck = Date.now() + 30 * 60 * 1_000;
+    return body;
+  } catch {
+    return fingerprintCache;
+  }
+}
+
+
+function publicVariant(row) {
+  const stats = Array.isArray(row.stats) ? row.stats.map((stat) => ({
+    name: stat.name || `Stat ${stat.type}`,
+    displayValue: typeof stat.value === "number" ? stat.value : 0,
+    valueText: typeof stat.value === "number" ? `${stat.value}${stat.percent ? "%" : ""}` : "—",
+    type: stat.type,
+    percent: stat.percent === true,
+  })) : [];
+  return {
+    listingKey: row.listingKey,
+    listingVersion: row.listingVersion,
+    low: row.unitPrice,
+    median: row.unitPrice,
+    high: row.unitPrice,
+    p25: row.unitPrice,
+    p75: row.unitPrice,
+    listingCount: 1,
+    published: true,
+    quantity: row.quantity,
+    status: row.status,
+    stats,
+    enhancements: row.enhancements && typeof row.enhancements === "object" ? row.enhancements : null,
+    chaos: false,
+    artifactSlot: Number.isSafeInteger(row.enhancements?.artifactSlot) ? row.enhancements.artifactSlot : null,
+    depth: null,
+    firstSeenAt: row.firstSeenAt,
+    lastSeenAt: row.lastSeenAt,
+    expiresAt: row.expiresAt,
+  };
+}
+
+let marketLoading = false;
+
+async function load(refreshSnapshot = false) {
+  if (marketLoading) return;
+  marketLoading = true;
+  const refresh = $("refresh-data");
+  const previousManifest = state.manifest;
+  refresh.disabled = true;
+  refresh.setAttribute("aria-busy", "true");
+  refresh.textContent = "Refreshing…";
+  $("meta").textContent = previousManifest ? "refreshing market data…" : "loading snapshot…";
+  Object.assign(state, readUrl());
+  $("q").value = state.query;
+  try {
+    const [catalog, snapshot, statFingerprints] = await Promise.all([
+      fetch("catalog.json").then((response) => {
+        if (!response.ok) throw new Error(`catalog ${response.status}`);
+        return response.json();
+      }),
+      fetchAllListings(refreshSnapshot),
+      fetchStatFingerprints(),
+    ]);
+    state.catalog = catalog;
+    state.statFingerprints = new Map();
+    state.statFingerprintGeneratedAt = statFingerprints?.generatedAt || null;
+    for (const fingerprint of statFingerprints?.items || []) {
+      if (Number.isSafeInteger(fingerprint.itemType) && typeof fingerprint.itemId === "string"
+          && (fingerprint.artifactSlot === null
+            || (Number.isSafeInteger(fingerprint.artifactSlot) && fingerprint.artifactSlot >= 0 && fingerprint.artifactSlot <= 3))) {
+        state.statFingerprints.set(
+          fingerprintKey(fingerprint.itemType, fingerprint.itemId, fingerprint.artifactSlot),
+          fingerprint,
+        );
+      }
+    }
+    const { listings, generatedAt } = snapshot;
+    const groups = new Map();
+    for (const listing of listings) {
+      const key = `${listing.itemType}:${listing.itemId}`;
+      const group = groups.get(key) || [];
+      group.push(listing);
+      groups.set(key, group);
+    }
+    state.manifest = {
+      date: generatedAt.slice(0, 10),
+      generatedAt,
+      totals: { listings: listings.length, items: groups.size },
+    };
+    state.items = [...groups.values()].map((rows) => {
+      const itemId = rows[0].itemId;
+      const meta = catalogOf(itemId, rows[0]);
+      const variants = rows.map(publicVariant).sort((left, right) =>
+        (right.lastSeenAt || "").localeCompare(left.lastSeenAt || "") || left.low - right.low);
+      for (const variant of variants) variant.hay = variantHay(variant);
+      const prices = variants.map((variant) => variant.low).sort((left, right) => left - right);
+      const firstSeenAt = variants.reduce((oldest, variant) =>
+        !oldest || variant.firstSeenAt < oldest ? variant.firstSeenAt : oldest, "");
+      const lastSeenAt = variants.reduce((newest, variant) =>
+        variant.lastSeenAt > newest ? variant.lastSeenAt : newest, "");
+      const item = {
+        id: itemId,
+        key: catalogKey(meta.kind, itemId),
+        itemType: rows[0].itemType,
+        name: rows.find((row) => row.displayName)?.displayName || meta.name,
+        kind: meta.kind,
+        wiki: meta.wiki,
+        icon: meta.icon,
+        section: meta.section || null,
+        slot: meta.slot || null,
+        fungible: isFungible(meta.kind),
+        confirmed: true,
+        variantCount: variants.length,
+        listingCount: variants.length,
+        low: prices[0],
+        median: prices[Math.floor((prices.length - 1) / 2)],
+        high: prices[prices.length - 1],
+        lastSeenAt,
+        firstSeenAt,
+        variants,
+      };
+      item.hay = [
+        item.name, item.id, item.kind, item.section, item.slot, slotLabel(item.slot),
+        variants.map((variant) => variant.hay).join(" "),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return item;
+    });
+    state.byId = new Map(state.items.map((item) => [item.key, item]));
+    if (state.open && !state.byId.has(state.open)) state.open = null;
+    renderMeta();
+    render();
+    if (pendingOpen) {
+      const message = pendingOpen;
+      pendingOpen = null;
+      openFromCompanion(message);
+    }
+  } catch (error) {
+    logClientEvent("frontend.market.load_failed", error);
+    if (previousManifest) {
+      renderMeta();
+      $("meta").innerHTML += "<br>refresh failed · showing previous data";
+    } else {
+      $("meta").textContent = "market feed unavailable";
+      $("list").innerHTML =
+        `<div class="empty">The community market feed is not available (${escapeHtml(error.message)}).</div>`;
+      renderToolbar([]);
+    }
+  } finally {
+    marketLoading = false;
+    refresh.disabled = false;
+    refresh.removeAttribute("aria-busy");
+    refresh.textContent = "↻ Refresh";
+  }
+}
+
+const MARKET_REFRESH_MS = 10 * 60 * 1_000;
+$("refresh-data").addEventListener("click", () => void load(true));
+// Repaint after the collector's publication check window (60-90 seconds).
+function scheduleMarketRefresh() {
+  const now = Date.now();
+  const offset = 95_000;
+  const next = (Math.floor((now - offset) / MARKET_REFRESH_MS) + 1) * MARKET_REFRESH_MS + offset;
+  setTimeout(() => {
+    if (!document.hidden) void load();
+    scheduleMarketRefresh();
+  }, next - now);
+}
+scheduleMarketRefresh();
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !state.manifest) return;
+  if (Date.now() - Date.parse(state.manifest.generatedAt) >= MARKET_REFRESH_MS) void load();
+});
+void load();
+</script>
+</html>

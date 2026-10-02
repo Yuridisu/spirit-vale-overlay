@@ -3,6 +3,29 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.12
+
+### Added
+
+- **Companion window.** The bag, loot rules, gold sessions and market of
+  [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2 are now part of this app, with the
+  author's agreement. Open it from the Companion tile on the main window.
+  - **Bag and storage.** Everything you carry and everything in your personal storage, with each
+    item's rolled stats, roll percentages and an estimated market value.
+  - **Loot rules.** Write `Show` and `Hide` rules by name, type, stat, roll quality, refine and more,
+    each with its own colour, tag and sound. Rules are kept in named profiles, and a starter set is
+    included. Matching drops are listed in an alert history.
+  - **Alert sounds.** Five built-in sounds, or your own `.wav` files, with a volume setting. They
+    play whether or not the Companion window is open.
+  - **Gold sessions.** Gross and net gold per hour, spending, a 15-minute pace, gold per kill and a
+    history of your finished sessions.
+  - **Market.** Browse the current community listings and each item's seven-day asking prices. The
+    listings come from market-api.spiritvalers.com and are only fetched once you open the Companion.
+  - **Market contribution, off by default.** If you turn it on in the Companion's settings, the
+    listings you see while browsing the market in game are uploaded to that service, which is what
+    fills the market for everyone. Your character, the sellers and raw game traffic are never
+    sent. The setting says exactly what is.
+
 ## 0.10.11
 
 ### Added

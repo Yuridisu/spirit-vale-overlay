@@ -57,6 +57,7 @@
         "@preact/signals": "^2.9.4",
         "@svoverlay/build-export": "workspace:*",
         "@svoverlay/combat": "workspace:*",
+        "@svoverlay/companion": "workspace:*",
         "@svoverlay/contracts": "workspace:*",
         "@svoverlay/desktop-platform": "workspace:*",
         "@svoverlay/i18n": "workspace:*",
@@ -92,6 +93,20 @@
         "@svoverlay/desktop-platform": "workspace:*",
         "@svoverlay/i18n": "workspace:*",
         "@svoverlay/ui-kit": "workspace:*",
+        "preact": "^10.29.7",
+      },
+    },
+    "packages/companion": {
+      "name": "@svoverlay/companion",
+      "dependencies": {
+        "@kar-mi/spirit-vale-tools-capture": "workspace:*",
+        "@kar-mi/spirit-vale-tools-items": "workspace:*",
+        "@kar-mi/spirit-vale-tools-market": "workspace:*",
+        "@svoverlay/contracts": "workspace:*",
+        "@svoverlay/desktop-platform": "workspace:*",
+        "@svoverlay/i18n": "workspace:*",
+        "@svoverlay/ui-kit": "workspace:*",
+        "lucide-preact": "^0.544.0",
         "preact": "^10.29.7",
       },
     },
@@ -322,6 +337,8 @@
     "@svoverlay/build-export": ["@svoverlay/build-export@workspace:packages/build-export"],
 
     "@svoverlay/combat": ["@svoverlay/combat@workspace:packages/combat"],
+
+    "@svoverlay/companion": ["@svoverlay/companion@workspace:packages/companion"],
 
     "@svoverlay/contracts": ["@svoverlay/contracts@workspace:packages/contracts"],
 
@@ -778,6 +795,8 @@
     "lowercase-keys": ["lowercase-keys@2.0.0", "", {}, "sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA=="],
 
     "lru-cache": ["lru-cache@6.0.0", "", { "dependencies": { "yallist": "^4.0.0" } }, "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA=="],
+
+    "lucide-preact": ["lucide-preact@0.544.0", "", { "peerDependencies": { "preact": "^10.5.13" } }, "sha512-1OYqlRfxlQ6fQ8/e39kiY1btdKGCljwDmYKgF/GnB0ytVYV+PZE5EXmKdA3/Pknqs5A5QQKX+sK9TD7knUzwuw=="],
 
     "make-dir": ["make-dir@3.1.0", "", { "dependencies": { "semver": "^6.0.0" } }, "sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw=="],
 

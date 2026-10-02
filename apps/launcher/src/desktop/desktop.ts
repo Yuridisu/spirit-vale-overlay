@@ -9,6 +9,7 @@ import { inspectRewardsReplaySummary } from "@kar-mi/spirit-vale-tools-rewards";
 
 import { createBuildExportWindow } from "@svoverlay/build-export";
 import { createRewardsWindow } from "@svoverlay/rewards";
+import { createCompanionService, createCompanionWindow, playWav } from "@svoverlay/companion";
 import type { LauncherRpc, LauncherSettingsRpc, LauncherState, SettingsSectionId, SharedSettingsState, ToolWindow } from "../launcher/types.ts";
 import { loadLauncherSettings, saveLauncherSettings, type LauncherSettings } from "../launcher/settings.ts";
 import type { LocalizedText, MessageKey } from "@svoverlay/i18n/messages";
@@ -297,6 +298,19 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   },
   onClosed,
 }));
+// The companion reads the same packets as everything else, so it runs whether or not its window is open.
+const companion = await createCompanionService({
+  dataDirectory: storagePaths.companionDirectory,
+  rendererDirectory: process.env.SPIRIT_VALE_COMPANION_RENDERER ?? path.resolve(import.meta.dir, "../companion"),
+  version: appVersion,
+  playSound: playWav,
+});
+const companionWindow = new WindowSlot((onClosed) => createCompanionWindow({
+  service: companion,
+  placements,
+  onClosed,
+  onOpenSettings: openSettings,
+}));
 /** The items the overlay's counter follows, as last reported by the overlay that owns the setting. */
 let itemCounterSlots: string[] = normalizeItemCounterItems(undefined);
 const itemCounterListeners = new Set<() => void>();
@@ -329,6 +343,16 @@ const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
 }));
 const capture = new CaptureCoordinator({
   logDirectory,
+  onPacket: (packet) => companion.consumePacket(packet),
+  onConnection: (event) => {
+    if (event.state === "closed") companion.connectionClosed(event.connectionId);
+    else companion.connectionOpened(event.connectionId);
+  },
+  onTargetState: (active) => companion.setCaptureStatus({
+    phase: active ? "capturing" : "waiting-for-game",
+    detail: active ? "Spirit Vale detected" : "Waiting for Spirit Vale",
+    gameDetected: active,
+  }),
   deviceName: settings.captureAdapter === "auto" ? undefined : settings.captureAdapter,
   onStatus: (state) => {
     const { captureWarning, ...captureState } = state;
@@ -826,6 +850,7 @@ async function openTool(tool: ToolWindow): Promise<void> {
   else if (tool === "rewards") await rewardsWindow.open();
   else if (tool === "build-export") await buildExportWindow.open();
   else if (tool === "boss-timers") await bossTimerWindow.open();
+  else if (tool === "companion") await companionWindow.open();
   else await characterWindow.open();
 }
 
@@ -1035,7 +1060,8 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   settingsLifecycle = undefined;
   launcherWindow.hide();
   settingsWindow?.close();
-  await Promise.all([combatWindow.close(), overlayWindow.close(), rewardsWindow.close(), characterWindow.close(), buildExportWindow.close(), bossTimerWindow.close()]);
+  await Promise.all([combatWindow.close(), overlayWindow.close(), rewardsWindow.close(), characterWindow.close(), buildExportWindow.close(), bossTimerWindow.close(), companionWindow.close()]);
+  await companion.shutdown().catch(() => {});
   liveDeathLogWindow.close();
   unsubscribeCharacterPersistence();
   unsubscribeInspectedCharacterPersistence();

@@ -1,0 +1,19 @@
+{
+  "name": "@svoverlay/companion",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@kar-mi/spirit-vale-tools-capture": "workspace:*",
+    "@kar-mi/spirit-vale-tools-items": "workspace:*",
+    "@kar-mi/spirit-vale-tools-market": "workspace:*",
+    "@svoverlay/contracts": "workspace:*",
+    "@svoverlay/desktop-platform": "workspace:*",
+    "@svoverlay/i18n": "workspace:*",
+    "@svoverlay/ui-kit": "workspace:*",
+    "lucide-preact": "^0.544.0",
+    "preact": "^10.29.7"
+  }
+}

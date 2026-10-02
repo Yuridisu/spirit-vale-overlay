@@ -151,6 +151,10 @@ export interface CaptureCoordinatorOptions {
   onServerInstance?: (instanceId: string | undefined) => void;
   stallWarningMs?: number;
   onSessionEnded?: (sessionId: string) => Promise<void>;
+  /** Sees every decoded packet as it arrives, before any of it is filtered by connection. */
+  onPacket?: (packet: CapturedFishNetPacket) => void;
+  onConnection?: (event: CaptureConnectionEvent) => void;
+  onTargetState?: (active: boolean) => void;
   clock?: Clock;
 }
 
@@ -294,6 +298,7 @@ export class CaptureCoordinator {
    * transport reports every connect and disconnect, so no single packet decides it any more.
    */
   private connectionChanged(event: CaptureConnectionEvent): void {
+    this.notifyTap(() => this.options.onConnection?.(event));
     const previous = this.activeConnectionId;
     if (event.state === "closed") {
       // A connection goes on sending for a moment after it is told to close, and those stragglers
@@ -987,6 +992,7 @@ export class CaptureCoordinator {
     });
     const previousState = this.targetState;
     this.targetState = target.state;
+    this.notifyTap(() => this.options.onTargetState?.(target.state === "active"));
     if (target.state === "waiting") {
       this.receivedDataForCurrentGame = false;
       this.health.reset();
@@ -1042,6 +1048,7 @@ export class CaptureCoordinator {
 
   private routePacket(packet: CapturedFishNetPacket): void {
     this.health.observeFishNet();
+    this.notifyTap(() => this.options.onPacket?.(packet));
     // The account callback arrives on the login connection, before any packet is admitted.
     this.lootOwnership.observe(packet);
     if (this.deferPacketDuringTransition(packet)) return;
@@ -1663,6 +1670,15 @@ export class CaptureCoordinator {
       displayName: snapshot.name,
       ...(archetype === undefined ? {} : { archetype }),
     });
+  }
+
+  /** A listener outside the coordinator must not be able to stop the capture it is listening to. */
+  private notifyTap(notify: () => void): void {
+    try {
+      notify();
+    } catch (error) {
+      console.warn("[capture] a packet listener failed:", error);
+    }
   }
 
   private logDomainWarning(domain: "combat" | "rewards", error: unknown): void {
