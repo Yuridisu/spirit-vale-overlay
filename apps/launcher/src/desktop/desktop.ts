@@ -586,6 +586,9 @@ const settingsRpc = BrowserView.defineRPC<LauncherSettingsRpc>({
       setMinimapRange: overlayAction((o, { range }: { range: number }) => o.setMinimapRange(range)),
       setTimerConfig: overlayAction((o, { mode, durationSeconds }: { mode: TimerMode; durationSeconds: number }) => o.setTimerConfig(mode, durationSeconds)),
       setItemCounterItems: overlayAction((o, { items }: { items: string[] }) => o.setItemCounterItems(items)),
+      saveOverlayPreset: overlayAction((o, { name }: { name: string }) => o.savePreset(name)),
+      applyOverlayPreset: overlayAction((o, { name }: { name: string }) => o.applyPreset(name)),
+      deleteOverlayPreset: overlayAction((o, { name }: { name: string }) => o.deletePreset(name)),
       importSettings: () => importSettings(),
       importSetting: ({ kind }) => importSetting(kind),
       exportSetting: ({ kind }) => exportSettingAndNotify(kind),
@@ -977,7 +980,8 @@ function openSettings(section?: SettingsSectionId): void {
   }));
   lifecycle.add(onceWindowEvent(nextWindow, "close", () => {
     // Do not leave global shortcuts disabled if the settings window closes while its keybinding picker is armed.
-    void overlayWindow.withWindow((overlay) => overlay.setShortcutCapture(false));
+    // Only if the overlay is there: asking for it here would reopen it while the app is closing.
+    overlayWindow.current?.setShortcutCapture(false);
     lifecycle.dispose();
     if (settingsWindow === nextWindow) {
       settingsWindow = undefined;
@@ -1141,7 +1145,7 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   settingsLifecycle = undefined;
   launcherWindow.hide();
   settingsWindow?.close();
-  await Promise.all([combatWindow.close(), overlayWindow.close(), rewardsWindow.close(), characterWindow.close(), buildExportWindow.close(), bossTimerWindow.close(), companionWindow.close()]);
+  await Promise.all([combatWindow.retire(), overlayWindow.retire(), rewardsWindow.retire(), characterWindow.retire(), buildExportWindow.retire(), bossTimerWindow.retire(), companionWindow.retire()]);
   await companion.shutdown().catch(() => {});
   liveDeathLogWindow.close();
   unsubscribeCharacterPersistence();

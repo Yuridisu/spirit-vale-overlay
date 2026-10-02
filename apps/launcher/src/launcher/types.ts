@@ -147,6 +147,9 @@ export type LauncherSettingsRpc = {
     setMinimapRange: { params: { range: number }; response: SharedSettingsState };
     setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: SharedSettingsState };
     setItemCounterItems: { params: { items: string[] }; response: SharedSettingsState };
+    saveOverlayPreset: { params: { name: string }; response: SharedSettingsState };
+    applyOverlayPreset: { params: { name: string }; response: SharedSettingsState };
+    deleteOverlayPreset: { params: { name: string }; response: SharedSettingsState };
     importSettings: { params: Record<string, never>; response: void };
     importSetting: { params: { kind: SettingsKind }; response: void };
     exportSetting: { params: { kind: SettingsKind }; response: void };

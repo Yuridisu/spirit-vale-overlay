@@ -1,6 +1,8 @@
 import { CustomSelect } from "@svoverlay/ui-kit/custom-select";
 import { OVERLAY_ELEMENT_IDS, type OverlayElementId } from "@svoverlay/overlay/app-types";
 import { TIMER_MODES, type TimerMode } from "@svoverlay/overlay/timer";
+import { MAX_PRESET_NAME_LENGTH, MAX_PRESETS } from "@svoverlay/overlay/presets";
+import { useState } from "preact/hooks";
 import type { Translator } from "@svoverlay/i18n/translate";
 import type { SettingsSection, SettingsSectionContext } from "../settings-section.ts";
 
@@ -8,6 +10,37 @@ const elementLabel = (t: Translator, id: OverlayElementId): string => t(`overlay
 
 function clampWhole(value: number, maximum: number): number {
   return Number.isFinite(value) ? Math.min(maximum, Math.max(0, Math.round(value))) : 0;
+}
+
+/** Saving, applying and deleting overlay presets. A component of its own for the name being typed. */
+function PresetsCard({ overlay, busy, actions, t }: Pick<SettingsSectionContext, "busy" | "actions" | "t"> & { overlay: SettingsSectionContext["state"]["overlay"] }) {
+  const [name, setName] = useState("");
+  const trimmed = name.trim();
+  const exists = overlay.presets.some((preset) => preset.toLowerCase() === trimmed.toLowerCase());
+  const full = overlay.presets.length >= MAX_PRESETS && !exists;
+  const save = (): void => {
+    if (!trimmed || full) return;
+    actions.saveOverlayPreset(trimmed);
+    setName("");
+  };
+  return <><div class="settings-card"><h2>{t("settings.overlay.presets.label")}</h2>
+    <div class="settings-preset-new">
+      <label class="settings-field"><span>{t("settings.overlay.presets.name")}</span><input class="input" type="text" maxLength={MAX_PRESET_NAME_LENGTH} placeholder={t("settings.overlay.presets.namePlaceholder")} disabled={busy} value={name} onInput={(event) => setName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); }} /></label>
+      <button class="btn" type="button" disabled={busy || !trimmed || full} onClick={save}>{t("settings.overlay.presets.save")}</button>
+    </div>
+    {full && <p class="settings-hint">{t("settings.overlay.presets.full", { count: MAX_PRESETS })}</p>}
+    {overlay.presets.length === 0
+      ? <p class="settings-hint">{t("settings.overlay.presets.empty")}</p>
+      : <div class="settings-preset-list">{overlay.presets.map((preset) => {
+        const active = overlay.activePreset === preset;
+        return <div class={`settings-preset-row${active ? " is-active" : ""}`} key={preset}>
+          <span class="settings-preset-name"><strong>{preset}</strong>{active && <em>{t("settings.overlay.presets.active")}</em>}</span>
+          <button class="btn" type="button" disabled={busy} onClick={() => actions.applyOverlayPreset(preset)}>{t("settings.overlay.presets.apply")}</button>
+          <button class="btn" type="button" disabled={busy} onClick={() => actions.saveOverlayPreset(preset)}>{t("settings.overlay.presets.update")}</button>
+          <button class="btn" type="button" disabled={busy} onClick={() => actions.deleteOverlayPreset(preset)}>{t("settings.overlay.presets.delete")}</button>
+        </div>;
+      })}</div>}
+  </div><p class="settings-hint">{t("settings.overlay.presets.hint", { shortcut: overlay.shortcuts.cyclePreset })}</p></>;
 }
 
 export function buildOverlaySettingsSection({ state, busy, actions, t }: SettingsSectionContext): SettingsSection {
@@ -39,6 +72,11 @@ export function buildOverlaySettingsSection({ state, busy, actions, t }: Setting
         searchText: t("settings.overlay.homeDisplay.search"),
         content: <><label class="settings-field"><span>{t("settings.overlay.homeDisplay.label")}</span><CustomSelect ariaLabel={t("settings.overlay.homeDisplay.label")} disabled={busy} value={overlay.homeDisplay} options={displayOptions} onChange={actions.setOverlayHomeDisplay} /></label><p class="settings-hint">{t("settings.overlay.homeDisplay.hint")}</p></>,
       }] : []),
+      {
+        id: "overlay-presets",
+        searchText: `${t("settings.overlay.presets.search")} ${overlay.presets.join(" ")}`,
+        content: <PresetsCard overlay={overlay} busy={busy} actions={actions} t={t} />,
+      },
       {
         id: "overlay-timer",
         searchText: t("settings.overlay.timer.search"),

@@ -42,6 +42,9 @@ export interface SettingsActions {
   setMinimapRange(value: number): void;
   setTimerConfig(mode: TimerMode, durationSeconds: number): void;
   setItemCounterItems(items: string[]): void;
+  saveOverlayPreset(name: string): void;
+  applyOverlayPreset(name: string): void;
+  deleteOverlayPreset(name: string): void;
   setRequiredStatuses(category: RequiredStatusCategory, statusIds: string[]): void;
   importSettings(): void;
   importSetting(kind: SettingsKind): void;

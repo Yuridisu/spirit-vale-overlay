@@ -18,7 +18,7 @@ export type { OverlayTimerState, TimerMode } from "./timer.ts";
 export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
-export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating"] as const;
+export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset"] as const;
 export type KeybindAction = (typeof KEYBIND_ACTIONS)[number];
 
 export const METER_STAT_TYPE_CYCLE: readonly StatType[] = ["damage", "heal", "tanked"];
@@ -328,6 +328,10 @@ export interface OverlaySettingsState {
   /** The drops being watched for, one per slot; a slot with no name is unused. */
   targetDrops: TargetDrop[];
   targetDropSound: boolean;
+  /** The saved presets, by name, in the order they cycle. */
+  presets: string[];
+  /** The preset last saved or applied. The overlay may have been changed since. */
+  activePreset?: string;
 }
 
 type OverlaySharedRequests = {

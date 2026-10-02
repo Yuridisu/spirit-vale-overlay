@@ -11,7 +11,8 @@
     "./rarity": "./src/rarity.ts",
     "./timer": "./src/timer.ts",
     "./item-counter": "./src/item-counter.ts",
-    "./target-drop": "./src/target-drop.ts"
+    "./target-drop": "./src/target-drop.ts",
+    "./presets": "./src/presets.ts"
   },
   "dependencies": {
     "@kar-mi/spirit-vale-tools-character": "workspace:*",

@@ -20,6 +20,17 @@ import { idleTimer, toggleTimer } from "../timer.ts";
 import type { OverlayTimerState, TimerMode } from "../timer.ts";
 import { itemCounterState, type ItemCounterSource, type OverlayItemCounterState } from "../item-counter.ts";
 import { matchTargetDrop, type TargetDrop } from "../target-drop.ts";
+import {
+  deletePreset as withoutPreset,
+  findPreset,
+  loadPresetStore,
+  nextPreset,
+  presetSettings,
+  presetStorePath,
+  savePreset as withPreset,
+  savePresetStore,
+  type OverlayPresetStore,
+} from "../presets.ts";
 import type {
   BossTimerState,
   KeybindAction,
@@ -64,6 +75,7 @@ import {
   normalizeOverlaySettings,
   overlayDisplayOptions,
   resetOverlayShortcuts,
+  resolveSettingsPath,
   saveOverlaySettings,
   type OverlaySettings,
 } from "../settings.ts";
@@ -99,6 +111,7 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   toggleTimer: "start/pause timer",
   resetTimer: "reset timer",
   toggleGearRating: "show/hide gear ratings",
+  cyclePreset: "switch to the next preset",
 };
 
 export interface OverlayMinimapSourceState {
@@ -186,6 +199,8 @@ type ProjectedStatusState = Omit<OverlayStatusState, "asOfMs">;
 export async function createOverlayController(options: OverlayControllerOptions) {
   let displays = readDisplays();
   let settings = await loadOverlaySettings(options.settingsPath, displays);
+  const presetsPath = presetStorePath(await resolveSettingsPath(options.settingsPath));
+  let presetStore = await loadPresetStore(presetsPath);
   if (options.lockOnCreate) settings.locked = true;
   let characterState = options.getCharacterState();
   let meter = createLiveMeter();
@@ -238,6 +253,17 @@ export async function createOverlayController(options: OverlayControllerOptions)
     onWarning: (warning) => {
       status = "error";
       statusDetail = warning ?? "Could not save overlay settings";
+      publishControl();
+    },
+  });
+
+  const presetPersistence = new SafeSaveQueue<OverlayPresetStore>({
+    label: "overlay presets",
+    save: (value) => savePresetStore(value, presetsPath),
+    onWarning: (warning) => {
+      if (!warning) return;
+      status = "error";
+      statusDetail = warning;
       publishControl();
     },
   });
@@ -390,6 +416,10 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setItemCounterItems,
     setTargetDrops,
     setTargetDropSound,
+    savePreset,
+    applyPreset,
+    deletePreset,
+    cyclePreset,
     toggleTimer: toggleTimerNow,
     resetTimer: resetTimerNow,
     timerState: (): OverlayTimerState => timer,
@@ -430,6 +460,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);
+      await presetPersistence.flush(presetStore);
     },
   };
   return controller;
@@ -498,6 +529,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       itemCounterChoices: inventorySource.items.filter((item) => item.count > 0).map((item) => item.name),
       targetDrops: settings.targetDrops,
       targetDropSound: settings.targetDropSound,
+      presets: presetStore.presets.map((preset) => preset.name),
+      ...(presetStore.active === undefined ? {} : { activePreset: presetStore.active }),
     };
   }
 
@@ -754,6 +787,58 @@ export async function createOverlayController(options: OverlayControllerOptions)
     void options.onSurfacesChanged?.();
   }
 
+  function changePresets(next: OverlayPresetStore): void {
+    presetStore = next;
+    presetPersistence.schedule(presetStore);
+    publishControl();
+  }
+
+  /** Saves the overlay as it is now under the name, overwriting a preset already called that. */
+  function savePreset(name: string): boolean {
+    const next = withPreset(presetStore, name, presetSettings(settings));
+    if (!next) return false;
+    changePresets(next);
+    return true;
+  }
+
+  /**
+   * Puts a saved layout back. The lock, the hotkeys, the home display and auto-hide are not part of
+   * a preset and stay as they are. Returns whether there was a preset by that name.
+   */
+  function applyPreset(name: string): boolean {
+    const preset = findPreset(presetStore, name);
+    if (!preset || shuttingDown) return false;
+    const timerBefore = `${settings.timerMode}/${settings.timerDurationSeconds}`;
+    // Normalizing refits a layout saved on other monitors to the ones there are now.
+    settings = normalizeOverlaySettings({ ...settings, ...structuredClone(preset.settings) }, displays);
+    presetStore = { ...presetStore, active: preset.name };
+    presetPersistence.schedule(presetStore);
+    persist();
+    if (`${settings.timerMode}/${settings.timerDurationSeconds}` !== timerBefore) {
+      setTimer(idleTimer(settings.timerMode, settings.timerDurationSeconds * 1_000));
+    }
+    publishControl(true);
+    publishStatuses(relativeNowMs() ?? 0, true);
+    publishMeter(true);
+    publishMinimap(true);
+    publishItemCounter();
+    void options.onSurfacesChanged?.();
+    return true;
+  }
+
+  function deletePreset(name: string): boolean {
+    const next = withoutPreset(presetStore, name);
+    if (next === presetStore) return false;
+    changePresets(next);
+    return true;
+  }
+
+  /** Applies the preset after the active one, wrapping round. Returns its name, if there is any preset. */
+  function cyclePreset(): string | undefined {
+    const preset = nextPreset(presetStore);
+    return preset && applyPreset(preset.name) ? preset.name : undefined;
+  }
+
   function scheduleClickThroughUpdate(): void {
     if (lockStyleTimer !== undefined) clearTimeout(lockStyleTimer);
     lockStyleTimer = setTimeout(() => {
@@ -995,6 +1080,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       cycleBossRegion();
     } else if (action === "toggleGearRating") {
       setElementEnabled("gearRating", !settings.elements.gearRating.enabled);
+    } else if (action === "cyclePreset") {
+      cyclePreset();
     } else if (action === "toggleTimer") {
       toggleTimerNow();
     } else if (action === "resetTimer") {

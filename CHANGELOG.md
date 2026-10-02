@@ -29,6 +29,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
     listings you see while browsing the market in game are uploaded to that service, which is what
     fills the market for everyone. Your character, the sellers and raw game traffic are never
     sent. The setting says exactly what is.
+- **Overlay presets.** Save the overlay as it is, under a name, and switch between your saved
+  layouts: which elements are on, where they sit, their size and opacity, the meter and minimap
+  options, the timer, the item counter and the target drops. Manage them under Settings > Overlay >
+  Presets, and step through them in game with `Ctrl+Shift+P`, which can be rebound.
 - **Target drops.** Name up to four drops you are hunting, each with the stats it must have and
   the least of each, such as a Starfire Jewel with Int 3, Mp % 2 and Matk % 2. When you pick one
   up, the overlay's Target drops element announces it under a banner, with a sound if you want
@@ -59,6 +63,8 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 - **"Minimize launcher to tray" works** in the standard build. The minimise button ignored the
   setting and only minimised to the taskbar.
+- **No overlay process is left behind when the app closes.** Closing the app with the Settings
+  window open could leave a hidden overlay process running.
 - **The killing blow is counted once** in the Damage taken total. It was added twice.
 
 ### For developers

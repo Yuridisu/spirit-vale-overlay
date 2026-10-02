@@ -75,6 +75,7 @@ const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
   toggleTimer: "Ctrl+Shift+9",
   resetTimer: "Ctrl+Shift+0",
   toggleGearRating: "Ctrl+Shift+G",
+  cyclePreset: "Ctrl+Shift+P",
 };
 
 const DEFAULT_LOCKED = true;
@@ -331,6 +332,7 @@ export function normalizeShortcuts(source: Record<string, unknown>): Record<Keyb
     toggleTimer: shortcutsSource.toggleTimer,
     resetTimer: shortcutsSource.resetTimer,
     toggleGearRating: shortcutsSource.toggleGearRating,
+    cyclePreset: shortcutsSource.cyclePreset,
   };
   const shortcuts = {} as Record<KeybindAction, string>;
   for (const action of KEYBIND_ACTIONS) {
@@ -364,7 +366,7 @@ function clampNumber(value: unknown, fallback: number, minimum: number, maximum:
   return Math.round(Math.max(minimum, Math.min(maximum, number)));
 }
 
-async function resolveSettingsPath(settingsPath: string | undefined): Promise<string> {
+export async function resolveSettingsPath(settingsPath: string | undefined): Promise<string> {
   if (settingsPath) return settingsPath;
   return path.join(resolveLocalStorageRoot(), "data", "settings", "overlay.json");
 }

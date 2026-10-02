@@ -7,6 +7,7 @@ export interface ManagedWindow {
 export class WindowSlot<T extends ManagedWindow> {
   private window?: T;
   private opening?: Promise<T>;
+  private retired = false;
 
   constructor(private readonly factory: (onClosed: () => void) => T | Promise<T>) {}
 
@@ -15,6 +16,9 @@ export class WindowSlot<T extends ManagedWindow> {
   }
 
   async open(): Promise<void> {
+    // A window asked for while the app is closing would be created after everything else has
+    // gone, and be left behind with nothing to close it.
+    if (this.retired) return;
     if (this.window) {
       try {
         await this.window.show();
@@ -37,7 +41,14 @@ export class WindowSlot<T extends ManagedWindow> {
 
   async withWindow<R>(callback: (window: T) => R | Promise<R>): Promise<R> {
     if (!this.window) await this.open();
-    return callback(this.window!);
+    if (!this.window) throw new Error("The window is no longer available: the app is closing.");
+    return callback(this.window);
+  }
+
+  /** Closes the window for good: the slot will not open another. For shutdown. */
+  retire(): Promise<void> {
+    this.retired = true;
+    return this.close();
   }
 
   async close(): Promise<void> {

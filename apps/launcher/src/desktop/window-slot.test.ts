@@ -134,3 +134,23 @@ class FakeWindow {
   }
   close(): void { this.closed += 1; }
 }
+
+describe("a retired window slot", () => {
+  test("closes its window and never opens another", async () => {
+    const windows: FakeWindow[] = [];
+    const slot = new WindowSlot(() => {
+      const window = new FakeWindow();
+      windows.push(window);
+      return window;
+    });
+    await slot.open();
+
+    await slot.retire();
+    expect(windows[0]?.closed).toBe(1);
+    await slot.open();
+    expect(windows).toHaveLength(1);
+    expect(slot.current).toBeUndefined();
+    await expect(slot.withWindow(() => "reached")).rejects.toThrow("closing");
+    expect(windows).toHaveLength(1);
+  });
+});
