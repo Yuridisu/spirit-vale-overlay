@@ -993,7 +993,12 @@ function minimizeLauncher(): void {
   launcherWindow.minimize();
 }
 
+/** With the tray setting on, closing the launcher only puts it away; the tray menu is then the way out. */
 async function closeLauncher(reason: string): Promise<void> {
+  if (launcherMinimizeAction(settings.minimizeToTray) === "hide") {
+    launcherWindow.hide();
+    return;
+  }
   await shutdown(reason);
 }
 

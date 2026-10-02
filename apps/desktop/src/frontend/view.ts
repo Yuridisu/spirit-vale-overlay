@@ -77,9 +77,12 @@ export class DesktopView<T extends { setTransport(transport: DesktopTransport): 
         transport.sendWindowEvent("windowResize", { width: frame.width, height: frame.height });
       }
     };
+    // The launcher's minimise and close are the backend's to decide: with the tray setting on they
+    // hide the window instead, and closing it for real takes the whole app down in order.
+    const isLauncher = location.pathname.includes("launcherview");
     const request = new Proxy(rpc.request as object, {
       get(target, property, receiver) {
-        if (property === "windowAction") return async ({ action }: { action: "minimize" | "close" }) => {
+        if (property === "windowAction" && !isLauncher) return async ({ action }: { action: "minimize" | "close" }) => {
           if (action === "minimize") await neutralinoWindow.minimize();
           else {
             // Told to the backend first, so its log can tell a deliberate close from the window vanishing.

@@ -309,7 +309,7 @@ export const en = {
   "settings.general.description": "Configure application behavior and appearance.",
   "settings.general.interfaceScale.label": "Interface scale",
   "settings.general.interfaceScale.search": "Interface scale UI appearance zoom percentage",
-  "settings.general.minimizeToTray.label": "Minimize launcher to tray",
+  "settings.general.minimizeToTray.label": "Minimize and close the launcher to the tray (exit from the tray icon)",
   "settings.general.minimizeToTray.search": "Minimize launcher to tray notification area close behavior",
 
   "settings.network.label": "Network",

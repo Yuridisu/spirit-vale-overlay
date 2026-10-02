@@ -39,8 +39,17 @@ section as the GitHub Release notes, so write it for the people who use the app.
   attack that landed the killing blow, its damage and the time. It stays until your next death,
   through the trip back to town.
 
+### Changed
+
+- **Closing the launcher can keep the app running.** With "Minimize and close the launcher to the
+  tray" turned on under Settings > General, the launcher's close button puts it in the tray instead
+  of ending the app, so the overlay and its hotkeys keep working. Exit from the tray icon's menu.
+  With the setting off, closing the launcher still ends the app, as before.
+
 ### Fixed
 
+- **"Minimize launcher to tray" works** in the standard build. The minimise button ignored the
+  setting and only minimised to the taskbar.
 - **The killing blow is counted once** in the Damage taken total. It was added twice.
 
 ### For developers
