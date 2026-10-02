@@ -7,20 +7,13 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Added
 
-- **Who killed you.** The Damage taken element now keeps your last death on show: the monster,
-  the attack that landed the killing blow, its damage and the time. It stays until your next death,
-  through the trip back to town.
-- **Target drops.** Name up to four drops you are hunting, each with the stats it must have and
-  the least of each, such as a Starfire Jewel with Int 3, Mp % 2 and Matk % 2. When you pick one
-  up, the overlay's Target drops element announces it under a banner, with a sound if you want
-  one. Set them in the Rewards window, under Target drops, and enable the element under Settings >
-  Overlay > Visible elements.
 - **Companion window.** The bag, loot rules, gold sessions and market of
   [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2 are now part of this app, with the
   author's agreement. Open it from the Companion tile on the main window.
-  - **Bag and storage.** Everything you carry and everything in your personal storage, with each
-    item's rolled stats, roll percentages and an estimated market value. The game sends the bag
-    with your first kill or pickup after the app starts, so it is empty until then.
+  - **Bag and storage.** Everything you carry and everything in your personal storage, with item
+    icons, each item's rolled stats and roll percentages, and an estimated market value. The game
+    sends the bag with your first kill or pickup after the app starts, so it is empty until then;
+    the storage fills in when you open it or move an item.
   - **Loot rules.** Write `Show` and `Hide` rules by name, type, stat, roll quality, refine and more,
     each with its own colour, tag and sound. Rules are kept in named profiles, and a starter set is
     included. Matching drops are listed in an alert history.
@@ -28,12 +21,34 @@ section as the GitHub Release notes, so write it for the people who use the app.
     play whether or not the Companion window is open.
   - **Gold sessions.** Gross and net gold per hour, spending, a 15-minute pace, gold per kill and a
     history of your finished sessions.
-  - **Market.** Browse the current community listings and each item's seven-day asking prices. The
-    listings come from market-api.spiritvalers.com and are only fetched once you open the Companion.
+  - **Market.** Browse the community listings and each item's seven-day asking prices. They come
+    from market-api.spiritvalers.com, which only knows the listings its contributors have seen in
+    game, so an item nobody has browsed has no price yet. Nothing is fetched until you open the
+    Companion.
   - **Market contribution, off by default.** If you turn it on in the Companion's settings, the
     listings you see while browsing the market in game are uploaded to that service, which is what
     fills the market for everyone. Your character, the sellers and raw game traffic are never
     sent. The setting says exactly what is.
+- **Target drops.** Name up to four drops you are hunting, each with the stats it must have and
+  the least of each, such as a Starfire Jewel with Int 3, Mp % 2 and Matk % 2. When you pick one
+  up, the overlay's Target drops element announces it under a banner, with a sound if you want
+  one. Items without rolls, such as materials and cards, can be targeted by name alone. Set them in
+  the Rewards window, under Target drops, and enable the element under Settings > Overlay > Visible
+  elements.
+- **Who killed you.** The Damage taken element now shows your last death first: the monster, the
+  attack that landed the killing blow, its damage and the time. It stays until your next death,
+  through the trip back to town.
+
+### Fixed
+
+- **The killing blow is counted once** in the Damage taken total. It was added twice.
+
+### For developers
+
+- Vale Companion's code lives in `packages/companion`, with a README listing what came from where
+  and what was changed. Unlike Vale Companion itself, market contribution is opt-in here, and
+  materials and consumables are given a market value.
+- The Electron build includes the Companion too.
 
 ## 0.10.11
 
