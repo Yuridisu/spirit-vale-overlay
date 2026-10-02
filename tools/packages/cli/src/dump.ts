@@ -1,0 +1,129 @@
+import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
+import type { CaptureProtocol } from "@kar-mi/spirit-vale-tools-capture";
+import { FishNetActorDirectory, FishNetCombatTracker } from "@kar-mi/spirit-vale-tools-combat";
+import { createLogSession } from "@kar-mi/spirit-vale-tools-logging";
+import { mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
+import {
+  domainEventData,
+  fishNetPacketData,
+  liteNetLibPacketData,
+  transportPacketData,
+} from "./format-packet.ts";
+import { option } from "./args.ts";
+
+const durationText = option("--duration");
+const durationSeconds = durationText === undefined ? undefined : Number(durationText);
+if (durationSeconds !== undefined && (!Number.isFinite(durationSeconds) || durationSeconds <= 0)) {
+  throw new Error("--duration must be a positive number of seconds");
+}
+
+const protocols = (option("--protocols") ?? "tcp,udp").split(",").map((value) => value.trim().toLowerCase());
+if (protocols.length === 0 || protocols.some((protocol) => protocol !== "tcp" && protocol !== "udp")) {
+  throw new Error("--protocols must be tcp, udp, or tcp,udp");
+}
+const targetProcessName = Bun.argv.includes("--all-processes") ? undefined : option("--process") ?? "SpiritVale.exe";
+if (Bun.argv.includes("--combat-json") || Bun.argv.includes("--combat-log")) {
+  throw new Error("--combat-json and --combat-log were replaced by automatic JSON sessions; use --combat-only");
+}
+const outputPath = option("--output");
+const combatOnly = Bun.argv.includes("--combat-only");
+const decodeFishNet = Bun.argv.includes("--decode-fishnet") || combatOnly;
+const decodeLiteNetLib = Bun.argv.includes("--decode-litenetlib") || decodeFishNet;
+const fishNetBuildFingerprint = option("--fishnet-build");
+const suppressDuplicates = !Bun.argv.includes("--no-dedup");
+const combatTracker = combatOnly
+  ? new FishNetCombatTracker({
+      buildFingerprint: fishNetBuildFingerprint,
+      // Names each hit's target from its spawn packet.
+      monsterCatalog: mobIdentityDefinitionsById(),
+    })
+  : undefined;
+const actorDirectory = combatOnly ? new FishNetActorDirectory() : undefined;
+const stream = combatOnly ? "combat" as const : "capture" as const;
+const session = await createLogSession({
+  producer: "capture-cli",
+  streams: [stream],
+  ...(outputPath ? { outputPaths: { [stream]: outputPath } } : {}),
+  onWriteError: ({ stream: failedStream, error }) => console.error(`[logging error] ${failedStream}: ${error.message}`),
+});
+const logger = session.logger(stream);
+console.error(`logging ${stream} session ${session.id}`);
+
+const capture = new PacketCapture();
+capture.on("started", () => {
+  logger.log("capture.lifecycle", { state: "started" });
+  console.error("capture started; press Ctrl+C to stop");
+});
+capture.on("warning", (message) => {
+  logger.log("capture.warning", { message });
+  console.error(`[warning] ${message}`);
+});
+capture.on("droppedFlows", (flows) => {
+  if (flows.length === 0) return;
+  logger.log("capture.droppedFlows", { flows: flows.map(({ flow, packets, verdict }) => ({ flow, packets, verdict })) });
+  for (const { flow, packets, verdict } of flows) {
+    console.error(`[dropped] ${packets} total ${flow} (${verdict})`);
+  }
+});
+capture.on("error", (error) => {
+  logger.log("capture.error", { message: error.message });
+  console.error(`[error] ${error.message}`);
+});
+capture.on("targetStatus", (status) => {
+  logger.log("capture.targetStatus", {
+    processName: status.processName,
+    state: status.state,
+    processIds: status.processIds,
+  });
+  const pids = status.processIds.length === 0 ? "" : ` (PID ${status.processIds.join(", ")})`;
+  console.error(`target ${status.processName}: ${status.state}${pids}`);
+});
+capture.on("transportPacket", (packet) => {
+  if (!combatOnly) logger.log("transport.packet", transportPacketData(packet));
+});
+capture.on("liteNetPacket", (packet) => {
+  if (!combatOnly) logger.log("litenetlib.packet", liteNetLibPacketData(packet));
+});
+capture.on("fishNetPacket", (packet) => {
+  if (!combatOnly) {
+    logger.log("fishnet.packet", fishNetPacketData(packet));
+    return;
+  }
+  for (const event of actorDirectory?.consume(packet) ?? []) {
+    logger.log("combat.actorIdentity", domainEventData(event));
+  }
+  for (const event of combatTracker?.consume(packet) ?? []) {
+    logger.log("combat.event", domainEventData(event));
+  }
+});
+capture.on("stopped", () => {
+  logger.log("capture.lifecycle", { state: "stopped" });
+  actorDirectory?.reset();
+  combatTracker?.reset();
+});
+
+let stopping = false;
+async function stop(): Promise<void> {
+  if (stopping) return;
+  stopping = true;
+  await capture.stop();
+  await session.close();
+}
+
+process.on("SIGINT", () => void stop());
+process.on("SIGTERM", () => void stop());
+
+await capture.start({
+  filter: option("--filter"),
+  deviceName: option("--adapter"),
+  protocols: protocols as CaptureProtocol[],
+  targetProcessName,
+  suppressDuplicates,
+  decodeLiteNetLib,
+  decodeFishNet,
+  fishNetBuildFingerprint,
+});
+if (durationSeconds !== undefined) {
+  await Bun.sleep(durationSeconds * 1000);
+  await stop();
+}

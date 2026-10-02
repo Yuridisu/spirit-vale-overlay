@@ -1,0 +1,160 @@
+import { describe, expect, test } from "bun:test";
+import { aggregateGearSubstats, calculateAdvancedGearStats, calculateCharacterStats, calculateWeightLimit, materializeGearStats, resolveCharacterHealingTraits, type ItemResolver, type SkillResolver } from "./formulas.ts";
+import type { CharacterArtifact, CharacterEquipment, CharacterSnapshot, CharacterSubstat } from "./types.ts";
+
+describe("calculateCharacterStats", () => {
+  test("uses the corrected current-build hit, flee, and critical formulas", () => {
+    const stats = calculateCharacterStats(50, { STR: 20, VIT: 30, AGI: 40, DEX: 25, INT: 10, LUK: 30 });
+    const value = (id: string) => stats.find((stat) => stat.id === id)?.value;
+    expect(value("hit")).toBe(135);
+    expect(value("flee")).toBe(128);
+    expect(value("crit-damage")).toBe(126);
+    expect(value("perfect-dodge")).toBe(3);
+  });
+
+  test("uses the corrected base health and magic scaling", () => {
+    const stats = calculateCharacterStats(10, { STR: 1, VIT: 20, AGI: 1, DEX: 10, INT: 20, LUK: 10 });
+    const value = (id: string) => stats.find((stat) => stat.id === id)?.value;
+    expect(value("max-health")).toBe(360);
+    expect(value("max-mana")).toBe(114);
+    expect(value("magic-attack")).toBe(35);
+  });
+
+  test("separates known substats into base, gear, and total values", () => {
+    const stats = calculateCharacterStats(20, { STR: 20, VIT: 20, AGI: 20, DEX: 20, INT: 20, LUK: 20 }, [substat(9, "ATK", 5)]);
+    const melee = stats.find((stat) => stat.id === "melee-attack")!;
+    const mana = stats.find((stat) => stat.id === "max-mana")!;
+    expect(melee.gear).toBe(melee.value - melee.base);
+    expect(melee.gear).toBeGreaterThan(0);
+    expect(mana.gear).toBe(0);
+  });
+
+  test("attributes from gear shift derived attack and resistance", () => {
+    const stats = calculateCharacterStats(20, { STR: 20, VIT: 20, AGI: 20, DEX: 20, INT: 20, LUK: 20 }, [substat(0, "STR", 3)]);
+    expect(stats.find((stat) => stat.id === "melee-attack")!.gear).toBeGreaterThan(0);
+    expect(stats.find((stat) => stat.id === "resist-str")!.gear).toBeGreaterThan(0);
+  });
+
+  test("aggregates duplicate equipment and artifact substats including unresolved rolls", () => {
+    const equipment: CharacterEquipment[] = [{ slot: "Head", itemId: "Helmet", refine: 0, cards: [], substats: [substat(63, "Attack speed", 3, true), unresolved(63, "Attack speed")] }];
+    const artifacts: CharacterArtifact[] = [{ slot: "Rune", itemId: "Rune", refine: 0, gems: [], substats: [substat(63, "Attack speed", 2, true)] }];
+    expect(aggregateGearSubstats(equipment, artifacts)).toEqual([{ type: 63, name: "Attack speed", total: 5, percent: true, unresolvedRolls: 1 }]);
+  });
+
+  test("creates advanced rows only for gear substats without basic formulas", () => {
+    const totals = aggregateGearSubstats([{ slot: "Feet", itemId: "Boots", refine: 0, cards: [], substats: [substat(9, "ATK", 2), substat(63, "Attack speed", 4, true)] }], []);
+    const advanced = calculateAdvancedGearStats(totals);
+    expect(advanced).toHaveLength(1);
+    expect(advanced[0]).toMatchObject({ id: "gear-stat-63", tab: "advanced", base: 0, gear: 4, value: 4 });
+  });
+
+  test("labels weight limit and groups incoming damage modifiers under mitigation", () => {
+    const advanced = calculateAdvancedGearStats([
+      { type: 58, name: "Damage from melee", total: -5, percent: true, unresolvedRolls: 0 },
+      { type: 101, name: "Weight limit", total: 100, percent: false, unresolvedRolls: 0 },
+      { type: 103, name: "Damage from ranged", total: -5, percent: true, unresolvedRolls: 0 },
+    ]);
+    expect(advanced).toMatchObject([
+      { id: "gear-stat-58", category: "Mitigation", unit: "%" },
+      { id: "gear-stat-101", label: "Weight limit", category: "Utility" },
+      { id: "gear-stat-103", label: "Damage from ranged", category: "Mitigation", unit: "%" },
+    ]);
+  });
+
+  test("calculates weight capacity from level and persistent weight-limit bonuses", () => {
+    const snapshot: CharacterSnapshot = {
+      schemaVersion: 1,
+      buildFingerprint: "synthetic-build",
+      name: "Fictional Carrier",
+      archetypes: ["Warrior"],
+      level: 10,
+      experience: 0,
+      jobLevel: 1,
+      jobExperience: 0,
+      attributes: { STR: 1, VIT: 1, AGI: 1, DEX: 1, INT: 1, LUK: 1 },
+      activeLoadout: "Normal",
+      equipment: [{ slot: "Back", itemId: "Fictional Pack", refine: 2, cards: [], substats: [] }],
+      artifacts: [],
+      skills: [{ id: "Fictional Porter", displayName: "Fictional Porter", level: 3, effects: [] }],
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      source: "live",
+    };
+    const resolveItem: ItemResolver = (itemType, itemId) => itemType === 2 && itemId === "Fictional Pack"
+      ? { itemType: 2, id: itemId, displayName: itemId, weight: 10, effects: [{ type: 101, value: 100 }], refineEffects: [{ type: 101, value: 50 }] }
+      : undefined;
+    const resolveSkill: SkillResolver = (skillId) => skillId === "Fictional Porter"
+      ? { id: skillId, displayName: skillId, kinds: ["passive"], effects: [{ type: 101, value: 25, valuePerLevel: 5 }] }
+      : undefined;
+
+    expect(calculateWeightLimit(snapshot, resolveItem, resolveSkill)).toBe(2_540);
+  });
+
+  test("detects Siphon Health and Health Leech without estimating recovery values", () => {
+    const snapshot: CharacterSnapshot = {
+      schemaVersion: 1,
+      buildFingerprint: "synthetic-build",
+      name: "Fictional Healer",
+      archetypes: ["Fictional"],
+      level: 1,
+      experience: 0,
+      jobLevel: 1,
+      jobExperience: 0,
+      attributes: { STR: 1, VIT: 1, AGI: 1, DEX: 1, INT: 1, LUK: 1 },
+      activeLoadout: "Normal",
+      equipment: [{ slot: "Rune", itemId: "Fictional Leech Item", refine: 0, cards: [], substats: [] }],
+      artifacts: [],
+      skills: [{ id: "Fictional Siphon Skill", displayName: "Fictional Siphon Skill", level: 3, effects: [] }],
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      source: "live",
+    };
+    const resolveItem: ItemResolver = (_itemType, itemId) => itemId === "Fictional Leech Item"
+      ? { itemType: 2, id: itemId, displayName: itemId, weight: 0, effects: [{ type: 98, value: 4 }] }
+      : undefined;
+    const resolveSkill: SkillResolver = (skillId) => skillId === "Fictional Siphon Skill"
+      ? { id: skillId, displayName: skillId, kinds: ["passive"], effects: [{ type: 176, value: 5, valuePerLevel: 10 }] }
+      : undefined;
+
+    expect(resolveCharacterHealingTraits(snapshot, resolveItem, resolveSkill)).toEqual({
+      hasSiphonHealth: true,
+      hasHealthLeech: true,
+    });
+  });
+
+  test("scales move speed from the verified 7.5 base", () => {
+    const noGear = calculateCharacterStats(88, { STR: 99, VIT: 50, AGI: 1, DEX: 1, INT: 1, LUK: 71 });
+    expect(noGear.find((stat) => stat.id === "move-speed")).toMatchObject({ base: 7.5, value: 7.5, tab: "basic" });
+    // The user's live build: +10% boots base effect and +9% rolled substat → the synced 8.925.
+    const geared = calculateCharacterStats(88, { STR: 99, VIT: 50, AGI: 1, DEX: 1, INT: 1, LUK: 71 }, [substat(65, "Move speed", 10, true), substat(65, "Move speed", 9, true)]);
+    expect(geared.find((stat) => stat.id === "move-speed")?.value).toBeCloseTo(8.925, 3);
+  });
+
+  test("applies artifact per-piece, refine, and full-set effects", () => {
+    const resolveItem: ItemResolver = (itemType, itemId) => itemType === 3 && itemId === "Example Set"
+      ? {
+        itemType: 3,
+        id: "Example Set",
+        displayName: "Example Set",
+        refineEffects: [{ type: 98, value: 0.125 }],
+        artifactSet: { requiredPieces: 4, perPieceBase: [{ type: 98, value: 3 }], perPiece: [], fullSet: [{ type: 98, value: 12 }] },
+      }
+      : undefined;
+    const artifact = (refine: number): CharacterArtifact => ({ slot: "Rune", itemId: "Example Set", refine, gems: [], substats: [] });
+    const leech = (artifacts: CharacterArtifact[]) => materializeGearStats([], artifacts, resolveItem).filter((stat) => stat.type === 98).reduce((total, stat) => total + (stat.value ?? 0), 0);
+    expect(leech([artifact(0)])).toBe(3);
+    expect(leech([artifact(4)])).toBe(3.5);
+    expect(leech([artifact(0), artifact(0), artifact(0), artifact(0)])).toBe(15);
+  });
+
+  test("scales socketed card refine effects with the equipped gear's refine level", () => {
+    const resolveItem: ItemResolver = (itemType, itemId) => itemType === 4 && itemId === "Delivery Robot"
+      ? { itemType: 4, id: "Delivery Robot", displayName: "Delivery Robot Card", refineEffects: [{ type: 101, value: 100 }] }
+      : undefined;
+    const equipment = (refine: number): CharacterEquipment[] => [{ slot: "Back", itemId: "Fictional Pack", refine, cards: ["Delivery Robot"], substats: [] }];
+    const weightBonus = (equip: CharacterEquipment[]) => materializeGearStats(equip, [], resolveItem).filter((stat) => stat.type === 101).reduce((total, stat) => total + (stat.value ?? 0), 0);
+    expect(weightBonus(equipment(0))).toBe(0);
+    expect(weightBonus(equipment(3))).toBe(300);
+  });
+});
+
+function substat(type: number, name: string, value: number, percent = false): CharacterSubstat { return { type, name, roll: 0, value, percent }; }
+function unresolved(type: number, name: string): CharacterSubstat { return { type, name, roll: 10, percent: false }; }

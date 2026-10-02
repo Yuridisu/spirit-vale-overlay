@@ -1,0 +1,781 @@
+import type { Statement } from "bun:sqlite";
+import type { IndexStreamRequest, IndexStreamResult, ReadModel } from "@kar-mi/spirit-vale-tools-sqlite";
+import type { LogRecord } from "@kar-mi/spirit-vale-tools-logging";
+
+import { parseDpsLogRecord } from "../replay/replay.ts";
+import { DamageReducer, createActor } from "../reducers/damage.ts";
+import type { CombatIdentity, DamageReducerOptions, DeathHitRecord, DeathRecord, EncounterAggregate } from "../reducers/damage.ts";
+import { MeterReducerGroup } from "../reducers/meter-group.ts";
+import { takeDirtyFrom } from "../reducers/timeline.ts";
+import { COMBAT_DOMAIN_NAME } from "./domain.ts";
+
+/** Table discriminator for the three meters sharing the actor/skill/target/timeline tables. */
+type StoredMeter = "dps" | "tanked" | "healing";
+
+/** Pseudo-meter tag for the shield-absorption rows parked in `combat_skills`/`combat_targets` beside the tanked rows. */
+const ABSORBED_METER = "absorbed";
+
+export interface IndexCombatStreamOptions extends Pick<DamageReducerOptions, "idleGapMs" | "currentTauSeconds"> {
+  sessionId: string;
+  sourcePath: string;
+  batchBytes?: number;
+  /** Closes the encounter still in progress at the end of the log. */
+  finalize?: boolean;
+}
+
+/** Indexes one combat log into the read model. */
+export async function indexCombatStream(model: ReadModel, options: IndexCombatStreamOptions): Promise<IndexStreamResult> {
+  const { sessionId, sourcePath } = options;
+  const finished: EncounterAggregate[] = [];
+  let currentSequence = 0;
+  let lastObservedAtMs = 0;
+
+  // The tanked and healing meters follow the damage reducer's encounter boundaries; only outgoing party damage defines an encounter.
+  const meters = new MeterReducerGroup({
+    ...(options.currentTauSeconds === undefined ? {} : { currentTauSeconds: options.currentTauSeconds }),
+  });
+  const meterAggregates = new Map<string, Map<StoredMeter, EncounterAggregate>>();
+
+  const captureMeters = (encounterId: string): void => {
+    const byMeter = new Map<StoredMeter, EncounterAggregate>(meters.snapshot());
+    if (byMeter.size > 0) meterAggregates.set(encounterId, byMeter);
+  };
+
+  const reducer = new DamageReducer({
+    ...(options.idleGapMs === undefined ? {} : { idleGapMs: options.idleGapMs }),
+    ...(options.currentTauSeconds === undefined ? {} : { currentTauSeconds: options.currentTauSeconds }),
+    createEncounterId: () => `enc-${currentSequence}`,
+    onEncounterFinished: (encounter) => {
+      captureMeters(encounter.id);
+      meters.finish(encounter.endedAtMs ?? encounter.lastDamageAtMs);
+      finished.push(encounter);
+    },
+  });
+
+  // Session-scoped reducer state first: an incremental pass often has no encounter open at the
+  // boundary, and identities, monster names and the death lookback all outlive any one encounter.
+  loadStreamState(model, sessionId, reducer);
+  const open = loadOpenEncounter(model, sessionId);
+  if (open) {
+    reducer.resume(open);
+    // Restore the meters' open aggregates too, or a resumed pass would restart their totals at zero
+    // while the damage totals continued.
+    meters.resume("tanked", loadMeterAggregate(model, sessionId, open, "tanked"));
+    meters.resume("healing", loadMeterAggregate(model, sessionId, open, "healing"));
+  }
+
+  const request: IndexStreamRequest = {
+    sessionId,
+    stream: "combat",
+    domain: COMBAT_DOMAIN_NAME,
+    sourcePath,
+    ...(options.batchBytes === undefined ? {} : { batchBytes: options.batchBytes }),
+    apply(records) {
+      const previouslyOpen = reducer.current?.id;
+      for (const record of records) {
+        consume(reducer, meters, record, (sequence, observedAtMs) => {
+          currentSequence = sequence;
+          lastObservedAtMs = observedAtMs;
+        });
+      }
+      for (const encounter of finished.splice(0)) {
+        writeEncounter(model, sessionId, encounter, reducer, meterAggregates.get(encounter.id));
+        meterAggregates.delete(encounter.id);
+      }
+      // The open encounter is rewritten each batch from the in-memory totals, so the stored row is
+      // an absolute snapshot rather than an accumulation — re-applying a batch cannot double-count.
+      if (reducer.current) {
+        captureMeters(reducer.current.id);
+        writeEncounter(model, sessionId, reducer.current, reducer, meterAggregates.get(reducer.current.id));
+      } else if (previouslyOpen) clearEncounter(model, sessionId, previouslyOpen, { keepFinished: true });
+      // Written in the same transaction as the rows above, so progress and reducer state commit
+      // together. Pruned first so the persisted lookback is exactly the window that gets read back.
+      reducer.pruneRecentHits(lastObservedAtMs);
+      writeStreamState(model, sessionId, reducer);
+    },
+    clear(scope, database) {
+      for (const table of TABLES) {
+        database.query(`delete from ${table} where session_id = $sessionId`).run({ sessionId: scope.sessionId });
+      }
+      reducer.current = undefined;
+      reducer.identities.clear();
+      reducer.mobIdentities.clear();
+      reducer.recentHits.clear();
+      meters.reset();
+      meterAggregates.clear();
+      finished.length = 0;
+    },
+  };
+
+  const result = await model.indexStream(request);
+  recordInvalidLines(model, sessionId, result.invalidLines, result.rebuilt);
+
+  if (options.finalize && reducer.current) {
+    // The byte offset is already committed; this only stamps ended_at_ms on the encounter row, so
+    // re-running it is harmless.
+    model.transaction(() => {
+      reducer.reset(lastObservedAtMs);
+      for (const encounter of finished.splice(0)) {
+        writeEncounter(model, sessionId, encounter, reducer, meterAggregates.get(encounter.id));
+        meterAggregates.delete(encounter.id);
+      }
+    });
+  }
+  return result;
+}
+
+const TABLES = [
+  "combat_stream_state",
+  "combat_death_hits",
+  "combat_deaths",
+  "combat_enemies",
+  "combat_enemy_skills",
+  "combat_timeline_buckets",
+  "combat_targets",
+  "combat_skills",
+  "combat_actors",
+  "combat_encounters",
+] as const;
+
+/** Adapts the model's managed statement cache to the `.query(sql)` shape the writers below use. */
+function statements(model: ReadModel): { query: (sql: string) => Statement } {
+  return { query: (sql: string) => model.statement(sql) };
+}
+
+function consume(
+  reducer: DamageReducer,
+  meters: MeterReducerGroup,
+  record: LogRecord,
+  note: (sequence: number, observedAtMs: number) => void,
+): void {
+  const event = parseDpsLogRecord(record.type, record.data);
+  if (!event) return;
+  const observedAtMs = Date.parse(record.recordedAt);
+  if (!Number.isFinite(observedAtMs)) return;
+  note(record.sequence, observedAtMs);
+  if (event.kind === "actorIdentity") {
+    reducer.consumeIdentity(event, observedAtMs);
+    meters.consumeIdentity(event);
+    return;
+  }
+  // The reducer owns encounter boundaries, so it runs first: it may close an encounter that has gone
+  // idle, and an incoming hit or heal arriving after that cutoff belongs to no encounter at all.
+  reducer.consumeCombat(event, observedAtMs);
+  meters.consumeCombat(reducer.current, event, observedAtMs, reducer.identities, reducer.mobIdentities);
+}
+
+/** Writes through the model's statement cache so repeated indexing reuses prepared SQL. */
+function writeEncounter(
+  model: ReadModel,
+  sessionId: string,
+  encounter: EncounterAggregate,
+  reducer: DamageReducer,
+  meterAggregates?: ReadonlyMap<StoredMeter, EncounterAggregate>,
+): void {
+  const database = statements(model);
+  writeEnemiesAndDeaths(model, sessionId, encounter, reducer.mobIdentities, meterAggregates?.get("tanked"));
+  const totalDamage = encounter.actors.reduce((sum, actor) => sum + actor.damage, 0);
+  database
+    .query(`insert or replace into combat_encounters
+      (session_id, encounter_id, started_at_ms, last_damage_at_ms, ended_at_ms, total_damage)
+      values ($sessionId, $encounterId, $startedAtMs, $lastDamageAtMs, $endedAtMs, $totalDamage)`)
+    .run({
+      sessionId,
+      encounterId: encounter.id,
+      startedAtMs: encounter.startedAtMs,
+      lastDamageAtMs: encounter.lastDamageAtMs,
+      endedAtMs: encounter.endedAtMs ?? null,
+      totalDamage,
+    });
+
+  writeActors(model, sessionId, encounter, "dps");
+  for (const [meter, aggregate] of meterAggregates ?? []) writeActors(model, sessionId, aggregate, meter, encounter.id);
+}
+
+/** Writes one meter's per-actor aggregates. The three meters differ only by the `meter` column. */
+function writeActors(
+  model: ReadModel,
+  sessionId: string,
+  aggregate: EncounterAggregate,
+  meter: StoredMeter,
+  encounterId = aggregate.id,
+): void {
+  const database = statements(model);
+  // Resolved once rather than inside the loops below: `statement()` keys its cache on the SQL text,
+  // so re-fetching per row hashes a few hundred characters for every one of the thousands of rows a
+  // busy encounter writes.
+  const insertActor = database.query(`insert or replace into combat_actors
+        (session_id, encounter_id, meter, actor_index, actor_id, active_slot, display_name, archetype, owner_connection_id, uid,
+         active_identity, damage, absorbed, first_damage_at_ms, last_damage_at_ms, hits, critical_hits, kills, ewma_rate, ewma_at_ms, ewma_tau_seconds)
+        values ($sessionId, $encounterId, $meter, $actorIndex, $actorId, $activeSlot, $displayName, $archetype, $ownerConnectionId, $uid,
+                $activeIdentity, $damage, $absorbed, $firstDamageAtMs, $lastDamageAtMs, $hits, $criticalHits, $kills, $ewmaRate, $ewmaAtMs, $ewmaTauSeconds)`);
+  const insertSkill = database.query(`insert or replace into combat_skills
+    (session_id, encounter_id, meter, actor_index, source_id, source_label, damage, hits, critical_hits)
+    values ($sessionId, $encounterId, $meter, $actorIndex, $sourceId, $sourceLabel, $damage, $hits, $criticalHits)`);
+  const insertTarget = database.query(`insert or replace into combat_targets
+    (session_id, encounter_id, meter, actor_index, target_id, damage)
+    values ($sessionId, $encounterId, $meter, $actorIndex, $targetId, $damage)`);
+  const insertBucket = database.query(`insert or replace into combat_timeline_buckets
+    (session_id, encounter_id, meter, actor_index, origin, origin_ms, width_ms, bucket_index, damage)
+    values ($sessionId, $encounterId, $meter, $actorIndex, $origin, $originMs, $widthMs, $bucketIndex, $damage)`);
+  const insertEnemySkill = database.query(`insert or replace into combat_enemy_skills
+    (session_id, encounter_id, meter, actor_index, target_id, source_id, source_label, damage, hits, critical_hits)
+    values ($sessionId, $encounterId, $meter, $actorIndex, $targetId, $sourceId, $sourceLabel, $damage, $hits, $criticalHits)`);
+  const deleteBucketTail = database.query(`delete from combat_timeline_buckets
+    where session_id = $sessionId and encounter_id = $encounterId and meter = $meter
+      and actor_index = $actorIndex and origin = $origin and bucket_index >= $bucketCount`);
+
+  for (const [actorIndex, actor] of aggregate.actors.entries()) {
+    insertActor
+      .run({
+        sessionId,
+        encounterId,
+        meter,
+        actorIndex,
+        actorId: actor.actorId,
+        activeSlot: aggregate.activeActors.get(actor.actorId) === actor ? 1 : 0,
+        displayName: actor.displayName ?? null,
+        archetype: actor.archetype ?? null,
+        ownerConnectionId: actor.ownerConnectionId ?? null,
+        uid: actor.uid ?? null,
+        activeIdentity: actor.activeIdentity ? 1 : 0,
+        damage: actor.damage,
+        absorbed: actor.absorbed,
+        firstDamageAtMs: actor.firstDamageAtMs ?? null,
+        lastDamageAtMs: actor.lastDamageAtMs ?? null,
+        hits: actor.hits,
+        criticalHits: actor.criticalHits,
+        kills: actor.kills,
+        ewmaRate: actor.currentRate.state().rate,
+        ewmaAtMs: actor.currentRate.state().updatedAtMs,
+        ewmaTauSeconds: actor.currentRate.tauSeconds,
+      });
+
+    for (const skill of actor.skills.values()) {
+      insertSkill
+        .run({
+          sessionId,
+          encounterId,
+          meter,
+          actorIndex,
+          sourceId: skill.sourceId,
+          sourceLabel: skill.sourceLabel,
+          damage: skill.damage,
+          hits: skill.hits,
+          criticalHits: skill.criticalHits,
+        });
+    }
+
+    for (const targetId of actor.targetIds) {
+      insertTarget
+        .run({
+          sessionId,
+          encounterId,
+          meter,
+          actorIndex,
+          targetId,
+          damage: actor.targetDamage.get(targetId) ?? 0,
+        });
+    }
+
+    if (meter === "dps" || meter === "tanked") {
+      for (const [targetId, bySkill] of actor.enemySkills) {
+        for (const [sourceId, stats] of bySkill) {
+          insertEnemySkill.run({
+            sessionId,
+            encounterId,
+            meter,
+            actorIndex,
+            targetId,
+            sourceId,
+            sourceLabel: stats.sourceLabel,
+            damage: stats.damage,
+            hits: stats.hits,
+            criticalHits: stats.criticalHits,
+          });
+        }
+      }
+    }
+
+    // Shield absorption rides alongside the tanked rows under a pseudo-meter tag, so the tanked
+    // snapshot can rebuild `absorbed` / `absorbedSkills` / `absorbedByEnemy` without extra actor rows.
+    if (meter === "tanked") {
+      for (const skill of actor.absorbedSkills.values()) {
+        insertSkill.run({
+          sessionId,
+          encounterId,
+          meter: ABSORBED_METER,
+          actorIndex,
+          sourceId: skill.sourceId,
+          sourceLabel: skill.sourceLabel,
+          damage: skill.damage,
+          hits: skill.hits,
+          criticalHits: skill.criticalHits,
+        });
+      }
+      for (const [targetId, value] of actor.absorbedByEnemy) {
+        insertTarget.run({ sessionId, encounterId, meter: ABSORBED_METER, actorIndex, targetId, damage: value });
+      }
+    }
+
+    for (const [origin, series] of [["encounter", actor.encounterSeries], ["actor", actor.actorSeries]] as const) {
+      // Only the buckets this pass touched. An open encounter is rewritten on every pass and its
+      // bucket count grows with its duration, so writing all of them would cost work quadratic in
+      // the length of the fight — which is what this avoids.
+      const dirtyFrom = takeDirtyFrom(series);
+      if (dirtyFrom === Number.POSITIVE_INFINITY) continue;
+      // Starting at 0 means the series was replaced wholesale (a resolution collapse re-spans every
+      // bucket and shortens the series), so any rows past the new end are stale.
+      if (dirtyFrom === 0) {
+        deleteBucketTail
+          .run({ sessionId, encounterId, meter, actorIndex, origin, bucketCount: series.buckets.length });
+      }
+      for (let bucketIndex = dirtyFrom; bucketIndex < series.buckets.length; bucketIndex += 1) {
+        insertBucket
+          .run({
+            sessionId,
+            encounterId,
+            meter,
+            actorIndex,
+            origin,
+            originMs: series.originMs,
+            widthMs: series.widthMs,
+            bucketIndex,
+            damage: series.buckets[bucketIndex] ?? 0,
+          });
+      }
+    }
+  }
+}
+
+function writeEnemiesAndDeaths(
+  model: ReadModel,
+  sessionId: string,
+  encounter: EncounterAggregate,
+  mobIdentities: ReadonlyMap<number, string>,
+  tanked?: EncounterAggregate,
+): void {
+  const database = statements(model);
+  const scope = { sessionId, encounterId: encounter.id };
+  // Every row below is keyed by something stable — attacker/target/source for enemies, the array
+  // position for deaths and their hits — so the upserts alone are an exact snapshot. Clearing the
+  // four tables first would only matter if a row could disappear, and none can: `loadOpenEncounter`
+  // restores both sets from these same tables on every resume, and they only ever grow from there.
+  // An encounter that genuinely has to start over is cleared by `clear`/`clearEncounter` instead.
+
+  // Resolved once, for the same reason as in `writeActors`: these loops are per enemy and per death
+  // hit, so re-fetching by SQL text inside them is pure overhead.
+  const insertEnemy = database.query(`insert or replace into combat_enemies
+    (session_id, encounter_id, target_id, display_name, first_seen_at_ms)
+    values ($sessionId, $encounterId, $targetId, $displayName, $firstSeenAtMs)`);
+  const insertDeath = database.query(`insert or replace into combat_deaths
+    (session_id, encounter_id, death_index, victim_name, target_id, died_at_ms, total_damage)
+    values ($sessionId, $encounterId, $deathIndex, $victimName, $targetId, $diedAtMs, $totalDamage)`);
+  const insertDeathHit = database.query(`insert or replace into combat_death_hits
+    (session_id, encounter_id, death_index, hit_index, before_death_ms, attacker_actor_id,
+     attacker_label, attacker_is_monster, source_label, damage, critical)
+    values ($sessionId, $encounterId, $deathIndex, $hitIndex, $beforeDeathMs, $attackerActorId,
+            $attackerLabel, $attackerIsMonster, $sourceLabel, $damage, $critical)`);
+
+  // `combat_enemies` is the row set both the DPS and the TPS enemy pickers read names from; the DPS
+  // picker filters back down to enemies it actually has skill rows for, so unioning the tanked
+  // aggregate's pure attackers here only adds names, it does not widen the DPS list.
+  const enemyFirstSeen = new Map(encounter.enemyFirstSeenAtMs);
+  for (const [targetId, firstSeenAtMs] of tanked?.enemyFirstSeenAtMs ?? []) {
+    enemyFirstSeen.set(targetId, Math.min(firstSeenAtMs, enemyFirstSeen.get(targetId) ?? firstSeenAtMs));
+  }
+  for (const [targetId, firstSeenAtMs] of enemyFirstSeen) {
+    // The name is whatever was captured when the hit landed; `mobIdentities` is only a fallback for
+    // rows carried over from before the aggregate recorded names.
+    insertEnemy
+      .run({
+        ...scope,
+        targetId,
+        displayName: encounter.enemyNames.get(targetId)
+          ?? tanked?.enemyNames.get(targetId)
+          ?? mobIdentities.get(targetId)
+          ?? null,
+        firstSeenAtMs,
+      });
+  }
+
+  for (const [deathIndex, death] of encounter.deaths.entries()) {
+    insertDeath
+      .run({
+        ...scope,
+        deathIndex,
+        victimName: death.victimName,
+        targetId: death.targetId,
+        diedAtMs: death.diedAtMs,
+        totalDamage: death.totalDamage,
+      });
+    for (const [hitIndex, hit] of death.hits.entries()) {
+      insertDeathHit
+        .run({
+          ...scope,
+          deathIndex,
+          hitIndex,
+          beforeDeathMs: hit.beforeDeathMs,
+          attackerActorId: hit.attackerActorId,
+          attackerLabel: hit.attackerLabel,
+          attackerIsMonster: hit.attackerIsMonster ? 1 : 0,
+          sourceLabel: hit.sourceLabel,
+          damage: hit.damage,
+          critical: hit.critical ? 1 : 0,
+        });
+    }
+  }
+}
+
+function clearEncounter(
+  model: ReadModel,
+  sessionId: string,
+  encounterId: string,
+  options: { keepFinished?: boolean } = {},
+): void {
+  const database = statements(model);
+  if (options.keepFinished) {
+    const stored = database
+      .query("select ended_at_ms from combat_encounters where session_id = $sessionId and encounter_id = $encounterId")
+      .get({ sessionId, encounterId }) as { ended_at_ms: number | null } | null;
+    if (stored && stored.ended_at_ms !== null) return;
+  }
+  for (const table of TABLES) {
+    database
+      .query(`delete from ${table} where session_id = $sessionId and encounter_id = $encounterId`)
+      .run({ sessionId, encounterId });
+  }
+}
+
+interface EncounterRow {
+  encounter_id: string;
+  started_at_ms: number;
+  last_damage_at_ms: number;
+  ended_at_ms: number | null;
+}
+
+interface StreamStateRow {
+  identities_json: string;
+  mob_identities_json: string;
+  recent_hits_json: string;
+}
+
+/**
+ * Accumulates the count of unparseable lines for the stream. A rebuild re-reads from byte zero, so
+ * its count replaces the running total instead of adding to it.
+ */
+function recordInvalidLines(model: ReadModel, sessionId: string, invalidLines: number, rebuilt: boolean): void {
+  if (invalidLines === 0 && !rebuilt) return;
+  model.transaction(() => {
+    statements(model)
+      .query(`insert into combat_stream_state (session_id, invalid_lines) values ($sessionId, $invalidLines)
+        on conflict(session_id) do update set
+          invalid_lines = case when $rebuilt = 1 then $invalidLines else combat_stream_state.invalid_lines + $invalidLines end`)
+      .run({ sessionId, invalidLines, rebuilt: rebuilt ? 1 : 0 });
+  });
+}
+
+/** Restores the reducer state that spans encounters, so an incremental pass continues where it left off. */
+function loadStreamState(model: ReadModel, sessionId: string, reducer: DamageReducer): void {
+  const row = statements(model)
+    .query("select identities_json, mob_identities_json, recent_hits_json from combat_stream_state where session_id = $sessionId")
+    .get({ sessionId }) as StreamStateRow | null;
+  if (!row) return;
+  for (const [actorId, identity] of JSON.parse(row.identities_json) as [number, CombatIdentity][]) {
+    reducer.identities.set(actorId, identity);
+  }
+  for (const [actorId, name] of JSON.parse(row.mob_identities_json) as [number, string][]) {
+    reducer.mobIdentities.set(actorId, name);
+  }
+  for (const [targetId, hits] of JSON.parse(row.recent_hits_json) as [number, { atMs: number; hit: DeathHitRecord }[]][]) {
+    reducer.recentHits.set(targetId, hits);
+  }
+}
+
+function writeStreamState(model: ReadModel, sessionId: string, reducer: DamageReducer): void {
+  // Upsert rather than replace: invalid_lines accumulates separately and must survive this write.
+  statements(model)
+    .query(`insert into combat_stream_state
+      (session_id, identities_json, mob_identities_json, recent_hits_json)
+      values ($sessionId, $identitiesJson, $mobIdentitiesJson, $recentHitsJson)
+      on conflict(session_id) do update set
+        identities_json = excluded.identities_json,
+        mob_identities_json = excluded.mob_identities_json,
+        recent_hits_json = excluded.recent_hits_json`)
+    .run({
+      sessionId,
+      identitiesJson: JSON.stringify([...reducer.identities]),
+      mobIdentitiesJson: JSON.stringify([...reducer.mobIdentities]),
+      recentHitsJson: JSON.stringify([...reducer.recentHits]),
+    });
+}
+
+/**
+ * Restores the stored first-sighting and display name for an encounter being resumed. The name
+ * matters: an open encounter's rows are deleted and rewritten on every pass, so without carrying it
+ * back the next pass would replace a name learned earlier with null.
+ */
+function loadEnemyIdentity(
+  database: { query: (sql: string) => Statement },
+  sessionId: string,
+  encounterId: string,
+): Pick<EncounterAggregate, "enemyFirstSeenAtMs" | "enemyNames"> {
+  const rows = database
+    .query("select target_id, display_name, first_seen_at_ms from combat_enemies where session_id = ? and encounter_id = ?")
+    .all(sessionId, encounterId) as { target_id: number; display_name: string | null; first_seen_at_ms: number }[];
+  return {
+    enemyFirstSeenAtMs: new Map(rows.map((enemy) => [enemy.target_id, enemy.first_seen_at_ms] as const)),
+    enemyNames: new Map(rows
+      .filter((enemy): enemy is typeof enemy & { display_name: string } => enemy.display_name !== null)
+      .map((enemy) => [enemy.target_id, enemy.display_name] as const)),
+  };
+}
+
+function loadDeaths(
+  database: { query: (sql: string) => Statement },
+  sessionId: string,
+  encounterId: string,
+): DeathRecord[] {
+  return (database
+    .query("select * from combat_deaths where session_id = ? and encounter_id = ? order by death_index")
+    .all(sessionId, encounterId) as { death_index: number; victim_name: string; target_id: number; died_at_ms: number; total_damage: number }[])
+    .map((row) => ({
+      victimName: row.victim_name,
+      targetId: row.target_id,
+      diedAtMs: row.died_at_ms,
+      totalDamage: row.total_damage,
+      hits: (database
+        .query("select * from combat_death_hits where session_id = ? and encounter_id = ? and death_index = ? order by hit_index")
+        .all(sessionId, encounterId, row.death_index) as { before_death_ms: number; attacker_actor_id: number; attacker_label: string; attacker_is_monster: number; source_label: string; damage: number; critical: number }[])
+        .map((hit) => ({
+          beforeDeathMs: hit.before_death_ms,
+          attackerActorId: hit.attacker_actor_id,
+          attackerLabel: hit.attacker_label,
+          attackerIsMonster: hit.attacker_is_monster === 1,
+          sourceLabel: hit.source_label,
+          damage: hit.damage,
+          critical: hit.critical === 1,
+        })),
+    }));
+}
+
+interface ActorRow {
+  actor_index: number;
+  actor_id: number;
+  active_slot: number;
+  display_name: string | null;
+  archetype: number | null;
+  owner_connection_id: number | null;
+  uid: string | null;
+  active_identity: number;
+  damage: number;
+  absorbed: number;
+  first_damage_at_ms: number | null;
+  last_damage_at_ms: number | null;
+  hits: number;
+  critical_hits: number;
+  kills: number;
+  ewma_rate: number;
+  ewma_at_ms: number;
+  ewma_tau_seconds: number;
+}
+
+/**
+ * Rebuilds the encounter left open by an earlier pass so indexing continues rather than restarts.
+ *
+ * Reads go through the model's statement cache so a long-lived model that re-indexes a live session
+ * can resume here on every pass without repeatedly preparing the same SQL.
+ */
+function loadOpenEncounter(model: ReadModel, sessionId: string): EncounterAggregate | undefined {
+  const database = statements(model);
+  const row = database
+    .query("select encounter_id, started_at_ms, last_damage_at_ms, ended_at_ms from combat_encounters where session_id = $sessionId and ended_at_ms is null")
+    .get({ sessionId }) as EncounterRow | null;
+  if (!row) return undefined;
+
+  const encounter: EncounterAggregate = {
+    id: row.encounter_id,
+    startedAtMs: row.started_at_ms,
+    lastDamageAtMs: row.last_damage_at_ms,
+    actors: [],
+    activeActors: new Map(),
+    ...loadEnemyIdentity(database, sessionId, row.encounter_id),
+    deaths: loadDeaths(database, sessionId, row.encounter_id),
+  };
+
+  const actorRows = database
+    .query("select * from combat_actors where session_id = $sessionId and encounter_id = $encounterId and meter = 'dps' order by actor_index")
+    .all({ sessionId, encounterId: row.encounter_id }) as ActorRow[];
+
+  for (const actorRow of actorRows) {
+    const actor = createActor(actorRow.actor_id, encounter.startedAtMs, actorRow.ewma_tau_seconds);
+    if (actorRow.display_name !== null) actor.displayName = actorRow.display_name;
+    if (actorRow.archetype !== null) actor.archetype = actorRow.archetype;
+    if (actorRow.owner_connection_id !== null) actor.ownerConnectionId = actorRow.owner_connection_id;
+    if (actorRow.uid !== null) actor.uid = actorRow.uid;
+    actor.activeIdentity = actorRow.active_identity === 1;
+    actor.damage = actorRow.damage;
+    if (actorRow.first_damage_at_ms !== null) actor.firstDamageAtMs = actorRow.first_damage_at_ms;
+    if (actorRow.last_damage_at_ms !== null) actor.lastDamageAtMs = actorRow.last_damage_at_ms;
+    actor.hits = actorRow.hits;
+    actor.criticalHits = actorRow.critical_hits;
+    actor.kills = actorRow.kills;
+    actor.currentRate.restore({
+      rate: actorRow.ewma_rate,
+      updatedAtMs: actorRow.ewma_at_ms,
+      tauSeconds: actorRow.ewma_tau_seconds,
+    });
+
+    for (const skill of database
+      .query("select source_id, source_label, damage, hits, critical_hits from combat_skills where session_id = ? and encounter_id = ? and meter = 'dps' and actor_index = ?")
+      .all(sessionId, row.encounter_id, actorRow.actor_index) as { source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }[]) {
+      actor.skills.set(skill.source_id, {
+        sourceId: skill.source_id,
+        sourceLabel: skill.source_label,
+        damage: skill.damage,
+        hits: skill.hits,
+        criticalHits: skill.critical_hits,
+      });
+    }
+
+    for (const target of database
+      .query("select target_id, damage from combat_targets where session_id = ? and encounter_id = ? and meter = 'dps' and actor_index = ?")
+      .all(sessionId, row.encounter_id, actorRow.actor_index) as { target_id: number; damage: number }[]) {
+      actor.targetIds.add(target.target_id);
+      actor.targetDamage.set(target.target_id, target.damage);
+    }
+
+    for (const enemySkill of database
+      .query("select target_id, source_id, source_label, damage, hits, critical_hits from combat_enemy_skills where session_id = ? and encounter_id = ? and meter = 'dps' and actor_index = ?")
+      .all(sessionId, row.encounter_id, actorRow.actor_index) as { target_id: number; source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }[]) {
+      const bySkill = actor.enemySkills.get(enemySkill.target_id) ?? new Map();
+      actor.enemySkills.set(enemySkill.target_id, bySkill);
+      bySkill.set(enemySkill.source_id, {
+        sourceLabel: enemySkill.source_label,
+        damage: enemySkill.damage,
+        hits: enemySkill.hits,
+        criticalHits: enemySkill.critical_hits,
+      });
+    }
+
+    for (const bucket of database
+      .query("select origin, origin_ms, width_ms, bucket_index, damage from combat_timeline_buckets where session_id = ? and encounter_id = ? and meter = 'dps' and actor_index = ? order by bucket_index")
+      .all(sessionId, row.encounter_id, actorRow.actor_index) as { origin: string; origin_ms: number; width_ms: number; bucket_index: number; damage: number }[]) {
+      const series = bucket.origin === "actor" ? actor.actorSeries : actor.encounterSeries;
+      series.originMs = bucket.origin_ms;
+      series.widthMs = bucket.width_ms;
+      while (series.buckets.length <= bucket.bucket_index) series.buckets.push(0);
+      series.buckets[bucket.bucket_index] = bucket.damage;
+    }
+
+    encounter.actors.push(actor);
+    // active_slot, not activeIdentity: an unidentified actor is still the slot further damage
+    // accumulates into, and restoring the wrong one would split an actor's totals in two.
+    if (actorRow.active_slot === 1) encounter.activeActors.set(actor.actorId, actor);
+  }
+  return encounter;
+}
+
+/** Rebuilds one meter's aggregate for an encounter left open by an earlier pass. */
+function loadMeterAggregate(
+  model: ReadModel,
+  sessionId: string,
+  open: EncounterAggregate,
+  meter: StoredMeter,
+): EncounterAggregate {
+  // Reuse the model's statement cache across incremental indexing passes.
+  const database = statements(model);
+  const aggregate: EncounterAggregate = {
+    id: open.id,
+    startedAtMs: open.startedAtMs,
+    lastDamageAtMs: open.lastDamageAtMs,
+    actors: [],
+    activeActors: new Map(),
+    enemyFirstSeenAtMs: new Map(),
+    enemyNames: new Map(),
+    deaths: [],
+  };
+  for (const actorRow of database
+    .query("select * from combat_actors where session_id = ? and encounter_id = ? and meter = ? order by actor_index")
+    .all(sessionId, open.id, meter) as ActorRow[]) {
+    const actor = createActor(actorRow.actor_id, aggregate.startedAtMs, actorRow.ewma_tau_seconds);
+    if (actorRow.display_name !== null) actor.displayName = actorRow.display_name;
+    if (actorRow.archetype !== null) actor.archetype = actorRow.archetype;
+    actor.activeIdentity = actorRow.active_identity === 1;
+    actor.damage = actorRow.damage;
+    actor.absorbed = actorRow.absorbed;
+    if (actorRow.first_damage_at_ms !== null) actor.firstDamageAtMs = actorRow.first_damage_at_ms;
+    if (actorRow.last_damage_at_ms !== null) actor.lastDamageAtMs = actorRow.last_damage_at_ms;
+    actor.hits = actorRow.hits;
+    actor.criticalHits = actorRow.critical_hits;
+    actor.currentRate.restore({
+      rate: actorRow.ewma_rate,
+      updatedAtMs: actorRow.ewma_at_ms,
+      tauSeconds: actorRow.ewma_tau_seconds,
+    });
+
+    for (const skill of database
+      .query("select source_id, source_label, damage, hits, critical_hits from combat_skills where session_id = ? and encounter_id = ? and meter = ? and actor_index = ?")
+      .all(sessionId, open.id, meter, actorRow.actor_index) as { source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }[]) {
+      actor.skills.set(skill.source_id, {
+        sourceId: skill.source_id,
+        sourceLabel: skill.source_label,
+        damage: skill.damage,
+        hits: skill.hits,
+        criticalHits: skill.critical_hits,
+      });
+    }
+
+    for (const target of database
+      .query("select target_id, damage from combat_targets where session_id = ? and encounter_id = ? and meter = ? and actor_index = ?")
+      .all(sessionId, open.id, meter, actorRow.actor_index) as { target_id: number; damage: number }[]) {
+      actor.targetIds.add(target.target_id);
+      actor.targetDamage.set(target.target_id, target.damage);
+    }
+
+    if (meter === "tanked") {
+      for (const enemySkill of database
+        .query("select target_id, source_id, source_label, damage, hits, critical_hits from combat_enemy_skills where session_id = ? and encounter_id = ? and meter = 'tanked' and actor_index = ?")
+        .all(sessionId, open.id, actorRow.actor_index) as { target_id: number; source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }[]) {
+        const bySkill = actor.enemySkills.get(enemySkill.target_id) ?? new Map();
+        actor.enemySkills.set(enemySkill.target_id, bySkill);
+        bySkill.set(enemySkill.source_id, {
+          sourceLabel: enemySkill.source_label,
+          damage: enemySkill.damage,
+          hits: enemySkill.hits,
+          criticalHits: enemySkill.critical_hits,
+        });
+      }
+      for (const skill of database
+        .query("select source_id, source_label, damage, hits, critical_hits from combat_skills where session_id = ? and encounter_id = ? and meter = 'absorbed' and actor_index = ?")
+        .all(sessionId, open.id, actorRow.actor_index) as { source_id: string; source_label: string; damage: number; hits: number; critical_hits: number }[]) {
+        actor.absorbedSkills.set(skill.source_id, {
+          sourceId: skill.source_id,
+          sourceLabel: skill.source_label,
+          damage: skill.damage,
+          hits: skill.hits,
+          criticalHits: skill.critical_hits,
+        });
+      }
+      for (const target of database
+        .query("select target_id, damage from combat_targets where session_id = ? and encounter_id = ? and meter = 'absorbed' and actor_index = ?")
+        .all(sessionId, open.id, actorRow.actor_index) as { target_id: number; damage: number }[]) {
+        actor.absorbedByEnemy.set(target.target_id, target.damage);
+      }
+    }
+
+    for (const bucket of database
+      .query("select origin, origin_ms, width_ms, bucket_index, damage from combat_timeline_buckets where session_id = ? and encounter_id = ? and meter = ? and actor_index = ? order by bucket_index")
+      .all(sessionId, open.id, meter, actorRow.actor_index) as { origin: string; origin_ms: number; width_ms: number; bucket_index: number; damage: number }[]) {
+      const series = bucket.origin === "actor" ? actor.actorSeries : actor.encounterSeries;
+      series.originMs = bucket.origin_ms;
+      series.widthMs = bucket.width_ms;
+      while (series.buckets.length <= bucket.bucket_index) series.buckets.push(0);
+      series.buckets[bucket.bucket_index] = bucket.damage;
+    }
+
+    aggregate.actors.push(actor);
+    if (actorRow.active_slot === 1) aggregate.activeActors.set(actor.actorId, actor);
+  }
+  return aggregate;
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["DOM", "ESNext"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ESNext",
+    "types": ["bun"],
+    "paths": {
+      "@kar-mi/spirit-vale-tools-capture": ["./packages/capture/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-capture/capture": ["./packages/capture/src/capture.ts"],
+      "@kar-mi/spirit-vale-tools-capture/wire-reader": ["./packages/capture/src/fishnet/decoding/wire-reader.ts"],
+      "@kar-mi/spirit-vale-tools-character": ["./packages/character/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-combat": ["./packages/combat/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-items": ["./packages/items/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-logging": ["./packages/logging/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-market": ["./packages/market/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-metrics": ["./packages/metrics/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-rewards": ["./packages/rewards/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-skills": ["./packages/skills/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-sqlite": ["./packages/sqlite/src/index.ts"],
+      "@kar-mi/spirit-vale-tools-statuses": ["./packages/statuses/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts"]
+}

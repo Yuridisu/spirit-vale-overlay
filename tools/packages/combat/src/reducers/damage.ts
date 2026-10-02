@@ -1,0 +1,567 @@
+import { EwmaRate } from "@kar-mi/spirit-vale-tools-metrics";
+import type { FishNetActorIdentityEvent } from "../tracking/actor-directory.ts";
+import type { FishNetCombatDamageEvent, FishNetCombatDeathEvent, FishNetCombatEvent } from "../events/combat-events.ts";
+import { ANALYSIS_BUCKET_MS, addToSeries, createSeries } from "./timeline.ts";
+import type { BucketSeries } from "./timeline.ts";
+
+const DEFAULT_IDLE_GAP_MS = 30_000;
+export const DEFAULT_MINIMUM_DURATION_MS = 1_000;
+/** Current DPS is an exponentially-weighted rate rather than a flat window of recent hits. */
+export const DEFAULT_CURRENT_TAU_SECONDS = 2.5;
+
+export interface CombatIdentity {
+  displayName: string;
+  archetype?: number;
+  ownerConnectionId?: number;
+  uid?: string;
+}
+
+export interface SkillAggregate {
+  sourceId: string;
+  sourceLabel: string;
+  damage: number;
+  hits: number;
+  criticalHits: number;
+}
+
+/** Per-actor totals for one encounter. */
+export interface ActorAggregate {
+  actorId: number;
+  actorIds: number[];
+  displayName?: string;
+  archetype?: number;
+  ownerConnectionId?: number;
+  uid?: string;
+  activeIdentity: boolean;
+  damage: number;
+  firstDamageAtMs?: number;
+  lastDamageAtMs?: number;
+  hits: number;
+  criticalHits: number;
+  kills: number;
+  targetIds: Set<number>;
+  targetDamage: Map<number, number>;
+  /** Enemy target id -> skill id -> outgoing damage attributed to this actor lifetime. */
+  enemySkills: Map<number, Map<string, EnemySkillStats>>;
+  skills: Map<string, SkillAggregate>;
+  /** Damage a shield on this actor soaked. Tracked apart from {@link damage} so TPS totals stay raw damage taken. */
+  absorbed: number;
+  /** Absorbed amount keyed by the incoming enemy skill that was soaked. */
+  absorbedSkills: Map<string, SkillAggregate>;
+  /** Absorbed amount keyed by the attacking enemy id. */
+  absorbedByEnemy: Map<number, number>;
+  encounterSeries: BucketSeries;
+  actorSeries: BucketSeries;
+  /** Exponentially-weighted recent rate behind `currentDps`. Two numbers, whatever the encounter length. */
+  currentRate: EwmaRate;
+}
+
+export interface EnemySkillStats {
+  sourceLabel: string;
+  damage: number;
+  hits: number;
+  criticalHits: number;
+}
+
+export interface DeathHitRecord {
+  /** Milliseconds before the death; zero is the lethal hit. */
+  beforeDeathMs: number;
+  attackerActorId: number;
+  attackerLabel: string;
+  attackerIsMonster: boolean;
+  sourceLabel: string;
+  damage: number;
+  critical: boolean;
+}
+
+export interface DeathRecord {
+  victimName: string;
+  targetId: number;
+  diedAtMs: number;
+  totalDamage: number;
+  hits: DeathHitRecord[];
+}
+
+export interface EncounterAggregate {
+  id: string;
+  startedAtMs: number;
+  lastDamageAtMs: number;
+  endedAtMs?: number;
+  actors: ActorAggregate[];
+  activeActors: Map<number, ActorAggregate>;
+  /** First time each enemy was hit, which orders the enemy picker. */
+  enemyFirstSeenAtMs: Map<number, number>;
+  /** Enemy display names, captured when the hit lands rather than looked up when the encounter is written. */
+  enemyNames: Map<number, string>;
+  deaths: DeathRecord[];
+}
+
+export interface DamageReducerOptions {
+  idleGapMs?: number;
+  /** Decay constant for `currentDps`. Defaults to {@link DEFAULT_CURRENT_TAU_SECONDS}. */
+  currentTauSeconds?: number;
+  /** Caps buckets per series; the read model leaves this unbounded to keep full resolution. */
+  maxTimelineBuckets?: number;
+  /** Supplies the encounter id when one begins. Defaults to a sequential counter. */
+  createEncounterId?: (startedAtMs: number) => string;
+  onEncounterFinished?: (encounter: EncounterAggregate) => void;
+}
+
+/** Windows combat events into encounters and accumulates per-actor totals. */
+/** Marks an activation record the capture coordinator uses to publish a monster's display name. */
+export const MOB_IDENTITY_PREFIX = "__spiritvaleMobIdentity:";
+
+const DEATH_LOOKBACK_MS = 10_000;
+/** Monster display names retained at once. */
+const MAX_MOB_IDENTITIES = 4_096;
+/** Player identities retained at once, capped for the same reasons as {@link MAX_MOB_IDENTITIES} and evicted least-recently-seen first. */
+const MAX_IDENTITIES = 4_096;
+
+export class DamageReducer {
+  readonly identities = new Map<number, CombatIdentity>();
+  readonly mobIdentities = new Map<number, string>();
+  current?: EncounterAggregate;
+  /** Recent positive hits per target, trimmed to the death lookback. */
+  readonly recentHits = new Map<number, { atMs: number; hit: DeathHitRecord }[]>();
+  private lastSweepAtMs?: number;
+  private readonly idleGapMs: number;
+  private readonly currentTauSeconds: number;
+  private readonly maxTimelineBuckets: number;
+  private readonly createEncounterId: (startedAtMs: number) => string;
+  private readonly onEncounterFinished?: (encounter: EncounterAggregate) => void;
+  private nextEncounter = 1;
+
+  constructor(options: DamageReducerOptions = {}) {
+    this.idleGapMs = options.idleGapMs ?? DEFAULT_IDLE_GAP_MS;
+    this.currentTauSeconds = positiveTau(options.currentTauSeconds ?? DEFAULT_CURRENT_TAU_SECONDS);
+    this.maxTimelineBuckets = options.maxTimelineBuckets ?? Number.POSITIVE_INFINITY;
+    this.createEncounterId = options.createEncounterId ?? (() => `encounter-${this.nextEncounter++}`);
+    if (options.onEncounterFinished) this.onEncounterFinished = options.onEncounterFinished;
+  }
+
+  /** Adopts an encounter left open by an earlier indexing pass. */
+  resume(encounter: EncounterAggregate): void {
+    this.current = encounter;
+  }
+
+  consumeIdentity(event: FishNetActorIdentityEvent, _observedAtMs: number): void {
+    if (event.operation === "reset") {
+      this.identities.clear();
+      this.mobIdentities.clear();
+      if (this.current) {
+        for (const actor of this.current.actors) actor.activeIdentity = false;
+        this.current.activeActors.clear();
+      }
+      return;
+    }
+    if (event.operation === "remove") {
+      this.identities.delete(event.actorId);
+      const actor = this.current?.activeActors.get(event.actorId);
+      if (actor) actor.activeIdentity = false;
+      this.current?.activeActors.delete(event.actorId);
+      return;
+    }
+
+    const previousIdentity = this.identities.get(event.actorId);
+    const archetype = event.archetype ?? previousIdentity?.archetype;
+    const ownerConnectionId = event.ownerConnectionId ?? previousIdentity?.ownerConnectionId;
+    const uid = event.uid ?? previousIdentity?.uid;
+    this.rememberIdentity(event.actorId, {
+      displayName: event.displayName,
+      ...(archetype === undefined ? {} : { archetype }),
+      ...(ownerConnectionId === undefined ? {} : { ownerConnectionId }),
+      ...(uid === undefined ? {} : { uid }),
+    });
+    if (!this.current) return;
+
+    const actor = this.actorFor(event.actorId);
+    actor.displayName = event.displayName;
+    if (event.archetype !== undefined) actor.archetype = event.archetype;
+    if (event.ownerConnectionId !== undefined) actor.ownerConnectionId = event.ownerConnectionId;
+    if (event.uid !== undefined) actor.uid = event.uid;
+    actor.activeIdentity = true;
+  }
+
+  consumeCombat(event: FishNetCombatEvent, observedAtMs: number): void {
+    if (event.kind === "monsterIdentity") {
+      if (event.operation === "reset") this.mobIdentities.clear();
+      else if (event.operation === "remove") this.mobIdentities.delete(event.actorId);
+      else {
+        this.rememberMobIdentity(event.actorId, event.displayName);
+        if (this.current?.enemyFirstSeenAtMs.has(event.actorId)) {
+          this.current.enemyNames.set(event.actorId, event.displayName);
+        }
+      }
+      return;
+    }
+    const actorId = event.actorId;
+    if (event.actorIdentity && actorId !== undefined) {
+      const previousIdentity = this.identities.get(actorId);
+      const archetype = event.actorIdentity.archetype ?? previousIdentity?.archetype;
+      const ownerConnectionId = event.actorIdentity.ownerConnectionId ?? previousIdentity?.ownerConnectionId;
+      const uid = event.actorIdentity.uid ?? previousIdentity?.uid;
+      this.rememberIdentity(actorId, {
+        displayName: event.actorIdentity.displayName,
+        ...(archetype === undefined ? {} : { archetype }),
+        ...(ownerConnectionId === undefined ? {} : { ownerConnectionId }),
+        ...(uid === undefined ? {} : { uid }),
+      });
+    }
+    if (event.kind === "activation" && event.sourceId?.startsWith(MOB_IDENTITY_PREFIX) && event.sourceLabel) {
+      this.rememberMobIdentity(event.actorId, event.sourceLabel);
+      return;
+    }
+    // The death lookback spans encounter boundaries, so it is tracked even with nothing open.
+    this.trackRecentHit(event, observedAtMs);
+
+    const countedDamage = isCountedDamage(event);
+    const countedKill = isCountedKill(event);
+    // Incoming damage never opens an encounter, but it does belong to one already in progress —
+    // provided that encounter has not already gone idle. Without this check a hit or heal arriving
+    // long after the fight ended is still counted against it.
+    if (!countedDamage && !countedKill) {
+      if (this.current && observedAtMs - this.current.lastDamageAtMs >= this.idleGapMs) {
+        this.finish(this.current.lastDamageAtMs + this.idleGapMs);
+      }
+      if (this.current) this.recordEncounterHit(event, observedAtMs);
+      return;
+    }
+    if (this.current && observedAtMs - this.current.lastDamageAtMs >= this.idleGapMs) {
+      this.finish(this.current.lastDamageAtMs + this.idleGapMs);
+    }
+    if (!this.current && !countedDamage) return;
+    if (!this.current) {
+      const actors = [...this.identities].map(([identityActorId, identity]) => ({
+        ...createActor(identityActorId, observedAtMs),
+        ...identity,
+        activeIdentity: true,
+      }));
+      this.current = {
+        id: this.createEncounterId(observedAtMs),
+        startedAtMs: observedAtMs,
+        lastDamageAtMs: observedAtMs,
+        actors,
+        activeActors: new Map(actors.map((actor) => [actor.actorId, actor])),
+        enemyFirstSeenAtMs: new Map(),
+        enemyNames: new Map(),
+        deaths: [],
+      };
+    }
+    const encounter = this.current;
+    if (countedDamage) encounter.lastDamageAtMs = observedAtMs;
+    // Death-log attribution is independent of outgoing enemy damage and still includes lethal
+    // records that also contribute to the meter.
+    this.recordEncounterHit(event, observedAtMs);
+    const actor = this.actorFor(event.actorId);
+    const eventIdentity = event.actorIdentity ?? this.identities.get(event.actorId);
+    if (eventIdentity) {
+      actor.displayName = eventIdentity.displayName;
+      if (eventIdentity.archetype !== undefined) actor.archetype = eventIdentity.archetype;
+      if (eventIdentity.ownerConnectionId !== undefined) actor.ownerConnectionId = eventIdentity.ownerConnectionId;
+      if (eventIdentity.uid !== undefined) actor.uid = eventIdentity.uid;
+      actor.activeIdentity = true;
+    }
+    if (countedDamage) {
+      recordHit(actor, {
+        value: event.value,
+        atMs: observedAtMs,
+        critical: event.hitResult === "critical",
+        sourceId: event.sourceId,
+        sourceLabel: event.sourceLabel,
+      }, this.maxTimelineBuckets);
+      if (isMobTarget(this.identities, event.actorId, event.targetId)) {
+        recordEnemyHit(encounter, actor, event, observedAtMs, this.mobIdentities);
+        actor.targetIds.add(event.targetId);
+        actor.targetDamage.set(event.targetId, (actor.targetDamage.get(event.targetId) ?? 0) + event.value);
+      }
+    }
+    if (countedKill) actor.kills += 1;
+  }
+
+  /** Finalizes an encounter that has been idle long enough. */
+  advance(observedAtMs: number): void {
+    if (this.current && observedAtMs - this.current.lastDamageAtMs >= this.idleGapMs) {
+      this.finish(this.current.lastDamageAtMs + this.idleGapMs);
+    }
+  }
+
+  /** Finalizes the current encounter; the next qualifying hit starts a new one. */
+  reset(observedAtMs: number): void {
+    this.finish(observedAtMs);
+  }
+
+  private finish(endedAtMs: number): void {
+    if (!this.current) return;
+    const encounter = this.current;
+    encounter.endedAtMs = Math.max(endedAtMs, encounter.lastDamageAtMs);
+    this.current = undefined;
+    this.onEncounterFinished?.(encounter);
+  }
+
+  /** Keeps the rolling window of recent positive hits per target that the death log draws from. */
+  private trackRecentHit(event: FishNetCombatEvent, observedAtMs: number): void {
+    if (event.kind !== "damage" && event.kind !== "death") return;
+    if (!isPositiveHit(event)) return;
+
+    const attackerLabel = this.identities.get(event.actorId)?.displayName
+      ?? this.mobIdentities.get(event.actorId)
+      ?? `Actor ${event.actorId}`;
+    const hits = this.recentHits.get(event.targetId) ?? [];
+    hits.push({
+      atMs: observedAtMs,
+      hit: {
+        beforeDeathMs: 0,
+        attackerActorId: event.actorId,
+        attackerLabel,
+        attackerIsMonster: this.mobIdentities.has(event.actorId),
+        sourceLabel: event.sourceLabel,
+        damage: event.value,
+        critical: event.hitResult === "critical",
+      },
+    });
+    const cutoffMs = observedAtMs - DEATH_LOOKBACK_MS;
+    while (hits.length > 0 && hits[0]!.atMs < cutoffMs) hits.shift();
+    if (hits.length === 0) this.recentHits.delete(event.targetId);
+    else this.recentHits.set(event.targetId, hits);
+    this.sweepRecentHits(observedAtMs);
+  }
+
+  /**
+   * Trims every target to the lookback immediately, regardless of when the last sweep ran.
+   *
+   * Used before persisting the map: the periodic sweep leaves up to two windows in memory, but only
+   * one is ever read back, and the persisted copy is rewritten on every batch.
+   */
+  pruneRecentHits(observedAtMs: number): void {
+    this.sweepRecentHits(observedAtMs, true);
+  }
+
+  /**
+   * Drops targets whose hits have all aged out.
+   *
+   * {@link trackRecentHit} only trims the target it is currently touching, so a target hit once and
+   * never again would otherwise be retained for the rest of the session. Runs at most once per
+   * lookback window of log time, which makes it a rare pass over a map that stays small.
+   */
+  private sweepRecentHits(observedAtMs: number, force = false): void {
+    if (!force && this.lastSweepAtMs !== undefined && observedAtMs - this.lastSweepAtMs < DEATH_LOOKBACK_MS) return;
+    this.lastSweepAtMs = observedAtMs;
+    const cutoffMs = observedAtMs - DEATH_LOOKBACK_MS;
+    for (const [targetId, hits] of this.recentHits) {
+      while (hits.length > 0 && hits[0]!.atMs < cutoffMs) hits.shift();
+      if (hits.length === 0) this.recentHits.delete(targetId);
+    }
+  }
+
+  /** Records a player's identity, evicting the least recently seen once the cap is reached. */
+  private rememberIdentity(actorId: number, identity: CombatIdentity): void {
+    // Re-inserting moves the entry to the end, so iteration order is least-recently-seen first.
+    this.identities.delete(actorId);
+    this.identities.set(actorId, identity);
+    while (this.identities.size > MAX_IDENTITIES) {
+      const oldest = this.identities.keys().next();
+      if (oldest.done) break;
+      this.identities.delete(oldest.value);
+    }
+  }
+
+  /** Records a monster's display name, evicting the least recently seen once the cap is reached. */
+  private rememberMobIdentity(actorId: number, displayName: string): void {
+    // Re-inserting moves the entry to the end, so iteration order is least-recently-seen first.
+    this.mobIdentities.delete(actorId);
+    this.mobIdentities.set(actorId, displayName);
+    while (this.mobIdentities.size > MAX_MOB_IDENTITIES) {
+      const oldest = this.mobIdentities.keys().next();
+      if (oldest.done) break;
+      this.mobIdentities.delete(oldest.value);
+    }
+  }
+
+  /** Attributes a hit to the open encounter's enemy breakdown and, on death, its log. */
+  private recordEncounterHit(event: FishNetCombatEvent, observedAtMs: number): void {
+    if (event.kind !== "damage" && event.kind !== "death") return;
+    if (!this.current) return;
+
+    // A death belongs in the log when the victim is one of ours, which is a question about the
+    // victim rather than about the team: reflected damage keeps the original caster's team, so a
+    // team-0 death can still be a party member killed by their own hit bouncing back (a boss's
+    // NPC_SpellGuard). A known monster is never logged. Otherwise a team-0 death is the party
+    // killing something — unless the victim is a known player, or killed themselves, which is what
+    // a reflect looks like on the wire and which no mob death ever does.
+    // The death event itself usually carries no damage — the lethal blow is a separate damage event
+    // — so it is recorded regardless of whether it qualifies as a positive hit of its own.
+    if (event.kind !== "death") return;
+    if (this.mobIdentities.has(event.targetId)) return;
+    if (event.team === 0 && !this.identities.has(event.targetId) && event.actorId !== event.targetId) return;
+    const windowStartMs = observedAtMs - DEATH_LOOKBACK_MS;
+    const victimHits = (this.recentHits.get(event.targetId) ?? [])
+      .filter((entry) => entry.atMs >= windowStartMs && entry.atMs <= observedAtMs)
+      .map((entry): DeathHitRecord => ({ ...entry.hit, beforeDeathMs: Math.max(0, observedAtMs - entry.atMs) }))
+      .sort((left, right) => right.beforeDeathMs - left.beforeDeathMs);
+    this.current.deaths.push({
+      victimName: this.identities.get(event.targetId)?.displayName ?? "Unidentified player",
+      targetId: event.targetId,
+      diedAtMs: observedAtMs,
+      totalDamage: victimHits.reduce((total, hit) => total + hit.damage, 0),
+      hits: victimHits,
+    });
+  }
+
+  private actorFor(actorId: number): ActorAggregate {
+    const encounter = this.current!;
+    let actor = encounter.activeActors.get(actorId);
+    if (!actor) {
+      actor = createActor(actorId, encounter.startedAtMs, this.currentTauSeconds);
+      encounter.actors.push(actor);
+      encounter.activeActors.set(actorId, actor);
+    }
+    return actor;
+  }
+}
+
+/** One positive hit's contribution to a row, shared by the damage reducer and the tanked/healing meters. */
+export interface RecordedHit {
+  value: number;
+  atMs: number;
+  critical: boolean;
+  sourceId: string;
+  sourceLabel: string;
+}
+
+/**
+ * Folds one hit into an actor's totals, both bucket series, its current-rate estimator and its
+ * per-skill row. Target attribution stays with the caller: the damage reducer counts enemies it can
+ * distinguish from party members, while the meters count their hit's counterpart unconditionally.
+ */
+export function recordHit(actor: ActorAggregate, hit: RecordedHit, maxTimelineBuckets: number): void {
+  actor.damage += hit.value;
+  if (actor.firstDamageAtMs === undefined) {
+    actor.firstDamageAtMs = hit.atMs;
+    actor.actorSeries.originMs = hit.atMs;
+  }
+  actor.lastDamageAtMs = hit.atMs;
+  actor.hits += 1;
+  if (hit.critical) actor.criticalHits += 1;
+  addToSeries(actor.encounterSeries, hit.atMs, hit.value, maxTimelineBuckets);
+  addToSeries(actor.actorSeries, hit.atMs, hit.value, maxTimelineBuckets);
+  actor.currentRate.record(hit.value, hit.atMs);
+
+  let skill = actor.skills.get(hit.sourceId);
+  if (!skill) {
+    skill = { sourceId: hit.sourceId, sourceLabel: hit.sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
+    actor.skills.set(hit.sourceId, skill);
+  }
+  skill.sourceLabel = hit.sourceLabel;
+  skill.damage += hit.value;
+  skill.hits += 1;
+  if (hit.critical) skill.criticalHits += 1;
+}
+
+/** Folds one hit into an `enemySkills`-style map: enemy id -> skill id -> stats. */
+export function foldEnemySkill(
+  byEnemy: Map<number, Map<string, EnemySkillStats>>,
+  enemyId: number,
+  sourceId: string,
+  sourceLabel: string,
+  value: number,
+  critical: boolean,
+): void {
+  const bySkill = byEnemy.get(enemyId) ?? new Map<string, EnemySkillStats>();
+  byEnemy.set(enemyId, bySkill);
+  const stats = bySkill.get(sourceId) ?? { sourceLabel, damage: 0, hits: 0, criticalHits: 0 };
+  stats.sourceLabel = sourceLabel;
+  stats.damage += value;
+  stats.hits += 1;
+  if (critical) stats.criticalHits += 1;
+  bySkill.set(sourceId, stats);
+}
+
+/** Rejected at construction rather than when the first actor is created, so a bad value fails fast. */
+export function positiveTau(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) throw new Error("currentTauSeconds must be a positive finite number");
+  return value;
+}
+
+/**
+ * Attributes one outgoing party hit to the exact actor lifetime that produced it. Only reached
+ * under `isMobTarget`, which requires the target to be absent from `identities`, so the mob name
+ * is the only possible source of a label.
+ */
+function recordEnemyHit(
+  encounter: EncounterAggregate,
+  actor: ActorAggregate,
+  event: FishNetCombatDamageEvent | FishNetCombatDeathEvent,
+  observedAtMs: number,
+  mobIdentities: ReadonlyMap<number, string>,
+): void {
+  foldEnemySkill(
+    actor.enemySkills,
+    event.targetId,
+    event.sourceId,
+    event.sourceLabel,
+    event.value,
+    event.hitResult === "critical",
+  );
+  if (!encounter.enemyFirstSeenAtMs.has(event.targetId)) {
+    encounter.enemyFirstSeenAtMs.set(event.targetId, observedAtMs);
+  }
+  const targetName = mobIdentities.get(event.targetId);
+  if (targetName !== undefined) encounter.enemyNames.set(event.targetId, targetName);
+}
+
+export function createActor(
+  actorId: number,
+  encounterStartedAtMs: number,
+  currentRate: number | EwmaRate = DEFAULT_CURRENT_TAU_SECONDS,
+): ActorAggregate {
+  return {
+    actorId,
+    actorIds: [actorId],
+    activeIdentity: false,
+    damage: 0,
+    targetIds: new Set(),
+    targetDamage: new Map(),
+    enemySkills: new Map(),
+    hits: 0,
+    criticalHits: 0,
+    kills: 0,
+    skills: new Map(),
+    absorbed: 0,
+    absorbedSkills: new Map(),
+    absorbedByEnemy: new Map(),
+    encounterSeries: createSeries(encounterStartedAtMs, ANALYSIS_BUCKET_MS),
+    actorSeries: createSeries(encounterStartedAtMs, ANALYSIS_BUCKET_MS),
+    currentRate: typeof currentRate === "number" ? new EwmaRate({ tauSeconds: currentRate }) : currentRate,
+  };
+}
+
+function isCountedDamage(event: FishNetCombatEvent): event is FishNetCombatDamageEvent | FishNetCombatDeathEvent {
+  if (event.kind !== "damage" && event.kind !== "death") return false;
+  if (event.team !== 0
+    || event.actorId === event.targetId
+    || !Number.isFinite(event.value)
+    || event.value <= 0) return false;
+  return event.kind === "damage" || !event.duplicatesDamageEvent;
+}
+
+function isCountedKill(event: FishNetCombatEvent): event is FishNetCombatDeathEvent {
+  return event.kind === "death"
+    && event.team === 0
+    && event.actorId !== event.targetId
+    && Number.isFinite(event.value)
+    && event.value > 0;
+}
+
+/**
+ * The enemy breakdown and death log count a wider set than the DPS aggregation: any positive hit,
+ * regardless of team or self-targeting, minus deaths that merely restate a damage event.
+ */
+export function isPositiveHit(event: FishNetCombatDamageEvent | FishNetCombatDeathEvent): boolean {
+  return Number.isFinite(event.value)
+    && event.value > 0
+    && (event.kind === "damage" || !event.duplicatesDamageEvent);
+}
+
+function isMobTarget(identities: ReadonlyMap<number, unknown>, actorId: number, targetId: number): boolean {
+  return targetId >= 0 && targetId !== actorId && !identities.has(targetId);
+}

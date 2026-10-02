@@ -1,0 +1,39 @@
+import { compact, count, warnings } from "@kar-mi/spirit-vale-tools-logging";
+import { loadRewardReplay } from "./replay.ts";
+
+export interface RewardsReplaySummary {
+  kills: number;
+  mobs: number;
+  experience: number;
+  coins: bigint;
+  invalidLines: number;
+}
+
+export interface RewardsReplayInspection {
+  recordCount: number;
+  summary: string;
+}
+
+export async function readRewardsReplaySummary(path: string): Promise<RewardsReplaySummary> {
+  const replay = await loadRewardReplay(path);
+  return {
+    kills: replay.snapshot.kills.length,
+    mobs: replay.snapshot.mobs.length,
+    experience: replay.snapshot.totalExperience,
+    coins: replay.snapshot.totalCoins,
+    invalidLines: replay.invalidLines,
+  };
+}
+
+export async function formatRewardsReplaySummary(path: string): Promise<string> {
+  return formatSummary(await readRewardsReplaySummary(path));
+}
+
+export async function inspectRewardsReplaySummary(path: string): Promise<RewardsReplayInspection> {
+  const summary = await readRewardsReplaySummary(path);
+  return { recordCount: summary.kills, summary: formatSummary(summary) };
+}
+
+function formatSummary(summary: RewardsReplaySummary): string {
+  return `${count(summary.kills, "kill")} · ${count(summary.mobs, "mob")} · ${compact(summary.experience)} XP · ${compact(summary.coins)} coins${warnings(summary.invalidLines)}`;
+}

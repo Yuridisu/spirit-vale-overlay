@@ -1,0 +1,163 @@
+import { describe, expect, test } from "bun:test";
+
+import { loadDpsReplay, parseDpsLogRecord } from "./replay.ts";
+
+describe("loadDpsReplay", () => {
+  test("preserves reported ceilings through JSON replay and accepts older events without them", () => {
+    const base = { kind: "status", tick: 1, actorId: 900, statusId: "FictionalVenom", action: "applied" };
+    for (const maxStacks of [0, 12]) {
+      const decoded = JSON.parse(JSON.stringify({ ...base, maxStacks }));
+      expect(parseDpsLogRecord("combat.event", decoded)).toMatchObject({ maxStacks });
+    }
+    expect(parseDpsLogRecord("combat.event", base)).not.toHaveProperty("maxStacks");
+    for (const maxStacks of [-1, 1.5, "12", null, Infinity, NaN]) {
+      expect(parseDpsLogRecord("combat.event", { ...base, maxStacks })).toBeUndefined();
+    }
+  });
+
+  test("accepts complete shield lifecycle records and rejects incomplete ones", () => {
+    expect(parseDpsLogRecord("combat.event", {
+      kind: "shield", rpc: "barrierSync", tick: 10, actorId: 1, targetId: 2,
+      sourceId: "Barrier", sourceLabel: "Sacred Aegis", value: 300,
+      barrierBefore: 0, barrierAfter: 300, action: "gained", attribution: "inferred",
+    })).toMatchObject({ kind: "shield", action: "gained", targetId: 2 });
+    expect(parseDpsLogRecord("combat.event", {
+      kind: "shield", tick: 10, targetId: 2, value: 300, action: "gained", attribution: "inferred",
+    })).toBeUndefined();
+  });
+
+  test("loads sanitized JSON Lines, splits encounters, and counts invalid records", async () => {
+    const basePath = `${import.meta.dir}/../../../.local/replay-test-${crypto.randomUUID()}`;
+    const file = Bun.file(`${basePath}.jsonl`);
+    const utf16File = Bun.file(`${basePath}-utf16.log`);
+    const records = [
+      logRecord(1, "combat.actorIdentity", { kind: "actorIdentity", operation: "upsert", tick: 300, actorId: 101, displayName: "Aster Vale" }),
+      logRecord(2, "combat.event", combatDamage(300, 101, 120)),
+      "not-json",
+      logRecord(3, "combat.event", { kind: "unknown", tick: 301 }),
+      logRecord(4, "combat.event", combatDamage(1_200, 101, 30), "2026-07-16T12:00:34.000Z"),
+    ];
+    const text = records.map((record) => typeof record === "string" ? record : JSON.stringify(record)).join("\n");
+    await Bun.write(file, text);
+    await Bun.write(utf16File, Buffer.from(`\ufeff${text}`, "utf16le"));
+    try {
+      const result = await loadDpsReplay(file.name!, "Aster Vale");
+      expect(result.invalidLines).toBe(2);
+      expect(result.snapshots.map(({ totalDamage }) => totalDamage)).toEqual([120, 30]);
+      expect(result.snapshots.at(-1)?.personalMatch).toBe("matched");
+      const utf16Result = await loadDpsReplay(utf16File.name!, "Aster Vale");
+      expect(utf16Result.invalidLines).toBe(2);
+      expect(utf16Result.snapshots.map(({ totalDamage }) => totalDamage)).toEqual([120, 30]);
+    } finally {
+      await file.delete();
+      await utf16File.delete();
+    }
+  });
+
+  test("accepts status events without treating them as invalid or counting damage", async () => {
+    const basePath = `${import.meta.dir}/../../../.local/replay-test-${crypto.randomUUID()}`;
+    const file = Bun.file(`${basePath}.jsonl`);
+    const records = [
+      logRecord(1, "combat.event", combatDamage(300, 101, 120)),
+      logRecord(2, "combat.event", combatStatus(300, 101, "Bleed", 2, "applied")),
+      logRecord(3, "combat.event", combatStatus(301, 101, "Bleed", 2, "removed")),
+      logRecord(4, "combat.event", { kind: "status", tick: 302, actorId: 101 }),
+    ];
+    const text = records.map((record) => JSON.stringify(record)).join("\n");
+    await Bun.write(file, text);
+    try {
+      const result = await loadDpsReplay(file.name!);
+      expect(result.invalidLines).toBe(1);
+      expect(result.snapshots.map(({ totalDamage }) => totalDamage)).toEqual([120]);
+    } finally {
+      await file.delete();
+    }
+  });
+
+  test("accepts valid summon stack events and rejects invalid counts", async () => {
+    const basePath = `${import.meta.dir}/../../../.local/replay-test-${crypto.randomUUID()}`;
+    const file = Bun.file(`${basePath}.jsonl`);
+    const records = [
+      logRecord(1, "combat.event", combatDamage(300, 101, 120)),
+      logRecord(2, "combat.event", { kind: "summon", rpc: "CalibrateSummons_T", tick: 301, actorId: 101, skillId: "FictionalSummon", stacks: 2 }),
+      logRecord(3, "combat.event", { kind: "summon", rpc: "CalibrateSummons_T", tick: 302, actorId: 101, skillId: "FictionalSummon", stacks: -1 }),
+    ];
+    await Bun.write(file, records.map((record) => JSON.stringify(record)).join("\n"));
+    try {
+      const result = await loadDpsReplay(file.name!);
+      expect(result.invalidLines).toBe(1);
+      expect(result.snapshots.map(({ totalDamage }) => totalDamage)).toEqual([120]);
+    } finally {
+      await file.delete();
+    }
+  });
+
+  test("keeps observer status events, which carry a timer instead of a level", async () => {
+    const basePath = `${import.meta.dir}/../../../.local/replay-test-${crypto.randomUUID()}`;
+    const file = Bun.file(`${basePath}.jsonl`);
+    const records = [
+      logRecord(1, "combat.event", combatDamage(300, 101, 120)),
+      // The observer feed reports remaining time and stacks but never a level; demanding one here
+      // used to discard the whole feed on replay.
+      logRecord(2, "combat.event", {
+        kind: "status", rpc: "ApplyEffectDisplays_O", tick: 301, actorId: 101,
+        statusId: "FictionalBuff", action: "applied", remainingSeconds: 12.5, stacks: 3,
+      }),
+      // A non-numeric timer is still malformed.
+      logRecord(3, "combat.event", {
+        kind: "status", rpc: "ApplyEffectDisplays_O", tick: 302, actorId: 101,
+        statusId: "FictionalBuff", action: "applied", remainingSeconds: "soon",
+      }),
+    ];
+    await Bun.write(file, records.map((record) => JSON.stringify(record)).join("\n"));
+    try {
+      const result = await loadDpsReplay(file.name!);
+      expect(result.invalidLines).toBe(1);
+      expect(result.snapshots.map(({ totalDamage }) => totalDamage)).toEqual([120]);
+    } finally {
+      await file.delete();
+    }
+  });
+});
+
+function combatStatus(
+  tick: number,
+  actorId: number,
+  statusId: string,
+  level: number,
+  action: "applied" | "removed",
+): Record<string, unknown> {
+  return { kind: "status", rpc: action === "applied" ? "ApplyEffect_T" : "RemoveEffect_T", tick, actorId, statusId, level, action };
+}
+
+function combatDamage(tick: number, actorId: number, value: number): Record<string, unknown> {
+  return {
+    kind: "damage",
+    rpc: "ApplyDamage_C",
+    tick,
+    actorId,
+    targetId: 900,
+    sourceId: "SyntheticArc",
+    sourceLabel: "Synthetic Arc",
+    value,
+    hitResult: "normal",
+    team: 0,
+  };
+}
+
+function logRecord(
+  sequence: number,
+  type: string,
+  data: Record<string, unknown>,
+  recordedAt = `2026-07-16T12:00:0${sequence}.000Z`,
+): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    sessionId: "synthetic-session",
+    sequence,
+    recordedAt,
+    source: "synthetic-test",
+    type,
+    data,
+  };
+}
