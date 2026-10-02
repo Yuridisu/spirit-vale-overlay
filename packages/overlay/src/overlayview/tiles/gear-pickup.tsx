@@ -2,7 +2,7 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayGearPickupEvent } from "../../app-types.ts";
 import { gearPickups } from "../store.ts";
 
-/** Cards for equipment the player just picked up, newest at the bottom, each fading out on its own. */
+/** The card for the equipment the player just picked up; several pickups take turns, one at a time. */
 export function GearPickupElement() {
   const cards = gearPickups.value;
   return (

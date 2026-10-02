@@ -68,9 +68,14 @@ let statusTicker: ReturnType<typeof setInterval> | undefined;
 let bossTicker: ReturnType<typeof setInterval> | undefined;
 let lootToastSequence = 0;
 let gearPickupSequence = 0;
-/** Long enough to read four stats mid-fight. */
+/** Long enough to read a card's stats mid-fight. */
 const GEAR_PICKUP_LIFETIME_MS = 15_000;
-const MAX_GEAR_PICKUP_CARDS = 3;
+/** How long a card is guaranteed once another is waiting behind it. */
+const GEAR_PICKUP_QUEUED_LIFETIME_MS = 6_000;
+const MAX_QUEUED_GEAR_PICKUPS = 20;
+const queuedGearPickups: GearPickupCardState[] = [];
+let gearPickupShownAtMs = 0;
+let gearPickupTimer: ReturnType<typeof setTimeout> | undefined;
 let lastChromeJson: string | undefined;
 const lastElementJson = new Map<OverlayElementId, string | undefined>();
 
@@ -124,12 +129,35 @@ export function applyBossTimers(next: BossTimerState): void {
   }
 }
 
+/**
+ * Shows picked-up gear one card at a time. A lone card stays its full lifetime; once another is
+ * waiting, the one on screen only keeps its shorter guaranteed time before the next takes over.
+ */
 export function pushGearPickup(event: OverlayGearPickupEvent): void {
-  const id = `${Date.now()}-${gearPickupSequence++}`;
-  gearPickups.value = [...gearPickups.value, { id, event }].slice(-MAX_GEAR_PICKUP_CARDS);
-  setTimeout(() => {
-    gearPickups.value = gearPickups.value.filter((card) => card.id !== id);
-  }, GEAR_PICKUP_LIFETIME_MS);
+  const card = { id: `${Date.now()}-${gearPickupSequence++}`, event };
+  if (gearPickups.value.length === 0) {
+    showGearPickup(card);
+    return;
+  }
+  if (queuedGearPickups.length >= MAX_QUEUED_GEAR_PICKUPS) queuedGearPickups.shift();
+  queuedGearPickups.push(card);
+  scheduleGearPickupAdvance(GEAR_PICKUP_QUEUED_LIFETIME_MS - (Date.now() - gearPickupShownAtMs));
+}
+
+function showGearPickup(card: GearPickupCardState): void {
+  gearPickups.value = [card];
+  gearPickupShownAtMs = Date.now();
+  scheduleGearPickupAdvance(queuedGearPickups.length > 0 ? GEAR_PICKUP_QUEUED_LIFETIME_MS : GEAR_PICKUP_LIFETIME_MS);
+}
+
+function scheduleGearPickupAdvance(delayMs: number): void {
+  if (gearPickupTimer !== undefined) clearTimeout(gearPickupTimer);
+  gearPickupTimer = setTimeout(() => {
+    gearPickupTimer = undefined;
+    const next = queuedGearPickups.shift();
+    if (next) showGearPickup(next);
+    else gearPickups.value = [];
+  }, Math.max(0, delayMs));
 }
 
 export function pushLootToast(event: OverlayLootToastEvent): void {
