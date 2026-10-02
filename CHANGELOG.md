@@ -24,6 +24,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
 - **Boss DPS element.** A meter for boss fights only: which boss, the total damage dealt to it, the
   damage per second, how long the fight has lasted, and every player ranked by their damage to the
   boss. Hits on other monsters are left out. The last fight stays on show until the next one starts.
+- **Boss Fight Analysis tab in the Combat window.** Every boss fight is recorded with its map,
+  length, the party's total damage and DPS, and each player's damage, share, hits, crit rate and
+  deaths. Click a player to see which skills their damage came from. The loot that dropped when the
+  boss died is listed too. Up to 30 fights are kept across restarts, with a button to clear them.
 - **Damage taken element.** What has been hitting you, by the monster and the skill or attack
   that dealt it, with each one's share of the total. It counts whether or not you are fighting back,
   and starts over after a minute without being hit or when you change map.

@@ -22,6 +22,48 @@ body {
 }
 
 .log-tabs { margin: 6px 12px; }
+.boss-screen { display: flex; min-height: 0; flex: 1; flex-direction: column; padding: 0 12px 12px; overflow: auto; }
+.boss-fight-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }
+.boss-fight-list { display: grid; gap: 6px; }
+.boss-fight-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface-container);
+  color: var(--on-surface);
+  text-align: left;
+}
+.boss-fight-item:hover { border-color: var(--primary); }
+.boss-fight-item.active { border-color: var(--primary); background: var(--primary-container); }
+.boss-fight-item strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.boss-fight-item span { color: var(--on-surface-variant); font-size: 11px; font-variant-numeric: tabular-nums; }
+.boss-fight-detail { display: grid; min-width: 0; gap: 10px; }
+.boss-fight-title { margin: 0; color: var(--on-surface); font-size: 16px; }
+.boss-fight-map { margin-left: 10px; color: var(--on-surface-variant); font-size: 12px; font-weight: 400; }
+.boss-fight-clear { justify-self: stretch; font-size: 12px; }
+.boss-fight-clear.is-confirming { border-color: var(--error); color: var(--error); }
+.boss-fight-hint { margin: 0; color: var(--on-surface-variant); font-size: 11px; }
+.boss-skill-row > td { padding: 6px 10px 10px 34px; background: var(--surface-container-low); }
+.boss-skill-table { width: 100%; font-size: 12px; }
+.meter-table-row.is-expanded { outline: 1px solid var(--primary); outline-offset: -1px; }
+.boss-drop-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.boss-drop {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--outline-variant);
+  border-left: 3px solid var(--on-surface-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface-container);
+  font-size: 12px;
+}
+.boss-drop.rarity-1 { border-left-color: #6fbf73; }
+.boss-drop.rarity-2 { border-left-color: #4a90ff; }
+.boss-drop.rarity-3 { border-left-color: #c48aff; }
+.boss-drop.rarity-4 { border-left-color: #ffd54a; }
 .log-tabs > button { flex: 1; padding: 6px 10px; font-size: 12px; }
 
 .live-screen {

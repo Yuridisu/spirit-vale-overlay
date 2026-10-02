@@ -19,6 +19,7 @@ import { PastSessionPanel } from "./past-session-panel.tsx";
 import { PastAnalysisPanel } from "./past-analysis-panel.tsx";
 import { formatZone } from "../zone-label.ts";
 import { CombatClassCell } from "../combat-class.tsx";
+import { BossFightPanel } from "./boss-fight-panel.tsx";
 import { nextTableSort, SortableHeader, sortTableRows, type TableSort } from "@svoverlay/ui-kit/sortable-table";
 import {
   DPS_WINDOW_DEFAULT_HEIGHT,
@@ -140,9 +141,10 @@ function App() {
       <nav class="seg log-tabs" role="tablist" aria-label={t("combat.logSource.label")}>
         <button type="button" role="tab" aria-selected={next.screen === "live"} class={next.screen === "live" ? "active" : undefined} onClick={() => setScreen("live")}>{t("combat.logSource.live")}</button>
         <button type="button" role="tab" aria-selected={next.screen === "past"} class={next.screen === "past" ? "active" : undefined} onClick={() => setScreen("past")}>{t("combat.logSource.past")}</button>
+        <button type="button" role="tab" aria-selected={next.screen === "boss"} class={next.screen === "boss" ? "active" : undefined} onClick={() => setScreen("boss")}>{t("combat.logSource.boss")}</button>
       </nav>
 
-      {next.screen === "live" ? <section class="live-screen">
+      {next.screen === "boss" ? <BossFightPanel fights={next.bossFights} onClear={() => void desktopView.rpc?.request.clearBossFights({}).then((result) => { state.value = repairRendererPayload(result); })} /> : next.screen === "live" ? <section class="live-screen">
       <section class="command-bar">
         <StatTypeSelect value={next.statType} onChange={setStatType} />
         <div class="command-bar-actions">

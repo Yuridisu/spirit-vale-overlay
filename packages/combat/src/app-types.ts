@@ -1,3 +1,4 @@
+import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
 
@@ -24,7 +25,7 @@ export type {
 } from "@svoverlay/contracts/meter";
 
 export type DpsAppTab = "all" | "personal";
-export type CombatLogScreen = "live" | "past";
+export type CombatLogScreen = "live" | "past" | "boss";
 export type DpsAppStatus = "waiting" | "capturing" | "loading" | "ready" | "stopped" | "error";
 
 export interface DpsEncounterOption {
@@ -47,6 +48,8 @@ export interface DpsAppState {
   resetting: boolean;
   location?: SpiritValeLocation;
   liveDeathLogAvailable: boolean;
+  /** Boss fights on record, newest first. */
+  bossFights: BossFightReport[];
   past:
     | { view: "selector"; picker: SessionPickerState }
     | { view: "analysis"; analysis: CombatAnalysisState };
@@ -57,6 +60,7 @@ export type DpsAppRpc = {
     requests: {
       getState: { params: Record<string, never>; response: DpsAppState };
       setScreen: { params: { screen: CombatLogScreen }; response: DpsAppState };
+      clearBossFights: { params: Record<string, never>; response: DpsAppState };
       refreshPastSessions: { params: Record<string, never>; response: void };
       setPastDateRange: { params: SessionDateRange; response: DpsAppState };
       setPastZones: { params: { zones: string[] }; response: DpsAppState };

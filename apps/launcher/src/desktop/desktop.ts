@@ -46,6 +46,7 @@ import { createBossTimerCoordinator } from "./boss-timer-coordinator.ts";
 import { createBossTimerWindow } from "./boss-timer-window.ts";
 import { describeArtifactPickup, describeGearPickup } from "./gear-pickup.ts";
 import { rateGear } from "./gear-rating.ts";
+import { loadBossFights, saveBossFights } from "./boss-fight-store.ts";
 import { createXpTrackerCoordinator } from "./xp-tracker-coordinator.ts";
 import { createReadModelService } from "./read-model-service.ts";
 import { measureLogStorage } from "./log-storage.ts";
@@ -248,6 +249,9 @@ const combatWindow = new WindowSlot((onClosed) => createDpsWindow({
   onReset: () => capture.resetSession(),
   onOpenSettings: openSettings,
   onOpenLiveDeathLog: openLiveDeathLog,
+  getBossFights: () => capture.bossFightReports(),
+  subscribeBossFights: (listener) => capture.subscribeBossFightReports(listener),
+  onClearBossFights: () => capture.clearBossFights(),
 }));
 const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   logDirectory,
@@ -572,6 +576,18 @@ launcherLifecycle.add(onceWindowEvent(launcherWindow, "close", () => void shutdo
 
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
+capture.restoreBossFights(await loadBossFights(storagePaths.bossFightsPath));
+let savedBossFightsJson = "";
+capture.subscribeBossFightReports((reports) => {
+  // Saved once a fight is over; a fight in progress changes many times a second.
+  if (reports.some((report) => report.active)) return;
+  const oldestFirst = [...reports].reverse();
+  const json = JSON.stringify(oldestFirst);
+  if (json === savedBossFightsJson) return;
+  savedBossFightsJson = json;
+  void saveBossFights(oldestFirst, storagePaths.bossFightsPath)
+    .catch((error) => console.warn(`[spiritvale] could not save boss fights: ${error instanceof Error ? error.message : String(error)}`));
+});
 void initializeCapture();
 void checkForUpdate();
 void measureLogUsage().catch((error) => {
@@ -1008,6 +1024,8 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   inspectedCharacterRoster.close();
   xpTracker.shutdown();
   await bossTimers.shutdown();
+  // A fight that simply went quiet is never announced as over, so it is written out here.
+  await saveBossFights([...capture.bossFightReports()].reverse(), storagePaths.bossFightsPath).catch(() => {});
   await readModel.close();
 }
 

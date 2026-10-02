@@ -1,3 +1,4 @@
+import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
 import { localized, localizedCount } from "@svoverlay/i18n/messages";
 import path from "node:path";
 
@@ -35,6 +36,9 @@ export interface DpsWindowOptions {
   onReset?: () => Promise<void>;
   onOpenSettings?: () => void;
   onOpenLiveDeathLog?: () => Promise<void> | void;
+  getBossFights?: () => BossFightReport[];
+  subscribeBossFights?: (listener: (fights: BossFightReport[]) => void) => () => void;
+  onClearBossFights?: () => void;
 }
 
 export async function createDpsWindow(options: DpsWindowOptions) {
@@ -46,6 +50,7 @@ let publishing = false;
 let shuttingDown = false;
 let closedCallbackSent = false;
 let storageWarning: string | undefined;
+let bossFights: BossFightReport[] = options.getBossFights?.() ?? [];
 let resetting = false;
 let screen: CombatLogScreen = "live";
 let pastDateRange: SessionDateRange = {};
@@ -83,6 +88,11 @@ const rpc = BrowserView.defineRPC<DpsAppRpc>({
       getState: () => appState(),
       setScreen: ({ screen: nextScreen }) => {
         setScreen(nextScreen);
+        return appState();
+      },
+      clearBossFights: () => {
+        options.onClearBossFights?.();
+        bossFights = options.getBossFights?.() ?? [];
         return appState();
       },
       refreshPastSessions: () => { void refreshPastSessions(); },
@@ -199,6 +209,11 @@ const managed = createManagedWindow({
 window = managed.window;
 
 const unsubscribeCharacter = options.subscribeCharacter((state) => live.syncCharacter(state));
+const unsubscribeBossFights = options.subscribeBossFights?.((fights) => {
+  bossFights = fights;
+  // The other screens do not show it, and a fight in progress reports several times a second.
+  if (screen === "boss") publish();
+});
 live.start();
 return {
   show: () => window.show(),
@@ -231,6 +246,7 @@ function appState(): DpsAppState {
     resetting,
     ...(liveState.location === undefined ? {} : { location: liveState.location }),
     liveDeathLogAvailable: liveState.logPath !== undefined,
+    bossFights,
     past,
   };
 }
@@ -259,7 +275,8 @@ function setScreen(nextScreen: CombatLogScreen): void {
   if (screen === nextScreen) return;
   screen = nextScreen;
   analysis.closeDetails();
-  if (nextScreen === "live") {
+  if (nextScreen === "boss") bossFights = options.getBossFights?.() ?? bossFights;
+  if (nextScreen !== "past") {
     pastRefreshSequence += 1;
     analysis.close();
     pastPaths.clear();
@@ -447,6 +464,7 @@ async function shutdown(): Promise<void> {
   managed.lifecycle.dispose();
   analysis.close();
   unsubscribeCharacter();
+  unsubscribeBossFights?.();
   if (!window.isMaximized()) settings.frame = mainFrame.unscale(window.getFrame());
   live.close();
   notifyClosed();

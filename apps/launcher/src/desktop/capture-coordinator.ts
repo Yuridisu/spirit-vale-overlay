@@ -15,11 +15,12 @@ import type {
 import { FishNetInspectRoster, resolveCharacterHealingTraits } from "@kar-mi/spirit-vale-tools-character";
 import type { CharacterSnapshot, CharacterViewState, InspectedCharacter } from "@kar-mi/spirit-vale-tools-character";
 import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
-import { decodeBossGravestone, FishNetEternalTowerTracker } from "@kar-mi/spirit-vale-tools-capture";
+import { decodeBossGravestone, FishNetEternalTowerTracker, resolveBundledMapName } from "@kar-mi/spirit-vale-tools-capture";
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
 import { LootOwnership } from "./loot-ownership.ts";
 import { BossFightTracker, type BossFightState } from "./boss-fight.ts";
+import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
 import { DamageTakenTracker, type DamageTakenState } from "./damage-taken.ts";
 import type {
   CaptureConnectionEvent,
@@ -188,7 +189,8 @@ export class CaptureCoordinator {
   private readonly artifactPickupListeners = new Set<(event: CaptureArtifactPickupEvent) => void>();
   private readonly killListeners = new Set<(state: CaptureKillState) => void>();
   private readonly bossFightListeners = new Set<(state: BossFightState | undefined) => void>();
-  private readonly bossFight = new BossFightTracker();
+  private bossFight = new BossFightTracker();
+  private readonly bossFightReportListeners = new Set<(reports: BossFightReport[]) => void>();
   private readonly damageTakenListeners = new Set<(state: DamageTakenState) => void>();
   private readonly damageTaken = new DamageTakenTracker();
   private damageTakenTimer?: ClockTimer;
@@ -457,6 +459,33 @@ export class CaptureCoordinator {
     for (const listener of this.damageTakenListeners) listener(state);
   }
 
+  /** Seeds the boss fights recorded by earlier sessions, oldest first. Call before capture starts. */
+  restoreBossFights(history: readonly BossFightReport[]): void {
+    this.bossFight = new BossFightTracker(history);
+  }
+
+  /** Forgets every finished boss fight, at the player's request. */
+  clearBossFights(): void {
+    this.bossFight.clearHistory();
+    this.publishBossFight();
+  }
+
+  private currentMapName(): string | undefined {
+    const location = this.effectiveLocation();
+    if (location === undefined) return undefined;
+    if (location.kind === "map") return resolveBundledMapName(location.mapId) ?? `Zone ${location.mapId}`;
+    return location.floor === undefined ? "Eternal Tower" : `Eternal Tower - Floor ${location.floor}`;
+  }
+
+  bossFightReports(): BossFightReport[] {
+    return this.bossFight.reports(this.clock.now());
+  }
+
+  subscribeBossFightReports(listener: (reports: BossFightReport[]) => void): () => void {
+    this.bossFightReportListeners.add(listener);
+    return () => this.bossFightReportListeners.delete(listener);
+  }
+
   subscribeBossFight(listener: (state: BossFightState | undefined) => void): () => void {
     this.bossFightListeners.add(listener);
     listener(this.bossFight.state(this.clock.now()));
@@ -466,8 +495,21 @@ export class CaptureCoordinator {
   /** Feeds every player's hits on a boss to the fight, whoever on the map lands them. */
   private trackBossFight(events: readonly FishNetCombatEvent[]): void {
     let changed = false;
+    const nowMs = this.clock.now();
     for (const event of events) {
-      if ((event.kind !== "damage" && event.kind !== "death") || event.team !== 0) continue;
+      if (event.kind !== "damage" && event.kind !== "death") continue;
+      if (event.team !== 0) {
+        // A death on the other team is one of the players going down mid-fight.
+        if (event.kind === "death" && this.bossFight.state(nowMs)?.active) {
+          const victim = this.actors.getAttribution(event.targetId)?.displayName
+            ?? (this.isLocalRewardActor(event.targetId) ? this.character.current()?.name : undefined);
+          if (victim !== undefined) {
+            this.bossFight.observePlayerDeath(victim, nowMs);
+            changed = true;
+          }
+        }
+        continue;
+      }
       const mob = this.mobs.get(event.targetId);
       if (!mob?.boss) continue;
       const identity = this.actors.getAttribution(event.actorId);
@@ -477,10 +519,11 @@ export class CaptureCoordinator {
       this.bossFight.observeDamage(
         { objectId: mob.objectId, name: mob.displayName },
         { name, ...(identity?.archetype === undefined ? {} : { archetype: identity.archetype }) },
-        event.value,
-        this.clock.now(),
+        { damage: event.value, label: event.sourceLabel, critical: event.hitResult === "critical" },
+        nowMs,
       );
-      if (event.kind === "death") this.bossFight.observeDeath(mob.objectId);
+      this.bossFight.observeMap(this.currentMapName());
+      if (event.kind === "death") this.bossFight.observeDeath(mob.objectId, nowMs);
       changed = true;
     }
     if (changed) this.scheduleBossFightPublish();
@@ -499,6 +542,23 @@ export class CaptureCoordinator {
   private publishBossFight(): void {
     const state = this.bossFight.state(this.clock.now());
     for (const listener of this.bossFightListeners) listener(state);
+    if (this.bossFightReportListeners.size === 0) return;
+    const reports = this.bossFightReports();
+    for (const listener of this.bossFightReportListeners) listener(reports);
+  }
+
+  /** Loot that appears as a boss dies is listed as that boss's drops. */
+  private trackBossDrops(events: readonly FishNetLootDropEvent[]): void {
+    let changed = false;
+    for (const event of events) {
+      if (event.kind === "removed" || event.drop.displayName === undefined) continue;
+      changed = this.bossFight.observeDrop({
+        objectId: event.drop.objectId,
+        name: event.drop.displayName,
+        ...(event.drop.rarity === undefined ? {} : { rarity: event.drop.rarity }),
+      }, this.clock.now()) || changed;
+    }
+    if (changed) this.scheduleBossFightPublish();
   }
 
   subscribeKills(listener: (state: CaptureKillState) => void): () => void {
@@ -557,7 +617,7 @@ export class CaptureCoordinator {
   private noteMapChange(): void {
     this.options.onGoldMapChange?.();
     if (this.bossFight.state(this.clock.now()) !== undefined) {
-      this.bossFight.reset();
+      this.bossFight.reset(this.clock.now());
       this.publishBossFight();
     }
     if (this.damageTaken.state().total > 0) {
@@ -1122,6 +1182,7 @@ export class CaptureCoordinator {
       const lootEvents = this.loot.consume(packet);
       if (this.minimapEnabled() && lootEvents.length > 0) this.scheduleMinimapPublish();
       this.emitLootToasts(lootEvents);
+      this.trackBossDrops(lootEvents);
       this.emitGearPickups(packet);
       const tracked = this.shouldTrackRewardPacket(combatEvents)
         ? this.rewards.consume(packet)

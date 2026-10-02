@@ -12,6 +12,7 @@ export interface DesktopStoragePaths {
   readonly inspectedCharactersPath: string;
   readonly actorIdentitiesPath: string;
   readonly bossTimersPath: string;
+  readonly bossFightsPath: string;
 }
 
 export interface DesktopStoragePathOptions {
@@ -37,5 +38,6 @@ export function resolveDesktopStoragePaths(options: DesktopStoragePathOptions): 
     inspectedCharactersPath: path.join(dataDirectory, "inspected-characters.sqlite"),
     actorIdentitiesPath: path.join(dataDirectory, "actor-identities.json"),
     bossTimersPath: path.join(dataDirectory, "boss-timers.json"),
+    bossFightsPath: path.join(dataDirectory, "boss-fights.json"),
   };
 }
