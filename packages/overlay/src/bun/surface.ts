@@ -134,6 +134,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendArtifactPickup: (event) => rpc.send.artifactPickedUp(event),
     sendTimer: (state) => rpc.send.timerChanged(state),
     sendKills: (state) => rpc.send.killsChanged(state),
+    sendBossFight: (state) => rpc.send.bossFightChanged(state),
   };
   controller.registerSurface(sink);
 

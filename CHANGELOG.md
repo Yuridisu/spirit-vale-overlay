@@ -21,6 +21,9 @@ section as the GitHub Release notes, so write it for the people who use the app.
 - **Kill counter element.** Lists the monsters you have killed on the current map and how many
   of each, most killed first, with the experience and gold those kills paid. It starts over when
   you change map.
+- **Boss DPS element.** A meter for boss fights only: which boss, the total damage dealt to it, the
+  damage per second, how long the fight has lasted, and every player ranked by their damage to the
+  boss. Hits on other monsters are left out. The last fight stays on show until the next one starts.
 - **DPS details element.** Breaks your encounter damage down by the skill or attack that dealt
   it, with each one's share of the total.
 

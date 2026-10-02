@@ -26,6 +26,7 @@ import type {
   OverlayControlState,
   OverlayDragPreview,
   OverlayElementId,
+  OverlayBossFightState,
   OverlayGearPickupEvent,
   OverlayKillState,
   OverlayLootToastEvent,
@@ -125,6 +126,8 @@ export interface OverlayControllerOptions {
   subscribeArtifactPickup: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   /** Calls the listener at once with the current counts, then on every change. */
   subscribeKills: (listener: (state: OverlayKillState) => void) => () => void;
+  /** Calls the listener at once with the current fight, then on every change. */
+  subscribeBossFight: (listener: (state: OverlayBossFightState | undefined) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -154,6 +157,7 @@ export interface OverlaySurfaceSink {
   sendGearPickup(event: OverlayGearPickupEvent): void;
   sendArtifactPickup(event: OverlayGearPickupEvent): void;
   sendKills(state: OverlayKillState): void;
+  sendBossFight(state: OverlayBossFightState | undefined): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -261,6 +265,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendGearPickup(event));
   });
+  let bossFight: OverlayBossFightState | undefined;
+  const unsubscribeBossFight = options.subscribeBossFight((next) => {
+    bossFight = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendBossFight(next));
+  });
   let killState: OverlayKillState = { kills: [] };
   const unsubscribeKills = options.subscribeKills((next) => {
     killState = next;
@@ -355,6 +365,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeGearPickup();
       unsubscribeArtifactPickup();
       unsubscribeKills();
+      unsubscribeBossFight();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);
@@ -566,6 +577,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       bossTimers: bossTimerState(),
       timer,
       kills: killState,
+      ...(bossFight === undefined ? {} : { bossFight }),
     };
   }
 

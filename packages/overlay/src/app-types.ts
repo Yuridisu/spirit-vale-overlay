@@ -11,7 +11,7 @@ export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers
 import type { OverlayTimerState, TimerMode } from "./timer.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer"] as const;
@@ -183,6 +183,15 @@ export interface OverlayMeterSkill {
   critRate?: number;
 }
 
+/** The current or latest boss fight: every player's damage to the bosses, apart from other targets. */
+export interface OverlayBossFightState {
+  bossNames: string[];
+  totalDamage: number;
+  durationMs: number;
+  active: boolean;
+  rows: Array<{ name: string; archetype?: number; damage: number }>;
+}
+
 /** Monsters the local player has killed since the last map change, most killed first. */
 export interface OverlayKillState {
   kills: OverlayKillRow[];
@@ -205,6 +214,7 @@ export interface OverlayViewState {
   bossTimers: BossTimerState;
   timer: OverlayTimerState;
   kills: OverlayKillState;
+  bossFight?: OverlayBossFightState;
 }
 
 export interface OverlayLootToastEvent {
@@ -347,6 +357,7 @@ export type OverlayRpc = {
     gearPickedUp: OverlayGearPickupEvent;
     timerChanged: OverlayTimerState;
     killsChanged: OverlayKillState;
+    bossFightChanged: OverlayBossFightState | undefined;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

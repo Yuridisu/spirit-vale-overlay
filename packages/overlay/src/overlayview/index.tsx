@@ -12,6 +12,7 @@ import { BossTimersOverlayElement } from "./tiles/boss-timers.tsx";
 import { ClockElement } from "./tiles/clock.tsx";
 import { TimerElement } from "./tiles/timer.tsx";
 import { DpsDetailsElement, KillCounterElement } from "./tiles/details.tsx";
+import { BossMeterElement } from "./tiles/boss-meter.tsx";
 import { ArtifactPickupElement, GearPickupElement } from "./tiles/gear-pickup.tsx";
 import {
   CharacterResourceElement,
@@ -100,6 +101,9 @@ function App() {
       </OverlayElement>
       <OverlayElement id="timer" locked={next.locked}>
         <TimerElement />
+      </OverlayElement>
+      <OverlayElement id="bossMeter" locked={next.locked}>
+        <BossMeterElement />
       </OverlayElement>
       <OverlayElement id="killCounter" locked={next.locked}>
         <KillCounterElement />

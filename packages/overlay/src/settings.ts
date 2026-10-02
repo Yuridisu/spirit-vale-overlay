@@ -96,6 +96,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   timer: { enabled: false, opacity: 0.6, x: 905, y: 70, width: 110, height: 46 },
   killCounter: { enabled: false, opacity: 0.4, x: 430, y: 420, width: 220, height: 220 },
   dpsDetails: { enabled: false, opacity: 0.4, x: 1235, y: 100, width: 251, height: 230 },
+  bossMeter: { enabled: false, opacity: 0.5, x: 960, y: 300, width: 270, height: 380 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
