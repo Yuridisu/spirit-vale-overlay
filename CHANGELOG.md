@@ -12,12 +12,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
   They are two separate elements, so each can sit where you want it: enable Gear pickups and
   Artifact pickups under Settings > Overlay > Visible elements. A card stays for 15 seconds;
   several items picked up together take turns, one card at a time.
-
 - **Timer element.** A personal countdown or stopwatch over the game. Set the mode and the
   countdown length from the Timer panel on the main window, which also has Start/Pause and Reset
   buttons. In game, `Ctrl+Shift+9` starts and pauses it and `Ctrl+Shift+0` resets it; both can be
   rebound. A countdown flashes when it reaches zero until you press start or reset.
-
 - **Kill counter element.** Lists the monsters you have killed on the current map and how many
   of each, most killed first, with the experience and gold those kills paid. It starts over when
   you change map.
