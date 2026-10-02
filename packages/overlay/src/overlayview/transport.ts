@@ -19,6 +19,7 @@ import {
   dragPreview,
   meterState,
   minimapState,
+  pushGearPickup,
   pushLootToast,
 } from "./store.ts";
 import type { ElementRect } from "./geometry.ts";
@@ -36,6 +37,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     dragPreviewChanged: (next) => { dragPreview.value = next; },
     minimapChanged: (next) => { minimapState.value = repairRendererPayload(next); },
     lootDropped: (next) => { pushLootToast(repairRendererPayload(next)); },
+    gearPickedUp: (next) => { pushGearPickup(repairRendererPayload(next)); },
   } },
 });
 

@@ -18,9 +18,24 @@ export interface RewardItem {
   count: number;
 }
 
+/** One rolled substat as the server sent it: a stat type and the 0-100 roll within that stat's range. */
+export interface PickedUpSubstat {
+  type: number;
+  roll: number;
+  /** `StatData.ValueStr`, scoping the stat to one skill or element. */
+  qualifier?: string;
+}
+
+/** An equipment instance the player picked up, with the rolls that make it unique. */
+export interface PickedUpEquipment {
+  itemId: string;
+  refine: number;
+  substats: PickedUpSubstat[];
+}
+
 export type DecodedRewardPacket =
   | { kind: "experienceState"; tick: number; state: ExperienceCoinsState }
-  | { kind: "pickup"; tick: number; items: RewardItem[] };
+  | { kind: "pickup"; tick: number; items: RewardItem[]; equipment: PickedUpEquipment[] };
 
 export function decodeFishNetRewardPacket(packet: DecodedFishNetPacket): DecodedRewardPacket | undefined {
   if (packet.rpcName === "ExpCoinsChanged_T") {
@@ -39,13 +54,15 @@ export function decodeFishNetRewardPacket(packet: DecodedFishNetPacket): Decoded
     const reader = new RewardReader(packet.payload);
     const items = reader.pickupList();
     reader.finish(packet.rpcName);
-    return { kind: "pickup", tick: packet.tick, items };
+    return { kind: "pickup", tick: packet.tick, items, equipment: reader.equipment };
   }
   return undefined;
 }
 
 class RewardReader {
   private offset = 0;
+  /** Equipment instances read so far, kept apart from the coalesced item counts. */
+  readonly equipment: PickedUpEquipment[] = [];
 
   constructor(private readonly buffer: Buffer) {}
 
@@ -93,7 +110,7 @@ class RewardReader {
       const value = this.int64();
       if (value > 0n) items.push({ category: "currency", itemId: `currency:${type}`, count: safeCount(value) });
     });
-    this.dictionary("equipment", () => this.equipment(), items);
+    this.dictionary("equipment", () => this.equipmentItem(), items);
     this.dictionary("artifact", () => this.artifact(), items);
     this.dictionary("card", () => this.stackable(), items);
     this.dictionary("gem", () => this.refinable(), items);
@@ -132,17 +149,22 @@ class RewardReader {
     return { id, count: 1 };
   }
 
-  private equipment(): { id: string | null; count: number } {
+  private equipmentItem(): { id: string | null; count: number } {
     if (this.boolean()) return { id: null, count: 0 };
-    this.list(() => this.stat());
-    this.list(() => this.string());
-    this.int32();
-    this.int32();
-    this.int32();
-    this.string();
-    this.int32();
+    const substats: PickedUpSubstat[] = [];
+    this.list(() => {
+      const substat = this.stat();
+      if (substat) substats.push(substat);
+    });
+    this.list(() => this.string()); // Cards
+    this.int32(); // StartingPotential
+    this.int32(); // SpentPotential
+    this.int32(); // ChaosType
+    this.string(); // UID
+    const refine = this.int32();
     const { id } = this.inventoryBase();
     this.boolean();
+    if (id) this.equipment.push({ itemId: id, refine, substats });
     return { id, count: 1 };
   }
 
@@ -169,11 +191,12 @@ class RewardReader {
     return { id, count: 1 };
   }
 
-  private stat(): void {
-    if (this.boolean()) return;
-    this.int32();
-    this.int32();
-    this.string();
+  private stat(): PickedUpSubstat | undefined {
+    if (this.boolean()) return undefined;
+    const type = this.int32();
+    const roll = this.int32();
+    const qualifier = this.string();
+    return { type, roll, ...(qualifier ? { qualifier } : {}) };
   }
 
   private list(read: () => void): void {

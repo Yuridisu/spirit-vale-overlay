@@ -8,6 +8,7 @@ export type {
   MobRewardDefinition,
 } from "./catalog/catalog.ts";
 export { decodeFishNetRewardPacket } from "./tracking/reward-decoder.ts";
+export type { PickedUpEquipment, PickedUpSubstat } from "./tracking/reward-decoder.ts";
 export type { DecodedRewardPacket, ExperienceCoinsState, RewardItem, RewardItemCategory } from "./tracking/reward-decoder.ts";
 export { FishNetLootDropTracker } from "./tracking/loot-drop-tracker.ts";
 export type {

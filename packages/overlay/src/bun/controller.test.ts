@@ -36,6 +36,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendDragPreview: () => {},
     sendMinimap: () => {},
     sendLootToast: () => {},
+    sendGearPickup: () => {},
   };
 }
 
@@ -48,6 +49,7 @@ async function createController(settingsPath: string): Promise<OverlayController
     subscribeActiveStatuses: () => () => {},
     subscribeMinimap: () => () => {},
     subscribeLootToast: () => () => {},
+    subscribeGearPickup: () => () => {},
     xp: {
       getSnapshot: () => ({ ...emptyRate, timeline: [] }),
       getCoinsSnapshot: () => ({ ...emptyRate }),

@@ -24,6 +24,7 @@ import type {
   OverlayControlState,
   OverlayDragPreview,
   OverlayElementId,
+  OverlayGearPickupEvent,
   OverlayLootToastEvent,
   OverlayMinimapState,
   OverlaySettingsState,
@@ -115,6 +116,7 @@ export interface OverlayControllerOptions {
   subscribeActiveStatuses: (listener: (statuses: readonly FishNetActiveStatus[]) => void) => () => void;
   subscribeMinimap: (listener: (state: OverlayMinimapSourceState) => void) => () => void;
   subscribeLootToast: (listener: (event: OverlayLootToastEvent) => void) => () => void;
+  subscribeGearPickup: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   xp: XpTrackerSource;
   bossTimers: BossTimerSource;
   settingsPath?: string;
@@ -139,6 +141,7 @@ export interface OverlaySurfaceSink {
   sendDragPreview(preview: OverlayDragPreview | undefined): void;
   sendMinimap(state: OverlayMinimapState): void;
   sendLootToast(event: OverlayLootToastEvent): void;
+  sendGearPickup(event: OverlayGearPickupEvent): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -238,6 +241,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendLootToast(event));
   });
+  const unsubscribeGearPickup = options.subscribeGearPickup((event) => {
+    if (shuttingDown) return;
+    const element = settings.elements.gearPickup;
+    if (!element.enabled) return;
+    const surface = surfaces.get(element.display);
+    if (surface) publishSafely(() => surface.sendGearPickup(event));
+  });
   const unsubscribeBossTimers = options.bossTimers.subscribe(() => publishBossTimers());
 
   if (options.lockOnCreate) persistence.schedule(settings);
@@ -312,6 +322,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeXp();
       unsubscribeMinimap();
       unsubscribeLootToast();
+      unsubscribeGearPickup();
       unsubscribeBossTimers();
       shortcutListener?.close();
       await persistence.flush(settings);

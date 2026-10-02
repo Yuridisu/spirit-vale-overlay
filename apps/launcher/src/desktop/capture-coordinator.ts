@@ -38,8 +38,8 @@ import type {
   LogStream,
   LogWriteFailure,
 } from "@kar-mi/spirit-vale-tools-logging";
-import { FishNetLootDropTracker, FishNetMobDirectory, FishNetMobRewardTracker, mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
-import type { FishNetLootDrop, FishNetLootDropEvent } from "@kar-mi/spirit-vale-tools-rewards";
+import { decodeFishNetRewardPacket, FishNetLootDropTracker, FishNetMobDirectory, FishNetMobRewardTracker, mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
+import type { FishNetLootDrop, FishNetLootDropEvent, PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
 import { TOWER_FLOOR_EVENT_SOURCE_PREFIX, TOWER_FLOOR_UNKNOWN_SUFFIX, ZONE_EVENT_SOURCE_PREFIX } from "@svoverlay/combat/zone-log";
 import { sameSpiritValeLocation, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
 import { getCurrentExecutableNames } from "@svoverlay/desktop-platform/executable-names";
@@ -112,6 +112,8 @@ export interface CaptureLootToastEvent {
   lootChance?: number;
 }
 
+export type CaptureGearPickupEvent = PickedUpEquipment;
+
 export interface CaptureErrorReport {
   title: string;
   reason: string;
@@ -171,6 +173,7 @@ export class CaptureCoordinator {
   private minimapTimer?: ClockTimer;
   private lastPublishedMinimapJson?: string;
   private readonly lootToastListeners = new Set<(event: CaptureLootToastEvent) => void>();
+  private readonly gearPickupListeners = new Set<(event: CaptureGearPickupEvent) => void>();
   private readonly toastedLootIds = new Set<number>();
   private readonly character = new LocalCharacterRouter({
     onHandled: () => this.syncLocalActorIdentity(),
@@ -392,6 +395,11 @@ export class CaptureCoordinator {
     this.minimapListeners.add(listener);
     listener(this.minimapState());
     return () => this.minimapListeners.delete(listener);
+  }
+
+  subscribeGearPickup(listener: (event: CaptureGearPickupEvent) => void): () => void {
+    this.gearPickupListeners.add(listener);
+    return () => this.gearPickupListeners.delete(listener);
   }
 
   subscribeLootToast(listener: (event: CaptureLootToastEvent) => void): () => void {
@@ -932,6 +940,7 @@ export class CaptureCoordinator {
       const lootEvents = this.loot.consume(packet);
       if (this.minimapEnabled() && lootEvents.length > 0) this.scheduleMinimapPublish();
       this.emitLootToasts(lootEvents);
+      this.emitGearPickups(packet);
       const tracked = this.shouldTrackRewardPacket(combatEvents)
         ? this.rewards.consume(packet)
         : [];
@@ -1219,6 +1228,16 @@ export class CaptureCoordinator {
 
   private minimapEnabled(): boolean {
     return this.options.minimapEnabled?.() ?? true;
+  }
+
+  /** Equipment keeps its rolls only in the pickup packet, so they are read here rather than from the reward totals. */
+  private emitGearPickups(packet: CapturedFishNetPacket): void {
+    if (this.gearPickupListeners.size === 0 || packet.rpcName !== "PickupItems_T") return;
+    const pickup = decodeFishNetRewardPacket(packet);
+    if (pickup?.kind !== "pickup") return;
+    for (const equipment of pickup.equipment) {
+      for (const listener of this.gearPickupListeners) listener(equipment);
+    }
   }
 
   private emitLootToasts(events: readonly FishNetLootDropEvent[]): void {

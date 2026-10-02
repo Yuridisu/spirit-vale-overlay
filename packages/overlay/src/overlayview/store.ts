@@ -10,6 +10,7 @@ import type {
   OverlayDragPreview,
   OverlayElementId,
   OverlayElementSettings,
+  OverlayGearPickupEvent,
   OverlayLootToastEvent,
   OverlayMeterState,
   OverlayMinimapState,
@@ -34,6 +35,11 @@ export interface OverlayChrome {
   minimapEnabled: boolean;
 }
 
+export interface GearPickupCardState {
+  id: string;
+  event: OverlayGearPickupEvent;
+}
+
 export interface LootToastCardState {
   id: string;
   event: OverlayLootToastEvent;
@@ -52,6 +58,7 @@ export const bossNow = signal(Date.now());
 export const meterState = signal<OverlayMeterState | undefined>(undefined);
 export const minimapState = signal<OverlayMinimapState | undefined>(undefined);
 export const lootToasts = signal<LootToastCardState[]>([]);
+export const gearPickups = signal<GearPickupCardState[]>([]);
 export const gridEnabled = signal(false);
 export const selectedElementId = signal<OverlayElementId | undefined>(undefined);
 export const panelPosition = signal<{ x: number; y: number } | undefined>(undefined);
@@ -60,6 +67,10 @@ export const dragPreview = signal<OverlayDragPreview | undefined>(undefined);
 let statusTicker: ReturnType<typeof setInterval> | undefined;
 let bossTicker: ReturnType<typeof setInterval> | undefined;
 let lootToastSequence = 0;
+let gearPickupSequence = 0;
+/** Long enough to read four stats mid-fight. */
+const GEAR_PICKUP_LIFETIME_MS = 15_000;
+const MAX_GEAR_PICKUP_CARDS = 3;
 let lastChromeJson: string | undefined;
 const lastElementJson = new Map<OverlayElementId, string | undefined>();
 
@@ -111,6 +122,14 @@ export function applyBossTimers(next: BossTimerState): void {
     clearInterval(bossTicker);
     bossTicker = undefined;
   }
+}
+
+export function pushGearPickup(event: OverlayGearPickupEvent): void {
+  const id = `${Date.now()}-${gearPickupSequence++}`;
+  gearPickups.value = [...gearPickups.value, { id, event }].slice(-MAX_GEAR_PICKUP_CARDS);
+  setTimeout(() => {
+    gearPickups.value = gearPickups.value.filter((card) => card.id !== id);
+  }, GEAR_PICKUP_LIFETIME_MS);
 }
 
 export function pushLootToast(event: OverlayLootToastEvent): void {

@@ -3,6 +3,15 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.11
+
+### Added
+
+- **Gear pickup cards.** When you pick up a piece of equipment, a card shows its name, slot,
+  refine level, and every rolled stat with its value and roll percentage. Enable it under
+  Settings > Overlay > Visible elements > Gear pickups, then place and resize it like any other
+  element. Each card stays for 15 seconds.
+
 ## 0.10.10
 
 First release of the community continuation. The original project by

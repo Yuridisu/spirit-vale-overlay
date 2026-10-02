@@ -9,7 +9,7 @@ import type { RequiredStatusCategory } from "./required-statuses.ts";
 export type { StatType, RequiredStatusCategory };
 export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion"] as const;
@@ -184,6 +184,24 @@ export interface OverlayLootToastEvent {
   lootChance?: number;
 }
 
+/** One rolled substat of a picked-up equipment, already scaled for display. */
+export interface OverlayGearPickupStat {
+  label: string;
+  /** 0-100 position of the roll within the stat's range. */
+  roll: number;
+  /** Scaled value the game shows; absent when the stat's range is unknown. */
+  value?: number;
+  qualifier?: string;
+}
+
+export interface OverlayGearPickupEvent {
+  itemId: string;
+  displayName: string;
+  slot?: string;
+  refine: number;
+  stats: OverlayGearPickupStat[];
+}
+
 export interface OverlayMinimapLootDrop {
   objectId: number;
   x: number;
@@ -292,5 +310,6 @@ export type OverlayRpc = {
     dragPreviewChanged: OverlayDragPreview | undefined;
     minimapChanged: OverlayMinimapState;
     lootDropped: OverlayLootToastEvent;
+    gearPickedUp: OverlayGearPickupEvent;
   } }>;
 };

@@ -44,6 +44,7 @@ import type { BossTimerWindowState } from "../boss-timers/rpc.ts";
 import { CaptureCoordinator, type CaptureErrorReport } from "./capture-coordinator.ts";
 import { createBossTimerCoordinator } from "./boss-timer-coordinator.ts";
 import { createBossTimerWindow } from "./boss-timer-window.ts";
+import { describeGearPickup } from "./gear-pickup.ts";
 import { createXpTrackerCoordinator } from "./xp-tracker-coordinator.ts";
 import { createReadModelService } from "./read-model-service.ts";
 import { measureLogStorage } from "./log-storage.ts";
@@ -253,6 +254,7 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeActiveStatuses: (listener) => capture.subscribeActiveStatuses(listener),
   subscribeMinimap: (listener) => capture.subscribeMinimap(listener),
   subscribeLootToast: (listener) => capture.subscribeLootToast(listener),
+  subscribeGearPickup: (listener) => capture.subscribeGearPickup((equipment) => listener(describeGearPickup(equipment))),
   xp: xpTracker,
   bossTimers,
   settingsPath: storagePaths.overlaySettingsPath,
