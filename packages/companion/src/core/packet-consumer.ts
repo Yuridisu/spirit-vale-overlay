@@ -5,6 +5,8 @@ import type { SaviInventory, SaviSnapshot } from "./types.ts";
 const characterRpcNames: Readonly<Record<string, true>> = { LoadCharacter_T: true, CharacterCallback_T: true };
 const personalStorageRpcNames: Readonly<Record<string, true>> = {
   CompletePersonalStorageBatch: true,
+  // The same callback under the name this repository's RPC map gives it.
+  StorageBatchResult_T: true,
   PlayerCallback_Storage: true,
 };
 export interface PacketConsumerResult {

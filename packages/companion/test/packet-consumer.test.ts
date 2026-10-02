@@ -91,3 +91,25 @@ test("shape recovery still rejects outbound and malformed named packets", () => 
   malformed.payload = Buffer.alloc(4096, 255);
   expect(consumeFishNetPacket(malformed)).toEqual({ ignored: true });
 });
+
+test("reads a storage transfer under the name this repository's RPC map gives the callback", () => {
+  const writer = new Writer();
+  const cards = (count: number): void => {
+    writer.objectRef(true).dict([], () => undefined).dict([], () => undefined)
+      .dict([["Abomination", count]] as const, (value) => { writer.objectRef(true).packed(value).string("Abomination").bool(false); });
+    for (let index = 0; index < 4; index++) writer.dict([], () => undefined);
+  };
+  writer.string("storage-request").packed(1).packed(1).string(null);
+  cards(2);
+  writer.packed(17);
+  cards(5);
+  const result = consumeFishNetPacket({
+    rpcName: "StorageBatchResult_T",
+    payload: Buffer.from(writer.bytes()),
+    liteNetPacket: { udpPacket: { direction: "inbound" } },
+  } as unknown as CapturedFishNetPacket);
+
+  expect(result.ignored).toBe(false);
+  expect(result.inventory?.cards[0]?.count).toBe(2);
+  expect(result.storage?.cards[0]?.count).toBe(5);
+});
