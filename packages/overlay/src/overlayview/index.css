@@ -858,6 +858,12 @@
 }
 /* Artifacts wear a different accent, so the two kinds of card are never confused. */
 .pickup-artifact .gear-pickup-card { border-top-color: rgb(196, 138, 255); }
+.pickup-target .gear-pickup-card { border-top-color: rgb(255, 213, 74); border-top-left-radius: 0; border-top-right-radius: 0; }
+.pickup-target .gear-pickup-slot,
+.pickup-target .gear-pickup-refine { color: rgb(255, 213, 74); }
+.target-drop { display: flex; flex-direction: column; filter: drop-shadow(0 0 10px rgba(255, 213, 74, .45)); }
+.target-drop-banner { padding: 5px 10px; border-radius: 6px 6px 0 0; background: rgb(255, 213, 74); color: #1a1405; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
+.gear-pickup-count { margin: 0; padding-top: 8px; color: rgba(255, 255, 255, .95); font-size: 16px; font-weight: 700; }
 .pickup-artifact .gear-pickup-slot,
 .pickup-artifact .gear-pickup-refine { color: rgb(196, 138, 255); }
 .gear-pickup-header {

@@ -7,6 +7,11 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Added
 
+- **Target drops.** Name up to four drops you are hunting, each with the stats it must have and
+  the least of each, such as a Starfire Jewel with Int 3, Mp % 2 and Matk % 2. When you pick one
+  up, the overlay's Target drops element announces it under a banner, with a sound if you want
+  one. Set them in the Rewards window, under Target drops, and enable the element under Settings >
+  Overlay > Visible elements.
 - **Companion window.** The bag, loot rules, gold sessions and market of
   [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2 are now part of this app, with the
   author's agreement. Open it from the Companion tile on the main window.

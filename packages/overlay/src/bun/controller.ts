@@ -19,6 +19,7 @@ import { Screen } from "@svoverlay/desktop-runtime";
 import { idleTimer, toggleTimer } from "../timer.ts";
 import type { OverlayTimerState, TimerMode } from "../timer.ts";
 import { itemCounterState, type ItemCounterSource, type OverlayItemCounterState } from "../item-counter.ts";
+import { matchTargetDrop, type TargetDrop } from "../target-drop.ts";
 import type {
   BossTimerState,
   KeybindAction,
@@ -136,6 +137,10 @@ export interface OverlayControllerOptions {
   subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
   /** Calls the listener at once with the current tally, then on every change. */
   subscribeDamageTaken: (listener: (state: OverlayDamageTakenState) => void) => () => void;
+  /** Every stackable item picked up, which has a name and a count but no rolls. */
+  subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
+  /** A watched-for drop was just picked up, and the player asked to hear about it. */
+  onTargetDropSound?: () => void;
   /** Calls the listener at once with the bag as it is known, then on every change. */
   subscribeInventory: (listener: (state: ItemCounterSource) => void) => () => void;
   xp: XpTrackerSource;
@@ -171,6 +176,7 @@ export interface OverlaySurfaceSink {
   sendGearRating(state: OverlayGearRatingState): void;
   sendDamageTaken(state: OverlayDamageTakenState): void;
   sendItemCounter(state: OverlayItemCounterState): void;
+  sendTargetDrop(event: OverlayGearPickupEvent): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -280,6 +286,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
   });
   const unsubscribeGearPickup = options.subscribeGearPickup((event) => {
     if (shuttingDown) return;
+    announceTargetDrop(event);
     const element = settings.elements.gearPickup;
     if (!element.enabled) return;
     const surface = surfaces.get(element.display);
@@ -319,8 +326,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendKills(next));
   });
+  const unsubscribeStackPickup = options.subscribeStackPickup((event) => {
+    if (shuttingDown) return;
+    announceTargetDrop({ itemId: event.displayName, displayName: event.displayName, refine: 0, stats: [], count: event.count });
+  });
   const unsubscribeArtifactPickup = options.subscribeArtifactPickup((event) => {
     if (shuttingDown) return;
+    announceTargetDrop(event);
     const element = settings.elements.artifactPickup;
     if (!element.enabled) return;
     const surface = surfaces.get(element.display);
@@ -376,6 +388,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setMinimapRange,
     setTimerConfig,
     setItemCounterItems,
+    setTargetDrops,
+    setTargetDropSound,
     toggleTimer: toggleTimerNow,
     resetTimer: resetTimerNow,
     timerState: (): OverlayTimerState => timer,
@@ -407,6 +421,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeLootToast();
       unsubscribeGearPickup();
       unsubscribeArtifactPickup();
+      unsubscribeStackPickup();
       unsubscribeKills();
       unsubscribeBossFight();
       unsubscribeGearRating();
@@ -481,6 +496,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       timerDurationSeconds: settings.timerDurationSeconds,
       itemCounterItems: settings.itemCounterItems,
       itemCounterChoices: inventorySource.items.filter((item) => item.count > 0).map((item) => item.name),
+      targetDrops: settings.targetDrops,
+      targetDropSound: settings.targetDropSound,
     };
   }
 
@@ -555,6 +572,35 @@ export async function createOverlayController(options: OverlayControllerOptions)
     persist();
     setTimer(idleTimer(settings.timerMode, settings.timerDurationSeconds * 1_000));
     return timer;
+  }
+
+  /** Shows a pickup on the target-drop element when it is one of the drops being watched for. */
+  function announceTargetDrop(event: OverlayGearPickupEvent): void {
+    const element = settings.elements.targetDrop;
+    if (!element.enabled) return;
+    const matched = matchTargetDrop(settings.targetDrops, {
+      displayName: event.displayName,
+      ...(event.slot === undefined ? {} : { slot: event.slot }),
+      stats: event.stats,
+    });
+    if (matched === undefined) return;
+    const surface = surfaces.get(element.display);
+    if (surface) publishSafely(() => surface.sendTargetDrop(event));
+    if (settings.targetDropSound) publishSafely(() => options.onTargetDropSound?.());
+  }
+
+  function setTargetDrops(targets: TargetDrop[]): TargetDrop[] {
+    settings = normalizeOverlaySettings({ ...settings, targetDrops: targets }, displays);
+    persist();
+    publishControl();
+    return settings.targetDrops;
+  }
+
+  function setTargetDropSound(enabled: boolean): boolean {
+    settings = normalizeOverlaySettings({ ...settings, targetDropSound: enabled }, displays);
+    persist();
+    publishControl();
+    return settings.targetDropSound;
   }
 
   function setItemCounterItems(items: string[]): OverlayItemCounterState {

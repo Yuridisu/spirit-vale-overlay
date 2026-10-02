@@ -119,3 +119,12 @@ main {
 .item-counter-chip:disabled { cursor: default; opacity: .55; }
 .item-counter-chip.is-followed { border-color: var(--primary); opacity: 1; }
 .item-counter-empty { color: var(--on-surface-variant); font-size: 12px; }
+.target-drops { display: grid; gap: 14px; }
+.target-drop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.target-drop-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--outline-variant); border-radius: 10px; background: var(--surface-container-low); }
+.target-drop-card-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.target-drop-field { display: grid; gap: 5px; }
+.target-drop-field > span, .target-drop-stats > span { color: var(--on-surface-variant); font-size: 12px; }
+.target-drop-field .input, .target-drop-stats .input { width: 100%; min-width: 0; }
+.target-drop-stats { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 6px 8px; align-items: center; }
+.target-drop-sound { display: flex; align-items: center; gap: 8px; font-size: 13px; }

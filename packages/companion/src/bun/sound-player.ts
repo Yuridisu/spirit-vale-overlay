@@ -1,5 +1,7 @@
 import { dlopen, FFIType, ptr } from "bun:ffi";
 
+import { SOUND_WAVS } from "../sounds.ts";
+
 const SND_ASYNC = 0x0001;
 const SND_NODEFAULT = 0x0002;
 const SND_MEMORY = 0x0004;
@@ -35,6 +37,12 @@ export function playWav(wav: Uint8Array, volume: number): boolean {
   const buffer = scaleWavVolume(wav, volume);
   playing.buffer = buffer;
   return playSoundW(ptr(buffer), null, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
+}
+
+/** Plays one of the built-in alert tones: blip, chime, ding, alert or thud. */
+export function playBuiltinSound(name: string, volume: number): boolean {
+  const wav = SOUND_WAVS[name];
+  return wav === undefined ? false : playWav(wav, volume);
 }
 
 /**

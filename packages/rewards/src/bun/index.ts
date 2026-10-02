@@ -23,6 +23,8 @@ import type {
   RewardsAppRpc,
   RewardsAppState,
   RewardsItemCounterState,
+  RewardsTargetDrop,
+  RewardsTargetDropState,
   RewardsAppStatus,
 } from "../app-types.ts";
 import { loadRewardsSettings, saveRewardsSettings, type RewardsAppSettings } from "../settings.ts";
@@ -71,6 +73,12 @@ export interface RewardsWindowOptions {
   onReset?: () => Promise<void>;
   onOpenSettings?: () => void;
   itemCounter?: ItemCounterSource;
+  /** Changes reach the window through the item counter's subscription, which fires for both. */
+  targetDrops?: {
+    getState(): RewardsTargetDropState;
+    setTargets(targets: RewardsTargetDrop[]): Promise<void> | void;
+    setSound(enabled: boolean): Promise<void> | void;
+  };
 }
 
 export interface ItemCounterSource {
@@ -162,6 +170,14 @@ const rpc = BrowserView.defineRPC<RewardsAppRpc>({
       },
       setItemCounterItems: async ({ items }) => {
         await options.itemCounter?.setItems(items);
+        return appState();
+      },
+      setTargetDrops: async ({ targets }) => {
+        await options.targetDrops?.setTargets(targets);
+        return appState();
+      },
+      setTargetDropSound: async ({ enabled }) => {
+        await options.targetDrops?.setSound(enabled);
         return appState();
       },
       setPinned: ({ pinned }) => {
@@ -271,6 +287,7 @@ function appState(): RewardsAppState {
     xp: options.xp.getSnapshot(),
     gold: options.xp.getCoinsSnapshot(),
     itemCounter: options.itemCounter?.getState() ?? { slots: [], known: false, items: [] },
+    targetDrops: options.targetDrops?.getState() ?? { targets: [], sound: true, statChoices: [] },
   };
 }
 

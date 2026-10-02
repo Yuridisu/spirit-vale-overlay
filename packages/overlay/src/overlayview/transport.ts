@@ -20,6 +20,7 @@ import {
   meterState,
   minimapState,
   pushArtifactPickup,
+  pushTargetDrop,
   pushGearPickup,
   bossFightState,
   damageTakenState,
@@ -52,6 +53,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     itemCounterChanged: (next) => { itemCounter.value = repairRendererPayload(next); },
     bossFightChanged: (next) => { bossFightState.value = next === undefined ? undefined : repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
+    targetDropFound: (next) => { pushTargetDrop(repairRendererPayload(next)); },
   } },
 });
 

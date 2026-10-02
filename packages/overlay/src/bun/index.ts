@@ -7,6 +7,7 @@ import type {
 } from "../app-types.ts";
 import { displayKey, type OverlayDisplay } from "../display-layout.ts";
 import type { TimerMode } from "../timer.ts";
+import type { TargetDrop } from "../target-drop.ts";
 import type { OverlaySettings } from "../settings.ts";
 import { createOverlayController, type OverlayControllerOptions } from "./controller.ts";
 import { createOverlaySurface, type OverlaySurface } from "./surface.ts";
@@ -61,6 +62,8 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     setMinimapRange: (range: number) => controller.setMinimapRange(range),
     setTimerConfig: (mode: TimerMode, durationSeconds: number) => controller.setTimerConfig(mode, durationSeconds),
     setItemCounterItems: (items: string[]) => controller.setItemCounterItems(items),
+    setTargetDrops: (targets: TargetDrop[]) => controller.setTargetDrops(targets),
+    setTargetDropSound: (enabled: boolean) => controller.setTargetDropSound(enabled),
     toggleTimer: () => controller.toggleTimer(),
     resetTimer: () => controller.resetTimer(),
     getTimerState: () => controller.timerState(),

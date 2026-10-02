@@ -36,6 +36,12 @@ export function describeArtifactPickup(artifact: PickedUpArtifact): OverlayGearP
   };
 }
 
+/** Every stat a pickup card can label, for choosing among when describing a wanted drop. */
+export function pickupStatLabels(): string[] {
+  const labels = new Set(Object.entries(snapshot.statTypes).map(([type, name]) => statLabel(name, Number(type))));
+  return [...labels].sort((left, right) => left.localeCompare(right));
+}
+
 function describeSubstat(substat: PickedUpSubstat, item: SnapshotEquipment | undefined): OverlayGearPickupStat {
   const statName = snapshot.statTypes[substat.type];
   const value = statName === undefined

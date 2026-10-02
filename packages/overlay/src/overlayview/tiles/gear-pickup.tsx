@@ -1,6 +1,6 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayGearPickupEvent } from "../../app-types.ts";
-import { artifactPickups, gearPickups } from "../store.ts";
+import { artifactPickups, gearPickups, targetDrops } from "../store.ts";
 import type { GearPickupCardState } from "../store.ts";
 
 /** The card for the equipment the player just picked up; several pickups take turns, one at a time. */
@@ -11,6 +11,21 @@ export function GearPickupElement() {
 /** Artifacts get their own element, so they can sit apart from equipment and be told apart at a glance. */
 export function ArtifactPickupElement() {
   return <PickupCards cards={artifactPickups.value} kind="artifact" />;
+}
+
+/** A drop the player set as a target, announced under a banner so it cannot be taken for an ordinary pickup. */
+export function TargetDropElement() {
+  const t = useTranslator();
+  return (
+    <div class="gear-pickup-stack pickup-target">
+      {targetDrops.value.map((card) => (
+        <div class="target-drop" key={card.id}>
+          <div class="target-drop-banner">{t("overlay.targetDrop.banner")}</div>
+          <GearPickupCard event={card.event} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function PickupCards({ cards, kind }: { cards: readonly GearPickupCardState[]; kind: "gear" | "artifact" }) {
@@ -32,7 +47,9 @@ function GearPickupCard({ event }: { event: OverlayGearPickupEvent }) {
         </div>
         {event.refine > 0 && <span class="gear-pickup-refine">+{event.refine}</span>}
       </div>
-      {event.stats.length === 0
+      {event.count !== undefined
+        ? <p class="gear-pickup-count">{t("overlay.targetDrop.count", { count: event.count })}</p>
+        : event.stats.length === 0
         ? <p class="gear-pickup-empty">{t("overlay.gearPickup.noStats")}</p>
         : (
           <div class="gear-pickup-stats">

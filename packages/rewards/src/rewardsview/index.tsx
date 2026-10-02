@@ -141,6 +141,7 @@ function App() {
             <button class={next.view === "trends" ? "active" : undefined} type="button" onClick={() => setView("trends")}>{t("rewards.view.trends")}</button>
             <button class={next.view === "xpTracker" ? "active" : undefined} type="button" onClick={() => setView("xpTracker")}>{t("rewards.view.xpTracker")}</button>
             <button class={next.view === "itemCounter" ? "active" : undefined} type="button" onClick={() => setView("itemCounter")}>{t("rewards.view.itemCounter")}</button>
+            <button class={next.view === "targetDrops" ? "active" : undefined} type="button" onClick={() => setView("targetDrops")}>{t("rewards.view.targetDrops")}</button>
           </div>
           <StatusDot tone={STATUS_TONE[next.status]} detail={[next.statusDetail, ...next.statusDetailExtras ?? []].map((part) => t.text(part)).join(" · ")} />
           <div class="toolbar-actions">
@@ -259,8 +260,57 @@ function App() {
           </div>
           <ItemCounterSection counter={next.itemCounter} />
         </section>
+
+        <section hidden={next.view !== "targetDrops"}>
+          <div class="section-head">
+            <h1>{t("rewards.targetDrops.heading")}</h1>
+            <p>{t("rewards.targetDrops.hint")}</p>
+          </div>
+          <TargetDropsSection state={next.targetDrops} />
+        </section>
       </main>
     </>
+  );
+}
+
+/** Describes the drops the player is hunting: a name, and the stats the item must have. */
+function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }) {
+  const t = useTranslator();
+  const save = (targets: RewardsAppState["targetDrops"]["targets"]): void => {
+    void desktopView.rpc?.request.setTargetDrops({ targets });
+  };
+  const update = (slot: number, change: (target: RewardsAppState["targetDrops"]["targets"][number]) => RewardsAppState["targetDrops"]["targets"][number]): void => {
+    save(state.targets.map((target, index) => index === slot ? change(target) : target));
+  };
+  return (
+    <div class="target-drops">
+      <datalist id="target-drop-stats">{state.statChoices.map((stat) => <option key={stat} value={stat} />)}</datalist>
+      <div class="target-drop-grid">
+        {state.targets.map((target, slot) => (
+          <div class="target-drop-card" key={slot}>
+            <div class="target-drop-card-head">
+              <strong>{t("rewards.targetDrops.slot", { slot: slot + 1 })}</strong>
+              <button class="btn" type="button" disabled={!target.name && target.stats.every((row) => !row.stat)} onClick={() => update(slot, () => ({ name: "", stats: target.stats.map(() => ({ stat: "", min: 0 })) }))}>{t("rewards.targetDrops.clear")}</button>
+            </div>
+            <label class="target-drop-field">
+              <span>{t("rewards.targetDrops.name")}</span>
+              <input class="input" type="text" maxLength={60} placeholder={t("rewards.targetDrops.namePlaceholder")} value={target.name} onChange={(event) => update(slot, (current) => ({ ...current, name: event.currentTarget.value }))} />
+            </label>
+            <div class="target-drop-stats">
+              <span>{t("rewards.targetDrops.stat")}</span><span>{t("rewards.targetDrops.min")}</span>
+              {target.stats.map((row, index) => (
+                <Fragment key={index}>
+                  <input class="input" type="text" list="target-drop-stats" maxLength={60} placeholder={t("rewards.targetDrops.statPlaceholder")} value={row.stat} onChange={(event) => update(slot, (current) => ({ ...current, stats: current.stats.map((entry, at) => at === index ? { ...entry, stat: event.currentTarget.value } : entry) }))} />
+                  <input class="input" type="number" min="0" step="any" value={row.min} disabled={!row.stat} onChange={(event) => update(slot, (current) => ({ ...current, stats: current.stats.map((entry, at) => at === index ? { ...entry, min: Number.isFinite(event.currentTarget.valueAsNumber) ? event.currentTarget.valueAsNumber : 0 } : entry) }))} />
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <label class="target-drop-sound"><input type="checkbox" checked={state.sound} onChange={(event) => void desktopView.rpc?.request.setTargetDropSound({ enabled: event.currentTarget.checked })} /><span>{t("rewards.targetDrops.sound")}</span></label>
+      <p class="item-counter-empty">{t("rewards.targetDrops.help")}</p>
+    </div>
   );
 }
 

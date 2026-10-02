@@ -9,7 +9,7 @@ import { inspectRewardsReplaySummary } from "@kar-mi/spirit-vale-tools-rewards";
 
 import { createBuildExportWindow } from "@svoverlay/build-export";
 import { createRewardsWindow } from "@svoverlay/rewards";
-import { createCompanionService, createCompanionWindow, playWav } from "@svoverlay/companion";
+import { createCompanionService, createCompanionWindow, playBuiltinSound, playWav } from "@svoverlay/companion";
 import type { LauncherRpc, LauncherSettingsRpc, LauncherState, SettingsSectionId, SharedSettingsState, ToolWindow } from "../launcher/types.ts";
 import { loadLauncherSettings, saveLauncherSettings, type LauncherSettings } from "../launcher/settings.ts";
 import type { LocalizedText, MessageKey } from "@svoverlay/i18n/messages";
@@ -45,7 +45,7 @@ import type { BossTimerWindowState } from "../boss-timers/rpc.ts";
 import { CaptureCoordinator, type CaptureErrorReport } from "./capture-coordinator.ts";
 import { createBossTimerCoordinator } from "./boss-timer-coordinator.ts";
 import { createBossTimerWindow } from "./boss-timer-window.ts";
-import { describeArtifactPickup, describeGearPickup } from "./gear-pickup.ts";
+import { describeArtifactPickup, describeGearPickup, pickupStatLabels } from "./gear-pickup.ts";
 import { rateGear } from "./gear-rating.ts";
 import { loadBossFights, saveBossFights } from "./boss-fight-store.ts";
 import { createXpTrackerCoordinator } from "./xp-tracker-coordinator.ts";
@@ -57,6 +57,7 @@ import { readCombatLocations } from "@svoverlay/combat/zone-log";
 import { createOverlayWindow } from "@svoverlay/overlay";
 import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
 import { normalizeItemCounterItems } from "@svoverlay/overlay/item-counter";
+import { normalizeTargetDrops } from "@svoverlay/overlay/target-drop";
 import {
   KEYBIND_ACTIONS,
   type KeybindAction,
@@ -267,6 +268,8 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeBossFight: (listener) => capture.subscribeBossFight(listener),
   subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
   subscribeInventory: (listener) => capture.subscribeInventory(listener),
+  subscribeStackPickup: (listener) => capture.subscribeStackPickup(listener),
+  onTargetDropSound: () => { playBuiltinSound("alert", 80); },
   subscribeGearRating: (listener) => {
     listener(rateGear(capture.characterState().snapshot));
     return capture.subscribeCharacter((state) => listener(rateGear(state.snapshot)));
@@ -286,6 +289,11 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   },
   onTimerChanged: rememberTimer,
   onSettingsStateChanged: (overlayState) => {
+    const nextTargetDrops = JSON.stringify([overlayState.targetDrops, overlayState.targetDropSound]);
+    if (nextTargetDrops !== JSON.stringify([targetDropState.targets, targetDropState.sound])) {
+      targetDropState = { targets: overlayState.targetDrops, sound: overlayState.targetDropSound };
+      for (const listener of itemCounterListeners) listener();
+    }
     if (overlayState.itemCounterItems.join("\n") !== itemCounterSlots.join("\n")) {
       itemCounterSlots = overlayState.itemCounterItems;
       for (const listener of itemCounterListeners) listener();
@@ -314,6 +322,9 @@ const companionWindow = new WindowSlot((onClosed) => createCompanionWindow({
 /** The items the overlay's counter follows, as last reported by the overlay that owns the setting. */
 let itemCounterSlots: string[] = normalizeItemCounterItems(undefined);
 const itemCounterListeners = new Set<() => void>();
+/** The drops the overlay watches for, likewise as last reported by the overlay. */
+let targetDropState = { targets: normalizeTargetDrops(undefined), sound: true };
+const targetDropStatChoices = pickupStatLabels();
 const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   logDirectory,
   readModel,
@@ -326,6 +337,15 @@ const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   onClosed,
   onReset: () => capture.resetSession(),
   onOpenSettings: openSettings,
+  targetDrops: {
+    getState: () => ({ ...targetDropState, statChoices: targetDropStatChoices }),
+    setTargets: async (targets) => {
+      await overlayWindow.withWindow((overlay) => overlay.setTargetDrops(targets));
+    },
+    setSound: async (enabled) => {
+      await overlayWindow.withWindow((overlay) => overlay.setTargetDropSound(enabled));
+    },
+  },
   itemCounter: {
     getState: () => ({ slots: itemCounterSlots, ...capture.inventoryState() }),
     setItems: async (items) => {

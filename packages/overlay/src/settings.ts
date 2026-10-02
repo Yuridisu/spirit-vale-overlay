@@ -1,6 +1,7 @@
 import path from "node:path";
 import { TIMER_MODES, type TimerMode } from "./timer.ts";
 import { normalizeItemCounterItems } from "./item-counter.ts";
+import { normalizeTargetDrops, type TargetDrop } from "./target-drop.ts";
 import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
 
@@ -55,6 +56,10 @@ export interface OverlaySettings {
   timerDurationSeconds: number;
   /** The item followed in each counter slot; an empty string is a free slot. */
   itemCounterItems: string[];
+  /** The drops being watched for, one per slot; a slot with no name is unused. */
+  targetDrops: TargetDrop[];
+  /** Whether finding one also plays a sound. */
+  targetDropSound: boolean;
 }
 
 const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
@@ -104,6 +109,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   damageTaken: { enabled: false, opacity: 0.4, x: 1235, y: 340, width: 251, height: 230 },
   gearRating: { enabled: false, opacity: 0, x: 112, y: 125, width: 1049, height: 480 },
   itemCounter: { enabled: false, opacity: 0.4, x: 430, y: 650, width: 220, height: 150 },
+  targetDrop: { enabled: false, opacity: 0, x: 810, y: 170, width: 300, height: 290 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -223,6 +229,8 @@ export function normalizeOverlaySettings(
     timerMode: TIMER_MODES.includes(source.timerMode as TimerMode) ? source.timerMode as TimerMode : "countdown",
     timerDurationSeconds: normalizeTimerDuration(source.timerDurationSeconds),
     itemCounterItems: normalizeItemCounterItems(source.itemCounterItems),
+    targetDrops: normalizeTargetDrops(source.targetDrops),
+    targetDropSound: typeof source.targetDropSound === "boolean" ? source.targetDropSound : true,
   };
 }
 

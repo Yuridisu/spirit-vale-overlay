@@ -11,9 +11,11 @@ export type { BossTimer, BossTimerState } from "@svoverlay/contracts/boss-timers
 import type { OverlayTimerState, TimerMode } from "./timer.ts";
 import type { OverlayItemCounterState } from "./item-counter.ts";
 export type { ItemCounterSource, OverlayItemCounterState } from "./item-counter.ts";
+import type { TargetDrop } from "./target-drop.ts";
+export type { TargetDrop, TargetDropStat } from "./target-drop.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating"] as const;
@@ -267,6 +269,8 @@ export interface OverlayGearPickupEvent {
   slot?: string;
   refine: number;
   stats: OverlayGearPickupStat[];
+  /** How many were picked up, for a stackable item, which has no rolls to show. */
+  count?: number;
 }
 
 export interface OverlayMinimapLootDrop {
@@ -319,6 +323,9 @@ export interface OverlaySettingsState {
   itemCounterItems: string[];
   /** Items in the bag right now, offered as suggestions when choosing what to follow. */
   itemCounterChoices: string[];
+  /** The drops being watched for, one per slot; a slot with no name is unused. */
+  targetDrops: TargetDrop[];
+  targetDropSound: boolean;
 }
 
 type OverlaySharedRequests = {
@@ -391,6 +398,7 @@ export type OverlayRpc = {
     gearRatingChanged: OverlayGearRatingState;
     damageTakenChanged: OverlayDamageTakenState;
     itemCounterChanged: OverlayItemCounterState;
+    targetDropFound: OverlayGearPickupEvent;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

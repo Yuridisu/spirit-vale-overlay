@@ -10,7 +10,8 @@
     "./display-layout": "./src/display-layout.ts",
     "./rarity": "./src/rarity.ts",
     "./timer": "./src/timer.ts",
-    "./item-counter": "./src/item-counter.ts"
+    "./item-counter": "./src/item-counter.ts",
+    "./target-drop": "./src/target-drop.ts"
   },
   "dependencies": {
     "@kar-mi/spirit-vale-tools-character": "workspace:*",

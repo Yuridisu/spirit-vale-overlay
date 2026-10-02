@@ -193,6 +193,7 @@ export class CaptureCoordinator {
   private loggedLootOwnership: string | undefined;
   private readonly gearPickupListeners = new Set<(event: CaptureGearPickupEvent) => void>();
   private readonly artifactPickupListeners = new Set<(event: CaptureArtifactPickupEvent) => void>();
+  private readonly stackPickupListeners = new Set<(event: { displayName: string; count: number }) => void>();
   private readonly killListeners = new Set<(state: CaptureKillState) => void>();
   private readonly bossFightListeners = new Set<(state: BossFightState | undefined) => void>();
   private bossFight = new BossFightTracker();
@@ -671,6 +672,12 @@ export class CaptureCoordinator {
     if (this.killCounts.size === 0) return;
     this.killCounts.clear();
     this.publishKills();
+  }
+
+  /** Every picked-up item that is not equipment or an artifact, by the name the game shows. */
+  subscribeStackPickup(listener: (event: { displayName: string; count: number }) => void): () => void {
+    this.stackPickupListeners.add(listener);
+    return () => this.stackPickupListeners.delete(listener);
   }
 
   subscribeArtifactPickup(listener: (event: CaptureArtifactPickupEvent) => void): () => void {
@@ -1528,6 +1535,12 @@ export class CaptureCoordinator {
       ? [{ name: stackableName(item.category, item.itemId), count: item.count }]
       : []);
     if (this.inventoryCounter.addPickup(stacks, this.clock.now())) this.publishInventory();
+    for (const item of pickup.items) {
+      const itemType = NAMED_PICKUP_ITEM_TYPES[item.category];
+      if (itemType === undefined || item.count <= 0) continue;
+      const displayName = resolveFishNetItemDisplayName(itemType, item.itemId) ?? item.itemId;
+      for (const listener of this.stackPickupListeners) listener({ displayName, count: item.count });
+    }
     for (const equipment of pickup.equipment) {
       for (const listener of this.gearPickupListeners) listener(equipment);
     }
@@ -1851,6 +1864,9 @@ function errorMessage(error: unknown): string {
 function envFlag(value: string | undefined): boolean {
   return value !== undefined && value !== "" && value !== "0" && value.toLowerCase() !== "false";
 }
+
+/** Item-catalog types of the pickups announced by name alone; equipment and artifacts carry their rolls instead. */
+const NAMED_PICKUP_ITEM_TYPES: Partial<Record<string, number>> = { material: 0, consumable: 1, card: 4, gem: 5, cosmetic: 6 };
 
 /** Item-catalog types of the bag's stackable categories. */
 const STACKABLE_ITEM_TYPES = { material: 0, consumable: 1, card: 4 } as const;
