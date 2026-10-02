@@ -12,25 +12,19 @@
   "engines": {
     "bun": ">=1.4.0"
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "bun build ./src/index.ts ./src/capture.ts ./src/fishnet/decoding/wire-reader.ts --outdir ./dist --target bun --format esm && bunx tsc --project ./tsconfig.build.json"
-  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./wire-reader": {
-      "types": "./dist/fishnet/decoding/wire-reader.d.ts",
-      "default": "./dist/fishnet/decoding/wire-reader.js"
+      "types": "./src/fishnet/decoding/wire-reader.ts",
+      "default": "./src/fishnet/decoding/wire-reader.ts"
     },
     "./capture": {
-      "types": "./dist/capture.d.ts",
-      "default": "./dist/capture.js"
+      "types": "./src/capture.ts",
+      "default": "./src/capture.ts"
     }
-  }
+  },
+  "private": true
 }

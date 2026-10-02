@@ -9,20 +9,14 @@
     "directory": "packages/statuses"
   },
   "type": "module",
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun --format esm --external @kar-mi/spirit-vale-tools-capture && bunx tsc --project ./tsconfig.build.json"
-  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "dependencies": {
-    "@kar-mi/spirit-vale-tools-capture": "^3.0.4"
-  }
+    "@kar-mi/spirit-vale-tools-capture": "workspace:*"
+  },
+  "private": true
 }

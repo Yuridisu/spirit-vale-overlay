@@ -5,6 +5,8 @@
     "apps/*/src/**/*.tsx",
     "packages/*/**/*.ts",
     "packages/*/**/*.tsx",
-    "tooling/**/*.ts"
+    "tooling/**/*.ts",
+    "tools/packages/*/src/**/*.ts",
+    "tools/scripts/**/*.ts"
   ]
 }

@@ -9,25 +9,19 @@
     "directory": "packages/combat"
   },
   "type": "module",
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun --format esm --external '@kar-mi/spirit-vale-tools-*' && bunx tsc --project ./tsconfig.build.json"
-  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "dependencies": {
-    "@kar-mi/spirit-vale-tools-capture": "^3.0.4",
-    "@kar-mi/spirit-vale-tools-logging": "^0.10.2",
-    "@kar-mi/spirit-vale-tools-metrics": "^0.2.2",
-    "@kar-mi/spirit-vale-tools-skills": "^0.2.6",
-    "@kar-mi/spirit-vale-tools-sqlite": "^0.2.4",
-    "@kar-mi/spirit-vale-tools-statuses": "^0.3.2"
-  }
+    "@kar-mi/spirit-vale-tools-capture": "workspace:*",
+    "@kar-mi/spirit-vale-tools-logging": "workspace:*",
+    "@kar-mi/spirit-vale-tools-metrics": "workspace:*",
+    "@kar-mi/spirit-vale-tools-skills": "workspace:*",
+    "@kar-mi/spirit-vale-tools-sqlite": "workspace:*",
+    "@kar-mi/spirit-vale-tools-statuses": "workspace:*"
+  },
+  "private": true
 }

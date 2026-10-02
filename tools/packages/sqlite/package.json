@@ -12,20 +12,14 @@
   "engines": {
     "bun": ">=1.4.0"
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun --format esm --external '@kar-mi/spirit-vale-tools-*' && bunx tsc --project ./tsconfig.build.json"
-  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "dependencies": {
-    "@kar-mi/spirit-vale-tools-logging": "^0.10.2"
-  }
+    "@kar-mi/spirit-vale-tools-logging": "workspace:*"
+  },
+  "private": true
 }

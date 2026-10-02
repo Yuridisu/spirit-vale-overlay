@@ -8,6 +8,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
+    "tools/packages/*",
     "tooling/*"
   ],
   "scripts": {
@@ -22,7 +23,16 @@
     "test": "bun test --parallel",
     "typecheck": "tsc --noEmit",
     "verify:portable": "bun run tooling/release/verify-portable.ts",
-    "verify:portable:electron": "bun run tooling/release/verify-portable.ts --shell electron"
+    "verify:portable:electron": "bun run tooling/release/verify-portable.ts --shell electron",
+    "capture:dump": "bun run tools/packages/cli/src/dump.ts",
+    "capture:combat": "bun run tools/packages/cli/src/dump.ts --protocols udp --combat-only",
+    "combat:replay": "bun run tools/packages/cli/src/combat.ts",
+    "direction:debug": "bun run tools/packages/cli/src/direction-debug.ts",
+    "generate:rpc-map": "bun run tools/scripts/generate-rpc-map.ts",
+    "generate:combat-semantics": "bun run tools/scripts/generate-combat-semantics.ts",
+    "generate:static-catalogs": "bun run tools/scripts/generate-static-catalogs.ts",
+    "market": "bun run tools/packages/cli/src/market.ts",
+    "rewards": "bun run tools/packages/cli/src/rewards.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.0",
