@@ -64,6 +64,8 @@ html, body {
 .update-skip-button { padding: 7px 8px; font-size: 12px; }
 .update-button:hover, .update-skip-button:hover, .update-dismiss-button:hover { border-color: var(--primary); }
 .update-dismiss-button { width: 28px; height: 28px; font-size: 18px; line-height: 1; }
+.update-install-button { border-color: var(--primary); background: var(--primary); color: var(--on-primary); font-weight: 600; }
+.update-actions button:disabled { cursor: default; opacity: .55; }
 
 .tool-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 

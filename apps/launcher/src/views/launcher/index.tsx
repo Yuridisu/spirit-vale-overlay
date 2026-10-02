@@ -85,7 +85,7 @@ function App() {
 
         {next?.storageWarning && <div class="banner is-warn" aria-live="polite">{t.text(next.storageWarning)}</div>}
 
-        {next?.update && <UpdateNotification version={next.update.version} />}
+        {next?.update && <UpdateNotification update={next.update} />}
 
         <div class="tool-grid" aria-label={t("launcher.tools.label")}>
           {TOOLS.map(({ tool, titleKey, descriptionKey }) => (
@@ -221,15 +221,26 @@ function LogStorage({ usage }: { usage: NonNullable<LauncherState["logStorage"]>
   );
 }
 
-function UpdateNotification({ version }: { version: string }) {
+function UpdateNotification({ update }: { update: NonNullable<LauncherState["update"]> }) {
   const t = useTranslator();
+  const install = update.install;
+  const busy = install?.phase === "downloading" || install?.phase === "installing";
+  const body = install?.phase === "downloading" ? t("launcher.update.downloading", { percent: install.percent })
+    : install?.phase === "installing" ? t("launcher.update.installing")
+    : install?.phase === "failed" ? t("launcher.update.failed", { detail: install.detail })
+    : t("launcher.update.body", { version: update.version });
   return (
     <div class="update-notification" aria-live="polite">
-      <div><strong>{t("launcher.update.heading")}</strong><p>{t("launcher.update.body", { version })}</p></div>
+      <div><strong>{t("launcher.update.heading")}</strong><p>{body}</p></div>
       <div class="update-actions">
-        <button class="update-button" type="button" onClick={() => void desktopView.rpc?.request.openUpdateRelease({})}>{t("launcher.update.view")}</button>
-        <button class="update-skip-button" type="button" onClick={() => void desktopView.rpc?.request.skipUpdateVersion({})}>{t("launcher.update.skip")}</button>
-        <button class="update-dismiss-button" type="button" aria-label={t("launcher.update.dismissAria")} title={t("launcher.update.dismiss")} onClick={() => void desktopView.rpc?.request.dismissUpdateNotification({})}>×</button>
+        {update.canInstall && (
+          <button class="update-button update-install-button" type="button" disabled={busy} onClick={() => void desktopView.rpc?.request.installUpdate({})}>
+            {install?.phase === "failed" ? t("launcher.update.retry") : t("launcher.update.install")}
+          </button>
+        )}
+        <button class="update-button" type="button" disabled={busy} onClick={() => void desktopView.rpc?.request.openUpdateRelease({})}>{t("launcher.update.view")}</button>
+        <button class="update-skip-button" type="button" disabled={busy} onClick={() => void desktopView.rpc?.request.skipUpdateVersion({})}>{t("launcher.update.skip")}</button>
+        <button class="update-dismiss-button" type="button" disabled={busy} aria-label={t("launcher.update.dismissAria")} title={t("launcher.update.dismiss")} onClick={() => void desktopView.rpc?.request.dismissUpdateNotification({})}>×</button>
       </div>
     </div>
   );

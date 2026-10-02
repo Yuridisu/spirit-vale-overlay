@@ -60,8 +60,16 @@ export interface LauncherState {
   update?: {
     version: string;
     url: string;
+    /** Whether the app can install this release itself rather than send the player to the page. */
+    canInstall: boolean;
+    install?: UpdateInstallState;
   };
 }
+
+export type UpdateInstallState =
+  | { phase: "downloading"; percent: number }
+  | { phase: "installing" }
+  | { phase: "failed"; detail: string };
 
 export type SettingsSectionId =
   | "general"
@@ -97,6 +105,7 @@ export type LauncherRpc = {
       openTool: { params: { tool: ToolWindow }; response: LauncherState };
       openSettings: { params: { section?: SettingsSectionId }; response: void };
       openUpdateRelease: { params: Record<string, never>; response: void };
+      installUpdate: { params: Record<string, never>; response: void };
       skipUpdateVersion: { params: Record<string, never>; response: void };
       dismissUpdateNotification: { params: Record<string, never>; response: void };
       setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: LauncherState };

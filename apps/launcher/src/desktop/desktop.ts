@@ -73,7 +73,9 @@ import type { WindowFrame } from "@svoverlay/ui-kit/window-chrome";
 import { registerUiScaleWindow, scaledSize, setUiScale } from "@svoverlay/desktop-platform/ui-scale-window";
 import { WindowPlacementStore } from "@svoverlay/desktop-platform/window-placement";
 import { launcherMinimizeAction, trayAction } from "./launcher-tray-actions.ts";
-import { findAvailableUpdate } from "../launcher/update-check.ts";
+import { findAvailableUpdate, type ReleaseDownload } from "../launcher/update-check.ts";
+import { canSelfUpdate, cleanUpAfterUpdate, launchUpdater, stageUpdate } from "./self-update.ts";
+import { importFromPreviousVersion } from "./previous-version-import.ts";
 import { DisposableStore, onWindowEvent, onceWindowEvent } from "@svoverlay/desktop-platform/window-lifecycle";
 import { HumanReadableErrorLog } from "./human-readable-error-log.ts";
 import { verifyWritableDirectories } from "@svoverlay/desktop-platform/startup-preflight";
@@ -88,6 +90,15 @@ const storagePaths = resolveDesktopStoragePaths({
   logDirectoryOverride: process.env.SPIRIT_VALE_LOG_DIRECTORY,
 });
 const logDirectory = storagePaths.logDirectory;
+/** Set only for a portable bundle, which is the one kind of installation that owns its own folder. */
+const portableRoot = process.env.SPIRIT_VALE_PORTABLE_ROOT?.trim() || undefined;
+if (portableRoot) {
+  // Before any setting is read: a new version extracted beside the old one picks up where it left off.
+  await importFromPreviousVersion(portableRoot)
+    .then((imported) => { if (imported) console.warn(`[spiritvale-import] settings and data were carried over from ${imported.from}`); })
+    .catch((error) => console.warn("[spiritvale-import] the previous version's data could not be carried over:", error));
+  void cleanUpAfterUpdate(portableRoot);
+}
 let summaryJournalPromise: ReturnType<typeof loadSessionSummaryJournal> | undefined;
 const errorLog = new HumanReadableErrorLog(localRoot);
 const warningLog = new HumanReadableErrorLog(localRoot, "warning.log");
@@ -475,6 +486,7 @@ const rpc = BrowserView.defineRPC<LauncherRpc>({
       },
       openSettings: ({ section }) => { openSettings(section); },
       openUpdateRelease: () => { if (launcherState.update) Utils.openExternal(launcherState.update.url); },
+      installUpdate: () => { void installUpdate(); },
       skipUpdateVersion: async () => {
         if (!launcherState.update) return;
         settings.skippedUpdateVersion = launcherState.update.version;
@@ -672,11 +684,55 @@ async function measureLogUsage(): Promise<void> {
   publish();
 }
 
+let updateDownload: ReleaseDownload | undefined;
+let updateInstalling = false;
+
+/**
+ * Downloads the release, checks it, and hands over to the script that swaps the files once the app
+ * has exited. Until that hand-over nothing of the installation is touched, so a failure just leaves
+ * the notice saying what went wrong.
+ */
+async function installUpdate(): Promise<void> {
+  const update = launcherState.update;
+  if (updateInstalling || !update?.canInstall || !updateDownload || !canSelfUpdate(portableRoot)) return;
+  updateInstalling = true;
+  const report = (install: NonNullable<LauncherState["update"]>["install"]): void => {
+    if (!launcherState.update) return;
+    launcherState = { ...launcherState, update: { ...launcherState.update, install } };
+    publish();
+  };
+  try {
+    let lastPercent = -1;
+    report({ phase: "downloading", percent: 0 });
+    const staged = await stageUpdate({
+      root: portableRoot,
+      download: updateDownload,
+      onProgress: (received, total) => {
+        const percent = Math.floor(received / total * 100);
+        if (percent === lastPercent) return;
+        lastPercent = percent;
+        report({ phase: "downloading", percent });
+      },
+    });
+    report({ phase: "installing" });
+    await launchUpdater(portableRoot, staged);
+    await shutdown(`updating to ${update.version}`);
+  } catch (error) {
+    updateInstalling = false;
+    console.warn("[spiritvale-update] the update could not be installed:", error);
+    report({ phase: "failed", detail: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 async function checkForUpdate(): Promise<void> {
   try {
     const update = await findAvailableUpdate(appVersion);
     if (!update || update.version === settings.skippedUpdateVersion) return;
-    launcherState = { ...launcherState, update };
+    updateDownload = update.download;
+    launcherState = {
+      ...launcherState,
+      update: { version: update.version, url: update.url, canInstall: update.download !== undefined && canSelfUpdate(portableRoot) },
+    };
     publish();
     Utils.showNotification({
       title: "Spirit Vale Overlay update available",

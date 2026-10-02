@@ -39,6 +39,15 @@ section as the GitHub Release notes, so write it for the people who use the app.
   attack that landed the killing blow, its damage and the time. It stays until your next death,
   through the trip back to town.
 
+- **Update from inside the app.** When a new version is out, the notice on the main window has an
+  Update now button. It downloads the release, checks it against the checksum GitHub publishes,
+  swaps the files and reopens the app. Your settings and data are left where they are. Updating
+  this way starts with the version after this one; the Electron build still links to the download
+  page.
+- **A new version extracted beside the old one keeps your settings.** If you update by hand and
+  extract the new folder next to the previous one, it carries over your settings, overlay layout,
+  timers and Companion data the first time it starts.
+
 ### Changed
 
 - **Closing the launcher can keep the app running.** With "Minimize and close the launcher to the
