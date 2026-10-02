@@ -18,7 +18,7 @@ This guide covers the portable Windows x64 release of Spirit Vale Overlay. Work 
    - [Microsoft Visual C++ Redistributable for x64](https://aka.ms/vc14/vc_redist.x64.exe). Choose **Repair** if it is already installed.
       - [All versions of Microsoft Visual C++ Redistributable for x64](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version)
 3. Restart Windows after installing or repairing Npcap or the runtimes.
-4. Download the latest ZIP from [GitHub Releases](https://github.com/kar-mi/spirit-vale-overlay/releases/latest).
+4. Download the latest ZIP from [GitHub Releases](https://github.com/Yuridisu/spirit-vale-overlay/releases/latest).
 5. If you are unable to extract the zip, right-click it, choose **Properties**, select **Unblock** if that option is present, and then extract it. You can scan the zip with antivirus/view as needed.
 6. Extract the entire ZIP to a normal writable local folder, such as `C:\Users\<you>\Games\SpiritValeOverlay`. Do not run the executable from inside the ZIP. Avoid protected folders such as `C:\Program Files`, network drives, and cloud-synced folders while troubleshooting.
 7. Run `spirit-vale-overlay-win_x64.exe` from the extracted folder.
@@ -198,8 +198,8 @@ Review logs before sharing them. Diagnostic logs may contain endpoint addresses 
 
 ### Where to ask
 
-- For help working through a problem, or if you are not sure what the logs are telling you, ask in the [Spirit Vale Overlay Discord](https://discord.gg/XtZbkspzpZ).
-- For a reproducible bug, open a [GitHub issue](https://github.com/kar-mi/spirit-vale-overlay/issues) with the details above.
+- For help working through a problem, or if you are not sure what the logs are telling you, open a GitHub issue and describe what you see. Do not attach diagnostic logs: they contain your game login ticket.
+- For a reproducible bug, open a [GitHub issue](https://github.com/Yuridisu/spirit-vale-overlay/issues) with the details above.
 
 ## Developer-only checks
 

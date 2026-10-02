@@ -5,15 +5,14 @@ description: >-
   live combat, character, reward, and in-game overlay information without
   sending, modifying, dropping, or injecting game traffic.
 
-url: https://kar-mi.github.io
+url: https://yuridisu.github.io
 baseurl: /spirit-vale-overlay
 
-repository: kar-mi/spirit-vale-overlay
-github_repo_url: https://github.com/kar-mi/spirit-vale-overlay
-releases_latest_url: https://github.com/kar-mi/spirit-vale-overlay/releases/latest
-releases_api_url: https://api.github.com/repos/kar-mi/spirit-vale-overlay/releases/latest
-issues_url: https://github.com/kar-mi/spirit-vale-overlay/issues
-discord_url: https://discord.gg/XtZbkspzpZ
+repository: Yuridisu/spirit-vale-overlay
+github_repo_url: https://github.com/Yuridisu/spirit-vale-overlay
+releases_latest_url: https://github.com/Yuridisu/spirit-vale-overlay/releases/latest
+releases_api_url: https://api.github.com/repos/Yuridisu/spirit-vale-overlay/releases/latest
+issues_url: https://github.com/Yuridisu/spirit-vale-overlay/issues
 
 lang: en
 

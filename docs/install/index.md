@@ -32,7 +32,7 @@ Administrators only** unchecked.
 
 ## Portable release
 
-1. Download the latest `spirit-vale-overlay-windows-x64-v*.zip` from [GitHub Releases](https://github.com/kar-mi/spirit-vale-overlay/releases/latest).
+1. Download the latest `spirit-vale-overlay-windows-x64-v*.zip` from [GitHub Releases](https://github.com/Yuridisu/spirit-vale-overlay/releases/latest).
 2. Extract the complete ZIP. It contains one versioned folder, such as `spirit-vale-overlay-windows-x64-v0.10.9`.
 3. Open that folder and run `spirit-vale-overlay-win_x64.exe`.
 
@@ -52,4 +52,4 @@ Deleting the marker does not move existing portable data. To keep your current s
 
 If the app does not start, shows a blank window, or cannot capture game traffic, see the [Windows troubleshooting guide](../TROUBLESHOOTING.md). Using a VPN or network optimizer such as ExitLag needs [extra configuration](../vpn/VPN_ISSUES.md).
 
-You can also ask for help in the [Spirit Vale Overlay Discord](https://discord.gg/XtZbkspzpZ).
+You can also ask for help in a [GitHub issue](https://github.com/Yuridisu/spirit-vale-overlay/issues).

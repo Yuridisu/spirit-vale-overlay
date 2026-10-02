@@ -1,10 +1,10 @@
 # Spirit Vale Tools
 
-> [!WARNING]
-> **Deprecated:** This repository and all published
-> `@kar-mi/spirit-vale-tools-*` packages are no longer maintained. Existing
-> releases remain available as-is, but no further updates or support are
-> planned. Do not use them for new projects.
+> [!NOTE]
+> These packages come from [kar-mi/spirit-vale-tools](https://github.com/kar-mi/spirit-vale-tools),
+> which is no longer maintained. They are kept here as source workspaces of Spirit Vale Overlay
+> and are not published to a registry; the published `@kar-mi/spirit-vale-tools-*` releases stay
+> frozen at their last upstream version.
 
 Spirit Vale Tools provides reusable Bun packages and command-line utilities for
 passive packet capture, protocol decoding, catalogs, combat, character,

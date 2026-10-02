@@ -12,7 +12,7 @@ interface GitHubRelease {
   prerelease?: unknown;
 }
 
-export const RELEASES_LATEST_URL = "https://api.github.com/repos/kar-mi/spirit-vale-overlay/releases/latest";
+export const RELEASES_LATEST_URL = "https://api.github.com/repos/Yuridisu/spirit-vale-overlay/releases/latest";
 
 export async function findAvailableUpdate(
   currentVersion: string,

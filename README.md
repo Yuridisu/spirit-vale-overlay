@@ -1,19 +1,21 @@
 # Spirit Vale Overlay
 
-> [!WARNING]
-> **Deprecated:** Spirit Vale Overlay is no longer actively maintained. No further updates, fixes,
-> releases, or support are planned. The existing code, releases, and documentation remain available
-> as-is for reference.
+> [!NOTE]
+> **Community continuation.** Spirit Vale Overlay was created by
+> [kar-mi](https://github.com/kar-mi/spirit-vale-overlay), who stopped maintaining it in September
+> 2026 and invited others to take it over. This fork carries it on: it follows game updates and
+> adds fixes and features. It is not affiliated with the original author or with the game.
 
 Spirit Vale Overlay is a passive Windows companion app for live combat, character, reward, and in-game overlay information. It uses your existing Npcap installation in non-promiscuous mode and never sends, modifies, drops, or injects game traffic. Disclaimer for packet capture dps tools, packet capture is based on proxmity, so dps for other players will go down when out of range.
 
-**[Installation guide →](https://kar-mi.github.io/spirit-vale-overlay/install/)** · [Troubleshooting](https://kar-mi.github.io/spirit-vale-overlay/troubleshooting/) · [Discord support](https://discord.gg/XtZbkspzpZ)
+**[Installation guide →](https://yuridisu.github.io/spirit-vale-overlay/install/)** · [Troubleshooting](https://yuridisu.github.io/spirit-vale-overlay/troubleshooting/) · [Report an issue](https://github.com/Yuridisu/spirit-vale-overlay/issues)
 
 The same guides live in this repository: [docs/install/index.md](docs/install/index.md) and
 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-> Looking for the pacakges to use for development? See
-> [spirit-vale-tools](https://github.com/kar-mi/spirit-vale-tools).
+> The capture, decoding, and catalog packages that used to live in
+> [spirit-vale-tools](https://github.com/kar-mi/spirit-vale-tools) are now part of this repository,
+> under [tools/](tools/).
 
 > **Default overlay hotkeys:** `Ctrl+Shift+1` locks or unlocks the overlay, `Ctrl+Shift+2` resets the
 > session, `Ctrl+Shift+3` opens the live death log, `Ctrl+Shift+4` shows or hides the overlay,
@@ -35,7 +37,7 @@ The in-game overlay shows live party DPS along with HP/MP during combat.
 
 ![In-game DPS overlay](docs/img/overlay/dps_overlay.png)
 
-The **[Guide](https://kar-mi.github.io/spirit-vale-overlay/guide/)** walks
+The **[Guide](https://yuridisu.github.io/spirit-vale-overlay/guide/)** walks
 through each tool with screenshots — the overlay and its tiles, combat logs and
 the death log, boss timers, character data, rewards, build export, and every
 settings tab.
@@ -53,7 +55,7 @@ Administrators only** unchecked.
 
 ### Portable release
 
-1. Download the latest `spirit-vale-overlay-windows-x64-v*.zip` from [GitHub Releases](https://github.com/kar-mi/spirit-vale-overlay/releases/latest).
+1. Download the latest `spirit-vale-overlay-windows-x64-v*.zip` from [GitHub Releases](https://github.com/Yuridisu/spirit-vale-overlay/releases/latest).
 2. Extract the complete ZIP. It contains one versioned folder, such as `spirit-vale-overlay-windows-x64-v0.10.9`.
 3. Open that folder and run `spirit-vale-overlay-win_x64.exe`.
 
@@ -71,21 +73,12 @@ If the app does not start, shows a blank window, or cannot capture game traffic,
 
 ### Run from source
 
-This path is only for developers building the application. It requires Bun 1.4.0 or newer and access to the `@kar-mi/spirit-vale-tools-*` GitHub Packages.
-
-Create a local `.npmrc` file
-
-```ini
-@kar-mi:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-```
-
-Authenticate your existing GitHub CLI session with `read:packages`, then install and run the application:
+This path is only for developers building the application. It requires Bun 1.4.0 or newer; every
+package is in this repository, so no registry token is needed.
 
 ```powershell
-gh auth login --hostname github.com --web --scopes read:packages
-$env:NODE_AUTH_TOKEN = gh auth token
 bun install
+bun run --filter @svoverlay/desktop update
 bun run dev
 ```
 
@@ -117,8 +110,21 @@ before sharing and disable the environment variable after reproducing the issue.
 
 ## Support
 
-Ask for help in the [Spirit Vale Overlay Discord](https://discord.gg/XtZbkspzpZ), or open a
-[GitHub issue](https://github.com/kar-mi/spirit-vale-overlay/issues) for a reproducible bug.
+Open a [GitHub issue](https://github.com/Yuridisu/spirit-vale-overlay/issues) for a question or a
+reproducible bug.
+
+## After a game update
+
+A game update can renumber the network messages the overlay decodes. With the game installed and
+closed, refresh the bundled map from its files and run the tests:
+
+```powershell
+bun run tools/scripts/refresh-rpc-map.ts "C:\Program Files (x86)\Steam\steamapps\common\SpiritVale"
+bun run check
+```
+
+The script renumbers messages by name. It does not refresh SyncType indexes, prefab layouts, or
+struct layouts, so check a live capture after an update that changes those.
 
 ## VPN Issues
 

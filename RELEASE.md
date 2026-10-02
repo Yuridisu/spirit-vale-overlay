@@ -1,13 +1,11 @@
 # GitHub and release setup
 
-## Initial GitHub setup
+## Repository setup
 
-1. Create the `kar-mi/spirit-vale-overlay` repository on GitHub without adding starter files.
-2. For every required `@kar-mi/spirit-vale-tools-*` package, grant `kar-mi/spirit-vale-overlay` **Read** access under the package's **Manage Actions access** settings. This permits CI to install the packages using its `GITHUB_TOKEN`.
-3. Developers create the ignored `.npmrc` shown in the README, authenticate GitHub CLI with `read:packages`, set `NODE_AUTH_TOKEN` from `gh auth token`, and run `bun install`. Commit the generated `bun.lock`; CI intentionally uses `--frozen-lockfile`.
-4. From this directory, initialize Git, commit the migrated application and lockfile, add the GitHub remote, and push the `main` branch.
-5. Enable GitHub Actions. The CI workflow checks pull requests and `main`; the release workflow supports dry runs and tagged releases.
-6. Under the repository's **Settings > General > Releases**, enable **Immutable releases**. This protects releases created after the setting is enabled; it does not change existing releases.
+1. Enable GitHub Actions on the repository. The CI workflow checks pull requests and `main`; the release workflow supports dry runs and tagged releases.
+2. Every package is a workspace of this repository, so CI needs no registry token. Commit `bun.lock`; CI intentionally uses `--frozen-lockfile`.
+3. Under the repository's **Settings > General > Releases**, enable **Immutable releases**. This protects releases created after the setting is enabled; it does not change existing releases.
+4. To publish the documentation site, set **Settings > Pages > Source** to **GitHub Actions**.
 
 ## Windows releases
 

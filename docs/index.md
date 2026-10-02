@@ -13,10 +13,11 @@ description: >-
   Windows, in a portable overlay that never touches your game traffic.
 ---
 
-> [!WARNING]
-> **Deprecated:** Spirit Vale Overlay is no longer actively maintained. No further updates, fixes,
-> releases, or support are planned. The existing code, releases, and documentation remain available
-> as-is for reference.
+> [!NOTE]
+> **Community continuation.** Spirit Vale Overlay was created by
+> [kar-mi](https://github.com/kar-mi/spirit-vale-overlay), who stopped maintaining it in September
+> 2026 and invited others to take it over. This fork carries it on: it follows game updates and
+> adds fixes and features. It is not affiliated with the original author or with the game.
 
 ## Launcher and settings
 
@@ -59,5 +60,4 @@ release bundles its own runtime.
 Stuck or seeing something unexpected?
 
 - Work through the [Windows troubleshooting guide](TROUBLESHOOTING.md) first — it covers startup failures, blank windows, capture problems, and [VPN or network optimizer conflicts](vpn/VPN_ISSUES.md).
-- Ask in the [Spirit Vale Overlay Discord](https://discord.gg/XtZbkspzpZ) if you are still stuck or want a hand reading your logs.
-- File a reproducible bug at [GitHub Issues](https://github.com/kar-mi/spirit-vale-overlay/issues).
+- File a reproducible bug at [GitHub Issues](https://github.com/Yuridisu/spirit-vale-overlay/issues).
