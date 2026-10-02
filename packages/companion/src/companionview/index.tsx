@@ -18,7 +18,27 @@ function App() {
   const t = useTranslator();
   const [origin, setOrigin] = useState<string>();
   useEffect(() => {
-    void desktopView.rpc?.request.getState({}).then((state) => setOrigin(state.origin));
+    // Nothing is pushed to this view later, so a request lost while the window was still connecting
+    // has to be asked again rather than waited on.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ask = (): void => {
+      if (stopped) return;
+      void desktopView.rpc?.request.getState({}).then(
+        (state) => {
+          if (stopped) return;
+          stopped = true;
+          setOrigin(state.origin);
+        },
+        () => { /* Asked again below. */ },
+      );
+      timer = setTimeout(ask, 1_000);
+    };
+    ask();
+    return () => {
+      stopped = true;
+      if (timer !== undefined) clearTimeout(timer);
+    };
   }, []);
 
   return <div class="app-shell">
