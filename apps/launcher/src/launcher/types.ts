@@ -1,5 +1,5 @@
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
-import type { TimerMode } from "@svoverlay/overlay/timer";
+import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { WindowFrame } from "@svoverlay/ui-kit/window-chrome";
 import type { UiScale } from "@svoverlay/desktop-platform/ui-scale";
@@ -55,6 +55,8 @@ export interface LauncherState {
   resetGoldOnMapChange: boolean;
   pastLogLimit: number;
   overlayShortcuts?: Record<KeybindAction, string>;
+  /** The overlay's personal timer, so the launcher can configure and drive it. */
+  timer?: OverlayTimerState;
   update?: {
     version: string;
     url: string;
@@ -97,6 +99,9 @@ export type LauncherRpc = {
       openUpdateRelease: { params: Record<string, never>; response: void };
       skipUpdateVersion: { params: Record<string, never>; response: void };
       dismissUpdateNotification: { params: Record<string, never>; response: void };
+      setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: LauncherState };
+      toggleTimer: { params: Record<string, never>; response: LauncherState };
+      resetTimer: { params: Record<string, never>; response: LauncherState };
     };
   }>;
   webview: RPCSchema<{ messages: { stateChanged: LauncherState } }>;

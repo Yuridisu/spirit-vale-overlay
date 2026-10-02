@@ -78,6 +78,58 @@ html, body {
   text-align: left;
 }
 
+.timer-panel {
+  display: grid;
+  grid-column: span 4;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px 16px;
+  min-height: 86px;
+  padding: 12px 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-md);
+  background: var(--surface-container);
+}
+.timer-panel-heading { display: grid; gap: 4px; }
+.timer-panel-heading strong { color: var(--on-surface); font-size: 15px; }
+.timer-panel-status { color: var(--on-surface-variant); font-size: 12px; }
+.timer-panel-status.is-finished { color: var(--error, #ff8a8a); font-weight: 700; }
+.timer-panel-config { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.timer-mode-switch { display: inline-flex; border: 1px solid var(--outline-variant); border-radius: 999px; overflow: hidden; }
+.timer-mode-switch button {
+  padding: 5px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--on-surface-variant);
+  font-size: 12px;
+}
+.timer-mode-switch button[aria-pressed="true"] { background: var(--primary-container); color: var(--on-surface); font-weight: 700; }
+.timer-duration { display: inline-flex; align-items: center; gap: 4px; color: var(--on-surface-variant); font-size: 12px; }
+.timer-duration input {
+  width: 58px;
+  padding: 5px 6px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface);
+  color: var(--on-surface);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.timer-panel-actions { display: flex; gap: 8px; }
+.timer-panel-actions button {
+  min-width: 72px;
+  padding: 7px 12px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 13px;
+}
+.timer-panel-actions button.is-primary { border-color: var(--primary); background: var(--primary-container); font-weight: 700; }
+.timer-panel-actions button:hover { border-color: var(--primary); }
+.timer-panel-hint { color: var(--on-surface-variant); font-size: 11px; }
+
 .tool-button:hover {
   border-color: var(--primary);
   background: var(--primary-container);

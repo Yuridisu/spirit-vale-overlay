@@ -52,7 +52,7 @@ import { createCharacterWindow } from "./character-window.ts";
 import { createDeathLogWindow, createDpsWindow } from "@svoverlay/combat";
 import { readCombatLocations } from "@svoverlay/combat/zone-log";
 import { createOverlayWindow } from "@svoverlay/overlay";
-import type { TimerMode } from "@svoverlay/overlay/timer";
+import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
 import {
   KEYBIND_ACTIONS,
   type KeybindAction,
@@ -269,8 +269,12 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
     liveCombatLogPath = nextPath;
     if (nextPath) void liveDeathLogWindow.refresh(nextPath);
   },
+  onTimerChanged: rememberTimer,
   onSettingsStateChanged: (overlayState) => {
     rememberOverlayShortcuts(overlayState.shortcuts);
+    // Also the first word the launcher gets of the timer, before anything has changed it.
+    const timer = overlayWindow.current?.getTimerState();
+    if (timer) rememberTimer(timer);
     void publishSettings(overlayState);
   },
   onClosed,
@@ -398,6 +402,18 @@ const rpc = BrowserView.defineRPC<LauncherRpc>({
         await launcherSettingsPersistence.flush(settings);
         launcherState = { ...launcherState, update: undefined };
         publish();
+      },
+      setTimerConfig: async ({ mode, durationSeconds }) => {
+        await overlayWindow.withWindow((overlay) => overlay.setTimerConfig(mode, durationSeconds));
+        return launcherState;
+      },
+      toggleTimer: async () => {
+        await overlayWindow.withWindow((overlay) => overlay.toggleTimer());
+        return launcherState;
+      },
+      resetTimer: async () => {
+        await overlayWindow.withWindow((overlay) => overlay.resetTimer());
+        return launcherState;
       },
       dismissUpdateNotification: () => {
         if (!launcherState.update) return;
@@ -858,6 +874,12 @@ function setResetGoldOnMapChange(resetGoldOnMapChange: boolean): LauncherState {
 
 function setPastLogLimit(pastLogLimit: number): LauncherState {
   return applySetting("pastLogLimit", normalizeHistorySessionLimit(pastLogLimit));
+}
+
+function rememberTimer(timer: OverlayTimerState): void {
+  if (JSON.stringify(launcherState.timer) === JSON.stringify(timer)) return;
+  launcherState = { ...launcherState, timer: { ...timer } };
+  publish();
 }
 
 function rememberOverlayShortcuts(shortcuts: Record<KeybindAction, string>): void {

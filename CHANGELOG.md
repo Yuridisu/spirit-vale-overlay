@@ -13,10 +13,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
   Artifact pickups under Settings > Overlay > Visible elements. A card stays for 15 seconds;
   several items picked up together take turns, one card at a time.
 
-- **Timer element.** A personal countdown or stopwatch over the game. Pick the mode and the
-  countdown length under Settings > Overlay > Timer. `Ctrl+Shift+9` starts and pauses it and
-  `Ctrl+Shift+0` resets it; both can be rebound. A countdown flashes when it reaches zero until
-  you press start or reset.
+- **Timer element.** A personal countdown or stopwatch over the game. Set the mode and the
+  countdown length from the Timer panel on the main window, which also has Start/Pause and Reset
+  buttons. In game, `Ctrl+Shift+9` starts and pauses it and `Ctrl+Shift+0` resets it; both can be
+  rebound. A countdown flashes when it reaches zero until you press start or reset.
 
 ### Changed
 

@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import { render } from "preact";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { DesktopView, watchBackendReconnecting } from "@svoverlay/desktop-runtime/view";
 import { initWindowChrome, type WindowChrome } from "@svoverlay/ui-kit/window-chrome";
 import { ensureInitialWindowSize } from "@svoverlay/ui-kit/ensure-window-size";
@@ -9,6 +9,7 @@ import { repairRendererPayload } from "@svoverlay/ui-kit/renderer-text";
 import { formatBytes, formatMeasuredAt } from "@svoverlay/ui-kit/format";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { MessageKey } from "@svoverlay/i18n/messages";
+import { TIMER_MODES, formatTimer, timerDisplayMs, timerFinished, type TimerMode } from "@svoverlay/overlay/timer";
 import type { LauncherRpc, LauncherState, ToolWindow } from "../../launcher/types.ts";
 
 const DEFAULT_WIDTH = 960;
@@ -105,12 +106,96 @@ function App() {
             <strong>{t("launcher.manageSettings.title")}</strong>
             <span>{t("launcher.manageSettings.description")}</span>
           </button>
+          <TimerPanel timer={next?.timer} shortcuts={next?.overlayShortcuts} />
         </div>
       </section>
 
       {next?.overlayShortcuts && <OverlayHints shortcuts={next.overlayShortcuts} />}
       {next?.logStorage && <LogStorage usage={next.logStorage} />}
     </main>
+  );
+}
+
+const applyState = (request: Promise<LauncherState> | undefined): void => {
+  void request?.then((result) => { state.value = repairRendererPayload(result); });
+};
+
+function clampWhole(value: number, maximum: number): number {
+  return Number.isFinite(value) ? Math.min(maximum, Math.max(0, Math.round(value))) : 0;
+}
+
+/** Sets up and drives the overlay's timer from a window that, unlike the overlay, takes clicks. */
+function TimerPanel({ timer, shortcuts }: { timer: LauncherState["timer"]; shortcuts: LauncherState["overlayShortcuts"] }) {
+  const t = useTranslator();
+  // The countdown only shows whole seconds elapsed here, so a slow tick is enough to notice it ending.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!timer?.running) return undefined;
+    const ticker = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(ticker);
+  }, [timer?.running, timer?.startedAtMs]);
+
+  if (!timer) {
+    return (
+      <div class="timer-panel">
+        <div class="timer-panel-heading"><strong>{t("launcher.timer.title")}</strong><span class="timer-panel-status">{t("launcher.timer.unavailable")}</span></div>
+      </div>
+    );
+  }
+  const durationSeconds = Math.round(timer.durationMs / 1_000);
+  const finished = timerFinished(timer, Math.max(now, Date.now()));
+  const status = finished
+    ? t("launcher.timer.finished")
+    : timer.running
+      ? t("launcher.timer.running")
+      : timer.elapsedMs > 0 ? t("launcher.timer.paused") : t("launcher.timer.ready");
+  const setConfig = (mode: TimerMode, seconds: number): void => {
+    applyState(desktopView.rpc?.request.setTimerConfig({ mode, durationSeconds: Math.max(1, seconds) }));
+  };
+
+  return (
+    <div class="timer-panel">
+      <div class="timer-panel-heading">
+        <strong>{t("launcher.timer.title")}</strong>
+        <span class={`timer-panel-status${finished ? " is-finished" : ""}`} aria-live="polite">
+          {status} · {formatTimer(timerDisplayMs(timer, Math.max(now, Date.now())))}
+        </span>
+        {shortcuts && (
+          <span class="timer-panel-hint">
+            {t("launcher.timer.hint", { toggle: shortcuts.toggleTimer, reset: shortcuts.resetTimer })}
+          </span>
+        )}
+      </div>
+      <div class="timer-panel-config">
+        <div class="timer-mode-switch" role="group" aria-label={t("launcher.timer.mode")}>
+          {TIMER_MODES.map((mode) => (
+            <button key={mode} type="button" aria-pressed={timer.mode === mode} onClick={() => setConfig(mode, durationSeconds)}>
+              {t(`overlay.timer.mode.${mode}`)}
+            </button>
+          ))}
+        </div>
+        {timer.mode === "countdown" && (
+          <>
+            <label class="timer-duration">
+              <input type="number" min="0" max="1439" value={Math.floor(durationSeconds / 60)}
+                onChange={(event) => setConfig(timer.mode, clampWhole(event.currentTarget.valueAsNumber, 1439) * 60 + durationSeconds % 60)} />
+              {t("launcher.timer.minutes")}
+            </label>
+            <label class="timer-duration">
+              <input type="number" min="0" max="59" value={durationSeconds % 60}
+                onChange={(event) => setConfig(timer.mode, Math.floor(durationSeconds / 60) * 60 + clampWhole(event.currentTarget.valueAsNumber, 59))} />
+              {t("launcher.timer.seconds")}
+            </label>
+          </>
+        )}
+      </div>
+      <div class="timer-panel-actions">
+        <button class="is-primary" type="button" onClick={() => applyState(desktopView.rpc?.request.toggleTimer({}))}>
+          {timer.running && !finished ? t("launcher.timer.pause") : t("launcher.timer.start")}
+        </button>
+        <button type="button" onClick={() => applyState(desktopView.rpc?.request.resetTimer({}))}>{t("launcher.timer.reset")}</button>
+      </div>
+    </div>
   );
 }
 

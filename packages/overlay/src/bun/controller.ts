@@ -130,6 +130,7 @@ export interface OverlayControllerOptions {
   onOpenLiveDeathLog?: () => Promise<void> | void;
   onLiveLogPathChanged?: (path: string | undefined) => void;
   onSettingsStateChanged?: (state: OverlaySettingsState) => void;
+  onTimerChanged?: (timer: OverlayTimerState) => void;
   onSurfacesChanged?: () => void | Promise<void>;
   isAppProcess?: (processId: number) => boolean;
 }
@@ -312,6 +313,9 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setMinimapLootChanceFilter,
     setMinimapRange,
     setTimerConfig,
+    toggleTimer: toggleTimerNow,
+    resetTimer: resetTimerNow,
+    timerState: (): OverlayTimerState => timer,
     resetXpTracker: () => {
       options.xp.reset();
       publishCharacter();
@@ -487,6 +491,17 @@ export async function createOverlayController(options: OverlayControllerOptions)
     timer = next;
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendTimer(timer));
+    options.onTimerChanged?.(timer);
+  }
+
+  function toggleTimerNow(): OverlayTimerState {
+    setTimer(toggleTimer(timer, Date.now()));
+    return timer;
+  }
+
+  function resetTimerNow(): OverlayTimerState {
+    setTimer(idleTimer(timer.mode, timer.durationMs));
+    return timer;
   }
 
   function overlayCharacterState(): OverlayCharacterState {
@@ -838,9 +853,9 @@ export async function createOverlayController(options: OverlayControllerOptions)
     } else if (action === "cycleBossRegion") {
       cycleBossRegion();
     } else if (action === "toggleTimer") {
-      setTimer(toggleTimer(timer, Date.now()));
+      toggleTimerNow();
     } else if (action === "resetTimer") {
-      setTimer(idleTimer(timer.mode, timer.durationMs));
+      resetTimerNow();
     }
   }
 
