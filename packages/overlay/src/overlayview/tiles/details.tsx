@@ -1,7 +1,9 @@
+import { useState } from "preact/hooks";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatInteger } from "@svoverlay/ui-kit/format";
 import { damageTakenState, itemCounter, killState, meterState, summonsState } from "../store.ts";
 import { WaitingForDps } from "./common.tsx";
+import { StatusCell } from "./status.tsx";
 
 const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
 const KILL_ROW_COLOR = "rgba(190, 74, 69, 0.46)";
@@ -93,12 +95,12 @@ function healthShare(row: { health?: number; maxHealth?: number }): number | und
 
 /** Green when healthy, through amber, to red when nearly gone. */
 function healthColor(share: number): string {
-  if (share > 0.6) return "rgba(70, 170, 95, 0.6)";
-  if (share > 0.3) return "rgba(213, 160, 42, 0.6)";
-  return "rgba(210, 70, 60, 0.65)";
+  if (share > 0.6) return "rgb(76, 186, 104)";
+  if (share > 0.3) return "rgb(222, 168, 46)";
+  return "rgb(222, 74, 62)";
 }
 
-/** The local player's summons and their health, with the weakest called out at the top. */
+/** The local player's summons with their health and statuses, with the weakest called out at the top. */
 export function SummonsElement() {
   const t = useTranslator();
   const rows = summonsState.value?.rows ?? [];
@@ -116,25 +118,52 @@ export function SummonsElement() {
           </span>
         )}
       </div>
-      {rows.length ? <div class="ranking summon-list">{rows.map((row) => {
+      {rows.length ? <div class="summon-list">{rows.map((row) => {
         const share = healthShare(row);
+        const statuses = [...(row.statuses ?? [])].sort((left, right) => Number(left.isDebuff) - Number(right.isDebuff));
         return (
-          <div
-            class="ranking-row detail-row"
-            key={row.id}
-            style={`--row-fill:${(share ?? 1) * 100}%;--row-color:${healthColor(share ?? 1)}`}
-          >
-            <span class="ranking-name">{row.name}</span>
-            <span class="detail-values">
-              {row.health !== undefined && row.maxHealth !== undefined && (
-                <span class="summon-health">{formatCompact(row.health)} / {formatCompact(row.maxHealth)}</span>
+          <div class="summon-row" key={row.id}>
+            <SummonIcon iconId={row.iconId} name={row.name} />
+            <div class="summon-body">
+              <div class="summon-line">
+                <span class="ranking-name">{row.name}</span>
+                <span class="detail-values">
+                  {row.health !== undefined && row.maxHealth !== undefined && (
+                    <span class="summon-health">{formatCompact(row.health)} / {formatCompact(row.maxHealth)}</span>
+                  )}
+                  <strong>{share === undefined ? "?" : `${Math.round(share * 100)}%`}</strong>
+                </span>
+              </div>
+              <div class="summon-bar" aria-hidden="true">
+                <span style={`width:${(share ?? 1) * 100}%;background:${healthColor(share ?? 1)}`} />
+              </div>
+              {statuses.length > 0 && (
+                <div class="summon-statuses">
+                  {statuses.map((status) => (
+                    <StatusCell key={status.statusId} status={status} asOfMs={summonsState.value?.asOfMs} />
+                  ))}
+                </div>
               )}
-              <strong>{share === undefined ? "?" : `${Math.round(share * 100)}%`}</strong>
-            </span>
+            </div>
           </div>
         );
       })}</div> : <span class="detail-empty">{t("overlay.summons.empty")}</span>}
     </div>
+  );
+}
+
+/** The raising skill's icon, or the summon's initial where there is none. */
+function SummonIcon({ iconId, name }: { iconId?: string; name: string }) {
+  const [missing, setMissing] = useState(false);
+  if (!iconId || missing) return <span class="summon-icon summon-icon-blank" aria-hidden="true">{name.charAt(0)}</span>;
+  return (
+    <img
+      class="summon-icon"
+      src={`views://assets/status-icons/${iconId}.webp`}
+      alt=""
+      aria-hidden="true"
+      onError={() => setMissing(true)}
+    />
   );
 }
 

@@ -197,7 +197,17 @@ export interface OverlayDamageTakenState {
 
 /** The local player's summons, in the order they were raised. */
 export interface OverlaySummonsState {
-  rows: Array<{ id: string; name: string; health?: number; maxHealth?: number }>;
+  rows: Array<{
+    id: string;
+    name: string;
+    /** The raising skill's sprite, which names its icon. */
+    iconId?: string;
+    health?: number;
+    maxHealth?: number;
+    statuses?: FishNetActiveStatus[];
+  }>;
+  /** When the statuses' remaining times were read. */
+  asOfMs?: number;
 }
 
 /** One equipped item's substats rated out of six stars. */

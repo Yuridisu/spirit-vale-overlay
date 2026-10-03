@@ -51,8 +51,8 @@ test("lists the local player's summons with their health, in the order they were
 
   expect(roster.state(CONNECTION, OWNER)).toEqual({
     rows: [
-      { id: `${CONNECTION}\u000010`, name: "Skeleton Mage", health: 16_180, maxHealth: 16_180 },
-      { id: `${CONNECTION}\u000011`, name: "Abomination", health: 12_000, maxHealth: 20_594 },
+      { id: `${CONNECTION}\u000010`, objectId: 10, name: "Skeleton Mage", iconId: "Skeleton02", health: 16_180, maxHealth: 16_180 },
+      { id: `${CONNECTION}\u000011`, objectId: 11, name: "Abomination", iconId: "SummonAbomination", health: 12_000, maxHealth: 20_594 },
     ],
   });
   expect(roster.state(CONNECTION, 7).rows.map((row) => row.name)).toEqual(["Skeleton"]);
@@ -89,7 +89,7 @@ test("reads a summon raised in its spawn, and treats a reused object id as a new
   } as Partial<CapturedFishNetPacket>);
   roster.consume(spawn(30, "Reanimation"));
   expect(roster.state(CONNECTION, OWNER).rows).toEqual([
-    { id: `${CONNECTION}\u000030`, name: "Reanimation", health: 18_434, maxHealth: 18_434 },
+    { id: `${CONNECTION}\u000030`, objectId: 30, name: "Reanimation", iconId: "Necromancer5", health: 18_434, maxHealth: 18_434 },
   ]);
   roster.consume(spawn(30, "SummonSkeleton"));
   expect(roster.state(CONNECTION, OWNER).rows.map((row) => row.name)).toEqual(["Skeleton"]);

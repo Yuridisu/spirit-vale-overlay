@@ -841,8 +841,22 @@
 .killed-by-title { color: rgb(255, 150, 150); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .killed-by-who { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .killed-by-how { overflow: hidden; color: rgba(255,255,255,.72); font-size: 11px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
-.summon-list { gap: 4px; }
-.summon-health { color: rgba(255,255,255,.72); font-size: 11px; }
+.summon-list { display: grid; gap: 3px; }
+.summon-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: start; gap: 6px; padding: 3px 5px; border-radius: 6px; background: rgba(0,0,0,.28); }
+.summon-icon { width: 28px; height: 28px; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; background: rgba(0,0,0,.4); object-fit: cover; }
+.summon-icon-blank { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.7); font-size: 15px; font-weight: 700; }
+.summon-body { display: grid; min-width: 0; gap: 2px; }
+.summon-line { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
+.summon-line .ranking-name { flex: 1 1 auto; min-width: 0; }
+.summon-line .detail-values { flex: 0 0 auto; gap: 6px; white-space: nowrap; }
+.summon-health { color: rgba(255,255,255,.72); font-size: 10px; }
+.summon-bar { height: 4px; overflow: hidden; border-radius: 2px; background: rgba(255,255,255,.14); }
+.summon-bar > span { display: block; height: 100%; border-radius: 2px; }
+.summon-statuses { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 1px; }
+.summon-statuses .status-cell { width: 22px; gap: 1px; }
+.summon-statuses .status-icon-frame { width: 22px; height: 22px; border-radius: 4px; }
+.summon-statuses .status-stacks { font-size: 9px; }
+.summon-statuses .status-remaining { font-size: 9px; }
 .item-gained { color: rgb(142, 222, 150); font-size: 11px; }
 .gear-pickup-stack {
   display: flex;

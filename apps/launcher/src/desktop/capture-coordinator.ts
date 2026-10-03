@@ -57,7 +57,7 @@ import { CaptureDiagnostics } from "./capture-diagnostics.ts";
 import { CaptureHealthMonitor } from "./capture-health-monitor.ts";
 import { systemClock, type Clock, type ClockTimer } from "./clock.ts";
 import { InventoryCounter, type InventoryCountState } from "./inventory-counter.ts";
-import { SummonRoster, type SummonRosterState } from "./summon-roster.ts";
+import { SummonRoster, type CaptureSummonsState } from "./summon-roster.ts";
 import { LocalCharacterRouter } from "./local-character-router.ts";
 import { RewardEventAttributor } from "./reward-event-attributor.ts";
 
@@ -204,9 +204,10 @@ export class CaptureCoordinator {
   private damageTakenTimer?: ClockTimer;
   private readonly inventoryListeners = new Set<(state: InventoryCountState) => void>();
   private readonly summonRoster = new SummonRoster();
-  private readonly summonListeners = new Set<(state: SummonRosterState) => void>();
+  private readonly summonListeners = new Set<(state: CaptureSummonsState) => void>();
   private summonTimer?: ClockTimer;
   private lastSummonsJson = "";
+  private lastSummonStatusRevision = -1;
   private readonly inventoryCounter = new InventoryCounter();
   /** The bag report the counter was last filled from, so the same one is not applied over later pickups. */
   private inventoryRevision: number | undefined;
@@ -447,14 +448,20 @@ export class CaptureCoordinator {
     return () => this.gearPickupListeners.delete(listener);
   }
 
-  subscribeSummons(listener: (state: SummonRosterState) => void): () => void {
+  subscribeSummons(listener: (state: CaptureSummonsState) => void): () => void {
     this.summonListeners.add(listener);
     listener(this.summonState());
     return () => this.summonListeners.delete(listener);
   }
 
-  private summonState(): SummonRosterState {
-    return this.summonRoster.state(this.activeConnectionId, this.character.physicalObjectId());
+  private summonState(): CaptureSummonsState {
+    const nowMs = this.clock.now();
+    this.statusTracker.advance(nowMs);
+    const { rows } = this.summonRoster.state(this.activeConnectionId, this.character.physicalObjectId());
+    return {
+      rows: rows.map((row) => ({ ...row, statuses: this.statusTracker.getActiveStatuses(row.objectId, nowMs) })),
+      asOfMs: nowMs,
+    };
   }
 
   /**
@@ -470,11 +477,16 @@ export class CaptureCoordinator {
       this.logDomainWarning("combat", error);
     }
     if (!changed && packet.packetName !== "serverRpc") return;
+    this.scheduleSummonsPublish();
+  }
+
+  private scheduleSummonsPublish(): void {
     if (this.summonListeners.size === 0 || this.summonTimer !== undefined) return;
     this.summonTimer = this.clock.setTimeout(() => {
       this.summonTimer = undefined;
       const state = this.summonState();
-      const json = JSON.stringify(state);
+      // Remaining times shrink on their own; only a real change is worth sending.
+      const json = JSON.stringify(state, (key, value) => key === "remainingMs" || key === "asOfMs" ? undefined : value);
       if (json === this.lastSummonsJson) return;
       this.lastSummonsJson = json;
       for (const listener of this.summonListeners) listener(state);
@@ -1535,6 +1547,10 @@ export class CaptureCoordinator {
   }
 
   private publishActiveStatuses(force = false): void {
+    if (this.lastSummonStatusRevision !== this.statusTracker.revision) {
+      this.lastSummonStatusRevision = this.statusTracker.revision;
+      this.scheduleSummonsPublish();
+    }
     const nowMs = this.clock.now();
     const statuses = this.activeStatuses(nowMs);
     const actorId = this.character.physicalObjectId();

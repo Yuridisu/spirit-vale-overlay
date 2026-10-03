@@ -65,7 +65,7 @@ function StatusGridElement(
   );
 }
 
-function StatusCell(
+export function StatusCell(
   { status, asOfMs, flashExpiring }: {
     status: FishNetActiveStatus;
     asOfMs: number | undefined;

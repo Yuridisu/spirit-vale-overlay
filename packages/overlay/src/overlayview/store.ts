@@ -121,7 +121,18 @@ export function applyControl(next: OverlayControlState): void {
 export function applyStatuses(next: OverlayStatusState): void {
   statusState.value = next;
   statusNow.value = Date.now();
-  const counting = [next.buffs, next.debuffs, next.toggles]
+  refreshStatusTicker();
+}
+
+export function applySummons(next: OverlaySummonsState): void {
+  summonsState.value = next;
+  statusNow.value = Date.now();
+  refreshStatusTicker();
+}
+
+function refreshStatusTicker(): void {
+  const next = statusState.value;
+  const counting = [next?.buffs, next?.debuffs, next?.toggles, ...(summonsState.value?.rows ?? []).map((row) => row.statuses)]
     .some((statuses: readonly FishNetActiveStatus[] | undefined) => statuses?.some((status) => status.remainingMs !== undefined));
   if (counting && statusTicker === undefined) {
     statusTicker = setInterval(() => { statusNow.value = Date.now(); }, STATUS_TICK_MS);

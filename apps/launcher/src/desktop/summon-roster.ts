@@ -1,14 +1,26 @@
 import type { CapturedFishNetPacket, FishNetSpawnSyncEntry } from "@kar-mi/spirit-vale-tools-capture";
+import type { FishNetActiveStatus } from "@kar-mi/spirit-vale-tools-combat";
 import { decodeCharacterRecordSync, decodeCharacterSpawnRecords } from "@kar-mi/spirit-vale-tools-character";
-import { resolveFishNetSkillDisplayName } from "@kar-mi/spirit-vale-tools-skills";
+import { resolveFishNetSkill, resolveFishNetSkillDisplayName } from "@kar-mi/spirit-vale-tools-skills";
 
 export interface SummonRow {
   /** Stable for the life of the summon, for the view to key its rows by. */
   id: string;
+  /** The summon's own object, which its statuses are kept under. */
+  objectId: number;
   /** The skill that raised it, without the "Summon" in front: "Skeleton Mage". */
   name: string;
+  /** The raising skill's sprite, which names its icon. */
+  iconId?: string;
   health?: number;
   maxHealth?: number;
+}
+
+/** The player's summons as the overlay shows them, each with its own buffs and debuffs. */
+export interface CaptureSummonsState {
+  rows: Array<SummonRow & { statuses: FishNetActiveStatus[] }>;
+  /** When the statuses' remaining times were read. */
+  asOfMs: number;
 }
 
 export interface SummonRosterState {
@@ -82,12 +94,17 @@ export class SummonRoster {
     const rows = [...this.summons.values()]
       .filter((summon) => summon.connectionId === connectionId && summon.ownerId === ownerId && summon.skillId !== undefined)
       .sort((left, right) => left.order - right.order)
-      .map((summon) => ({
+      .map((summon) => {
+        const iconId = resolveFishNetSkill(summon.skillId)?.spriteId;
+        return {
         id: summonKey(summon.connectionId, summon.objectId),
+        objectId: summon.objectId,
         name: summonName(summon.skillId!),
+        ...(iconId === undefined ? {} : { iconId }),
         ...(summon.health === undefined ? {} : { health: summon.health }),
         ...(summon.maxHealth === undefined ? {} : { maxHealth: summon.maxHealth }),
-      }));
+        };
+      });
     return { rows };
   }
 
