@@ -1,10 +1,11 @@
-import { appendFile, mkdir, open, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { Buffer } from "node:buffer";
 import path from "node:path";
 
 import { currentStreamPointerPath, defaultLogDirectory, streamSessionPath } from "./paths.ts";
 import { isMissing, isRecord } from "./predicates.ts";
+import { replaceFile } from "./replace-file.ts";
 import { encodeLogRecord, encodeLogStreamHeader } from "./record-codec.ts";
 import type {
   CurrentLogStream,
@@ -382,7 +383,7 @@ async function writeAtomicJson(target: string, value: unknown): Promise<void> {
   await ensureDirectory(path.dirname(target));
   const temporary = `${target}.${crypto.randomUUID()}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  await rename(temporary, target);
+  await replaceFile(temporary, target);
 }
 
 function isNonEmptyString(value: unknown): value is string {

@@ -1,9 +1,10 @@
-import { appendFile, lstat, mkdir, open, readFile, readdir, rename, writeFile } from "node:fs/promises";
+import { appendFile, lstat, mkdir, open, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
   parseLogStreamHeader,
   readCurrentLogStream,
+  replaceFile,
   streamCategoryDirectory,
   streamSessionPath,
   type LogStream,
@@ -266,7 +267,7 @@ async function rewriteJournal(journalPath: string, entries: Map<string, IndexedE
     await mkdir(path.dirname(journalPath), { recursive: true });
     const temporary = `${journalPath}.${process.pid}.tmp`;
     await writeFile(temporary, lines.map((line) => `${JSON.stringify(line)}\n`).join(""), "utf8");
-    await rename(temporary, journalPath);
+    await replaceFile(temporary, journalPath);
   } catch {
     // Compaction is best-effort; an uncompacted journal still loads correctly.
   }

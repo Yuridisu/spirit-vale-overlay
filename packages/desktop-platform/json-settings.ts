@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { replaceFile } from "@kar-mi/spirit-vale-tools-logging";
 
 export async function loadJsonSettings<T>(
   file: string,
@@ -18,5 +19,5 @@ export async function writeJsonFileAtomic(file: string, value: unknown): Promise
   const temporary = `${file}.tmp`;
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(temporary, contents, "utf8");
-  await rename(temporary, file);
+  await replaceFile(temporary, file);
 }

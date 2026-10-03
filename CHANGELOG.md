@@ -18,6 +18,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Fixed
 
+- **Capture starts on the first try.** Opening the app often showed "Unable to capture data, please
+  close the app and restart it": while the windows were starting and reading the app's log
+  pointers, Windows refused to let capture replace one of them, and capture gave up. It now waits a
+  moment and tries again, and so do settings and the session journal.
 - **Hits on bosses are read through the whole fight.** The game sometimes despawns a boss from a
   player's view mid-fight while still sending the hits on it, and every hit after that was being
   dropped, so long boss fights showed little or no damage on the boss. Those hits are now kept, as

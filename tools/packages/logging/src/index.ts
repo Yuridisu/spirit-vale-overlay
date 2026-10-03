@@ -22,6 +22,8 @@ export type {
   LogWriteFailure,
 } from "./logger.ts";
 export { sanitizeCombatData } from "./combat-sanitizer.ts";
+export { replaceFile } from "./replace-file.ts";
+export type { ReplaceFileOptions } from "./replace-file.ts";
 export {
   defaultLogDirectory,
   currentStreamPointerPath,
