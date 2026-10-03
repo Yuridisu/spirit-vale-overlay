@@ -42,6 +42,8 @@ body {
 .boss-fight-detail { display: grid; min-width: 0; gap: 10px; }
 .boss-fight-title { margin: 0; color: var(--on-surface); font-size: 16px; }
 .boss-fight-map { margin-left: 10px; color: var(--on-surface-variant); font-size: 12px; font-weight: 400; }
+.boss-fight-bosses { display: flex; flex-wrap: wrap; gap: 6px; }
+.boss-fight-bosses .btn { height: 28px; font-size: 12px; }
 .boss-fight-clear { justify-self: stretch; font-size: 12px; }
 .boss-fight-clear.is-confirming { border-color: var(--error); color: var(--error); }
 .boss-fight-hint { margin: 0; color: var(--on-surface-variant); font-size: 11px; }

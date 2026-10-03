@@ -417,6 +417,8 @@ export const en = {
   "overlay.timer.mode.countdown": "Countdown",
   "overlay.timer.mode.stopwatch": "Stopwatch",
   "overlay.element.bossMeter": "Boss DPS",
+  "combat.boss.view.label": "Show the damage to",
+  "combat.boss.view.all": "All bosses",
   "overlay.bossMeter.heading": "Boss DPS",
   "overlay.bossMeter.tag": "Boss",
   "overlay.bossMeter.empty": "Waiting for a boss fight",

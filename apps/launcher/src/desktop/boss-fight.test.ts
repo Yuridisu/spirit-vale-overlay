@@ -147,3 +147,34 @@ test("records the map a fight took place on, and clears finished fights on reque
   tracker.clearHistory();
   expect(tracker.reports(10_000).map((report) => report.bossNames[0])).toEqual(["Turtle Champion"]);
 });
+
+test("splits a fight with two bosses into each boss's own damage, pace and players", () => {
+  const tracker = new BossFightTracker();
+  const twin = { objectId: 502, name: "Kraken" };
+  tracker.observeDamage(KRAKEN, { name: "Aster" }, 600, 1_000);
+  tracker.observeDamage(TURTLE, { name: "Brook" }, 300, 2_000);
+  tracker.observeDamage(KRAKEN, { name: "Brook" }, 100, 5_000);
+  tracker.observeDamage(twin, { name: "Aster" }, 50, 6_000);
+  tracker.observePlayerDeath("Brook", 6_500);
+  tracker.observeDeath(TURTLE.objectId, 7_000);
+
+  expect(tracker.state(7_000)?.bosses).toEqual([
+    { name: "Kraken", totalDamage: 700, durationMs: 4_000, alive: true, rows: [{ name: "Aster", damage: 600 }, { name: "Brook", damage: 100 }] },
+    { name: "Turtle Champion", totalDamage: 300, durationMs: 0, alive: false, rows: [{ name: "Brook", damage: 300 }] },
+    { name: "Kraken 2", totalDamage: 50, durationMs: 0, alive: true, rows: [{ name: "Aster", damage: 50 }] },
+  ]);
+  const report = tracker.reports(7_000)[0]!;
+  expect(report.totalDamage).toBe(1_050);
+  expect(report.bosses?.map((boss) => [boss.name, boss.totalDamage, boss.defeated, boss.players.map((player) => [player.name, player.damage, player.deaths])])).toEqual([
+    ["Kraken", 700, false, [["Aster", 600, 0], ["Brook", 100, 1]]],
+    ["Turtle Champion", 300, true, [["Brook", 300, 1]]],
+    ["Kraken 2", 50, false, [["Aster", 50, 0]]],
+  ]);
+});
+
+test("leaves a fight with a single boss as it was", () => {
+  const tracker = new BossFightTracker();
+  tracker.observeDamage(KRAKEN, { name: "Aster" }, 100, 1_000);
+  expect(tracker.state(1_000)?.bosses).toBeUndefined();
+  expect(tracker.reports(1_000)[0]?.bosses).toBeUndefined();
+});

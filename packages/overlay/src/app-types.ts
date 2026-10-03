@@ -232,6 +232,8 @@ export interface OverlayBossFightState {
   durationMs: number;
   active: boolean;
   rows: Array<{ name: string; archetype?: number; damage: number }>;
+  /** Each boss on its own, when the fight has more than one. */
+  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: Array<{ name: string; archetype?: number; damage: number }> }>;
 }
 
 /** Monsters the local player has killed since the last map change, most killed first. */

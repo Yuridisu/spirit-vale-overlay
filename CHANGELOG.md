@@ -15,6 +15,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
 - **A sound for each target drop.** Pick one of the five built-in tones or one of your own `.wav`
   files for each target, try it with Play, and set how loud target drops play. Your own sounds are
   the ones you add in the Companion's settings.
+- **Boss DPS splits a fight with several bosses.** Fighting two bosses at once still gives one
+  total, and below it each boss now has its own block: its damage, pace and players, with a defeated
+  boss struck through. In the Combat window's Boss Fight Analysis, buttons above the tables switch
+  between all bosses and each one.
 
 ### Fixed
 

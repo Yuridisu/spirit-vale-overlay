@@ -14,6 +14,8 @@ export function BossFightPanel({ fights, onClear }: { fights: readonly BossFight
   const t = useTranslator();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [expanded, setExpanded] = useState<string | undefined>(undefined);
+  // Which boss of a fight with several the tables are showing; none shows them all together.
+  const [bossView, setBossView] = useState<string | undefined>(undefined);
   // Clearing cannot be undone, so the button asks for a second click instead of acting on the first.
   const [confirmingClear, setConfirmingClear] = useState(false);
   useEffect(() => {
@@ -21,9 +23,15 @@ export function BossFightPanel({ fights, onClear }: { fights: readonly BossFight
     const timer = setTimeout(() => setConfirmingClear(false), 4_000);
     return () => clearTimeout(timer);
   }, [confirmingClear]);
-  const fight = fights.find((candidate) => candidate.id === selectedId) ?? fights[0];
+  const whole = fights.find((candidate) => candidate.id === selectedId) ?? fights[0];
 
-  if (!fight) return <section class="boss-screen"><div class="empty-state">{t("combat.boss.empty")}</div></section>;
+  if (!whole) return <section class="boss-screen"><div class="empty-state">{t("combat.boss.empty")}</div></section>;
+
+  const viewedBoss = whole.bosses?.find((boss) => boss.name === bossView);
+  // One boss's share reads like a fight of its own: its time, its damage and who dealt it.
+  const fight: BossFightReport = viewedBoss
+    ? { ...whole, durationMs: viewedBoss.durationMs, totalDamage: viewedBoss.totalDamage, defeated: viewedBoss.defeated, players: viewedBoss.players }
+    : whole;
 
   const seconds = fightSeconds(fight);
   const deaths = fight.players.reduce((total, player) => total + player.deaths, 0);
@@ -41,6 +49,7 @@ export function BossFightPanel({ fights, onClear }: { fights: readonly BossFight
               setConfirmingClear(false);
               setSelectedId(undefined);
               setExpanded(undefined);
+              setBossView(undefined);
               onClear();
             }}
           >
@@ -52,7 +61,7 @@ export function BossFightPanel({ fights, onClear }: { fights: readonly BossFight
               type="button"
               class={`boss-fight-item${candidate.id === fight.id ? " active" : ""}`}
               aria-pressed={candidate.id === fight.id}
-              onClick={() => { setSelectedId(candidate.id); setExpanded(undefined); }}
+              onClick={() => { setSelectedId(candidate.id); setExpanded(undefined); setBossView(undefined); }}
             >
               <strong>{candidate.bossNames.join(", ")}</strong>
               {candidate.mapName !== undefined && <span>{candidate.mapName}</span>}
@@ -68,6 +77,21 @@ export function BossFightPanel({ fights, onClear }: { fights: readonly BossFight
             {fight.bossNames.join(", ")}
             {fight.mapName !== undefined && <span class="boss-fight-map">{fight.mapName}</span>}
           </h2>
+          {whole.bosses && whole.bosses.length > 1 && (
+            <div class="boss-fight-bosses" role="group" aria-label={t("combat.boss.view.label")}>
+              {[undefined, ...whole.bosses.map((boss) => boss.name)].map((name) => (
+                <button
+                  key={name ?? ""}
+                  type="button"
+                  class={`btn${bossView === name ? " active" : ""}`}
+                  aria-pressed={bossView === name}
+                  onClick={() => { setBossView(name); setExpanded(undefined); }}
+                >
+                  {name ?? t("combat.boss.view.all")}
+                </button>
+              ))}
+            </div>
+          )}
           <div class="table-scroll summary-table-scroll">
             <table class="data-table summary-table" aria-label={t("combat.boss.summary.label")}>
               <thead><tr>

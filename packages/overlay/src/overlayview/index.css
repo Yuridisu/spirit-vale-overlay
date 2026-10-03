@@ -817,6 +817,16 @@
 .boss-meter-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; color: rgba(255,255,255,.72); font-size: 12px; font-variant-numeric: tabular-nums; }
 .boss-meter-total { color: white; font-size: 22px; line-height: 1; }
 .boss-meter-row-rate { min-width: 6ch; color: rgba(255,255,255,.66); font-size: 11px; text-align: right; }
+.boss-meter-boss { display: grid; gap: 4px; margin-top: 8px; }
+.boss-meter-boss:first-of-type { margin-top: 0; }
+.boss-meter-boss-heading { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px 2px; border-bottom: 1px solid rgba(255,255,255,.16); font-size: 12px; }
+.boss-meter-boss-name { overflow: hidden; font-weight: 700; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.boss-meter-boss.is-dead .boss-meter-boss-name { color: rgba(255,255,255,.55); text-decoration: line-through; }
+.boss-meter-boss-name { flex: 1 1 auto; min-width: 0; }
+.boss-meter-boss-heading .detail-values { flex: 0 0 auto; gap: 6px; white-space: nowrap; }
+.boss-meter-boss .ranking { gap: 3px; }
+.boss-meter-boss .ranking-row { padding: 3px 8px; font-size: 12px; }
+.boss-meter-boss .ranking-class-icon { width: 18px; height: 18px; }
 .gear-rating-grid {
   display: grid;
   width: 100%;

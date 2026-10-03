@@ -1,4 +1,4 @@
-import type { BossFightPlayer, BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { BossFightBoss, BossFightPlayer, BossFightReport } from "@svoverlay/contracts/boss-fight";
 
 /** One player's damage to the bosses of the current fight. */
 export interface BossFightRow {
@@ -16,6 +16,8 @@ export interface BossFightState {
   /** False once every boss is dead or the fight has gone quiet. */
   active: boolean;
   rows: BossFightRow[];
+  /** Each boss on its own, when the fight has more than one. */
+  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: BossFightRow[] }>;
 }
 
 /** Boss damage this long apart belongs to two different fights. */
@@ -29,8 +31,20 @@ interface PlayerTally extends Omit<BossFightPlayer, "skills"> {
   skills: Map<string, { label: string; damage: number; hits: number; crits: number }>;
 }
 
+/** One boss's share of a fight: when it was hit, and by whom. */
+interface BossTally {
+  name: string;
+  startedAtMs: number;
+  lastDamageAtMs: number;
+  totalDamage: number;
+  dead: boolean;
+  players: Map<string, PlayerTally>;
+}
+
 interface Fight {
   id: string;
+  /** Boss object id -> its own tally, in the order first hit. */
+  bosses: Map<number, BossTally>;
   startedAtMs: number;
   lastDamageAtMs: number;
   /** Boss object id -> name, for the bosses still standing. */
@@ -76,6 +90,7 @@ export class BossFightTracker {
         startedAtMs: nowMs,
         lastDamageAtMs: nowMs,
         alive: new Map(),
+        bosses: new Map(),
         bossNames: [],
         totalDamage: 0,
         players: new Map(),
@@ -89,16 +104,33 @@ export class BossFightTracker {
     if (!fight.bossNames.includes(boss.name)) fight.bossNames.push(boss.name);
     fight.totalDamage += damage;
 
-    const tally = this.player(fight, player.name);
-    if (player.archetype !== undefined) tally.archetype = player.archetype;
-    tally.damage += damage;
-    tally.hits += 1;
-    if (critical) tally.crits += 1;
-    const skill = tally.skills.get(label) ?? { label, damage: 0, hits: 0, crits: 0 };
-    skill.damage += damage;
-    skill.hits += 1;
-    if (critical) skill.crits += 1;
-    tally.skills.set(label, skill);
+    let bossTally = fight.bosses.get(boss.objectId);
+    if (!bossTally) {
+      const sameName = [...fight.bosses.values()].filter((other) => other.name === boss.name || other.name.startsWith(`${boss.name} `)).length;
+      bossTally = {
+        name: sameName === 0 ? boss.name : `${boss.name} ${sameName + 1}`,
+        startedAtMs: nowMs,
+        lastDamageAtMs: nowMs,
+        totalDamage: 0,
+        dead: false,
+        players: new Map(),
+      };
+      fight.bosses.set(boss.objectId, bossTally);
+    }
+    bossTally.lastDamageAtMs = nowMs;
+    bossTally.totalDamage += damage;
+
+    for (const tally of [this.player(fight.players, player.name), this.player(bossTally.players, player.name)]) {
+      if (player.archetype !== undefined) tally.archetype = player.archetype;
+      tally.damage += damage;
+      tally.hits += 1;
+      if (critical) tally.crits += 1;
+      const skill = tally.skills.get(label) ?? { label, damage: 0, hits: 0, crits: 0 };
+      skill.damage += damage;
+      skill.hits += 1;
+      if (critical) skill.crits += 1;
+      tally.skills.set(label, skill);
+    }
   }
 
   /** Names the map the fight in progress is on; the first name given stands. */
@@ -112,6 +144,8 @@ export class BossFightTracker {
   }
 
   observeDeath(bossObjectId: number, nowMs = 0): void {
+    const boss = this.fight?.bosses.get(bossObjectId);
+    if (boss) boss.dead = true;
     if (this.fight?.alive.delete(bossObjectId)) this.fight.lastBossDeathAtMs = nowMs;
   }
 
@@ -119,7 +153,7 @@ export class BossFightTracker {
   observePlayerDeath(name: string, nowMs: number): void {
     const fight = this.fight;
     if (!fight || this.ended(fight, nowMs)) return;
-    this.player(fight, name).deaths += 1;
+    this.player(fight.players, name).deaths += 1;
   }
 
   /** Loot appearing right after a boss dies. Returns whether it was counted as that boss's. */
@@ -149,15 +183,16 @@ export class BossFightTracker {
       totalDamage: fight.totalDamage,
       durationMs: fight.lastDamageAtMs - fight.startedAtMs,
       active: !this.ended(fight, nowMs),
-      rows: [...fight.players.values()]
-        .filter((player) => player.damage > 0)
-        .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name))
-        .slice(0, MAX_ROWS)
-        .map((player) => ({
-          name: player.name,
-          ...(player.archetype === undefined ? {} : { archetype: player.archetype }),
-          damage: player.damage,
+      rows: meterRows(fight.players),
+      ...(fight.bosses.size < 2 ? {} : {
+        bosses: [...fight.bosses.values()].map((boss) => ({
+          name: boss.name,
+          totalDamage: boss.totalDamage,
+          durationMs: boss.lastDamageAtMs - boss.startedAtMs,
+          alive: !boss.dead,
+          rows: meterRows(boss.players),
         })),
+      }),
     };
   }
 
@@ -167,11 +202,11 @@ export class BossFightTracker {
     return [...current, ...[...this.finished].reverse()];
   }
 
-  private player(fight: Fight, name: string): PlayerTally {
-    let tally = fight.players.get(name);
+  private player(players: Map<string, PlayerTally>, name: string): PlayerTally {
+    let tally = players.get(name);
     if (!tally) {
       tally = { name, damage: 0, hits: 0, crits: 0, deaths: 0, skills: new Map() };
-      fight.players.set(name, tally);
+      players.set(name, tally);
     }
     return tally;
   }
@@ -193,17 +228,16 @@ export class BossFightTracker {
       totalDamage: fight.totalDamage,
       active: !this.ended(fight, nowMs),
       defeated: fight.alive.size === 0,
-      players: [...fight.players.values()]
-        .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name))
-        .map((player) => ({
-          name: player.name,
-          ...(player.archetype === undefined ? {} : { archetype: player.archetype }),
-          damage: player.damage,
-          hits: player.hits,
-          crits: player.crits,
-          deaths: player.deaths,
-          skills: [...player.skills.values()].sort((left, right) => right.damage - left.damage).map((skill) => ({ ...skill })),
+      players: reportPlayers(fight.players),
+      ...(fight.bosses.size < 2 ? {} : {
+        bosses: [...fight.bosses.values()].map((boss): BossFightBoss => ({
+          name: boss.name,
+          durationMs: boss.lastDamageAtMs - boss.startedAtMs,
+          totalDamage: boss.totalDamage,
+          defeated: boss.dead,
+          players: reportPlayers(boss.players, fight.players),
         })),
+      }),
       drops: [...fight.drops.values()]
         .sort((left, right) => (right.rarity ?? 0) - (left.rarity ?? 0) || left.name.localeCompare(right.name))
         .map((drop) => ({ ...drop })),
@@ -213,4 +247,31 @@ export class BossFightTracker {
   private ended(fight: Fight, nowMs: number): boolean {
     return fight.alive.size === 0 || nowMs - fight.lastDamageAtMs >= IDLE_GAP_MS;
   }
+}
+
+function meterRows(players: Map<string, PlayerTally>): BossFightRow[] {
+  return [...players.values()]
+    .filter((player) => player.damage > 0)
+    .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name))
+    .slice(0, MAX_ROWS)
+    .map((player) => ({
+      name: player.name,
+      ...(player.archetype === undefined ? {} : { archetype: player.archetype }),
+      damage: player.damage,
+    }));
+}
+
+/** Players ranked by damage; deaths come from the whole fight, as a death is not one boss's. */
+function reportPlayers(players: Map<string, PlayerTally>, whole: Map<string, PlayerTally> = players): BossFightPlayer[] {
+  return [...players.values()]
+    .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name))
+    .map((player) => ({
+      name: player.name,
+      ...(player.archetype === undefined ? {} : { archetype: player.archetype }),
+      damage: player.damage,
+      hits: player.hits,
+      crits: player.crits,
+      deaths: whole.get(player.name)?.deaths ?? player.deaths,
+      skills: [...player.skills.values()].sort((left, right) => right.damage - left.damage).map((skill) => ({ ...skill })),
+    }));
 }

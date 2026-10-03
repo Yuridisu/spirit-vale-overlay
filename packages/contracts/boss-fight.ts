@@ -25,6 +25,18 @@ export interface BossFightDrop {
   count: number;
 }
 
+/** One boss of a fight with several, and what each player dealt to that boss alone. */
+export interface BossFightBoss {
+  /** The boss's name; a second boss of the same name is numbered, as "Kraken 2". */
+  name: string;
+  /** From the first hit on this boss to the latest one. */
+  durationMs: number;
+  totalDamage: number;
+  defeated: boolean;
+  /** Ranked by damage to this boss. Deaths are the player's deaths in the whole fight. */
+  players: BossFightPlayer[];
+}
+
 /** Everything recorded about one boss fight, for the overlay's meter and the Combat window's analysis. */
 export interface BossFightReport {
   id: string;
@@ -43,5 +55,7 @@ export interface BossFightReport {
   defeated: boolean;
   /** Ranked by damage to the bosses. */
   players: BossFightPlayer[];
+  /** Each boss on its own, in the order they were first hit; only when the fight had more than one. */
+  bosses?: BossFightBoss[];
   drops: BossFightDrop[];
 }
