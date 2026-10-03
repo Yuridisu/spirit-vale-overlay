@@ -608,11 +608,16 @@ export class CaptureCoordinator {
         continue;
       }
       const mob = this.mobs.get(event.targetId);
-      if (!mob?.boss) continue;
-      const identity = this.actors.getAttribution(event.actorId);
+      // A necromancer's Reanimation of a boss is still that boss to the game, but it is on the players' side.
+      if (!mob?.boss || !this.isEnemyMonster(event.targetId)) continue;
+      // Damage a boss reflects is not anyone's damage to it.
+      if (this.isEnemyMonster(event.actorId)) continue;
+      // A summon's hits count for the player who raised it.
+      const dealer = this.summonRoster.summon(this.activeConnectionId, event.actorId)?.ownerId ?? event.actorId;
+      const identity = this.actors.getAttribution(dealer);
       const name = identity?.displayName
-        ?? (this.isLocalRewardActor(event.actorId) ? this.character.current()?.name : undefined)
-        ?? `Unidentified (${event.actorId})`;
+        ?? (this.isLocalRewardActor(dealer) ? this.character.current()?.name : undefined)
+        ?? `Unidentified (${dealer})`;
       this.bossFight.observeDamage(
         { objectId: mob.objectId, name: mob.displayName },
         { name, ...(identity?.archetype === undefined ? {} : { archetype: identity.archetype }) },
@@ -1260,7 +1265,8 @@ export class CaptureCoordinator {
         );
       }
       for (const event of events) {
-        if ((event.kind === "damage" || event.kind === "death") && event.team === 0) {
+        // A monster's own hits can land on the player side too, as damage it reflects.
+        if ((event.kind === "damage" || event.kind === "death") && event.team === 0 && !this.isEnemyMonster(event.actorId)) {
           identities.push(...this.actors.observePlayerActor(event.actorId, event.tick));
         }
         if (event.kind === "death" && event.team !== 0) {
@@ -1408,6 +1414,11 @@ export class CaptureCoordinator {
       if (localActor || locallyDamaged) relevant = true;
     }
     return relevant;
+  }
+
+  /** A monster on the other side: known as a monster, and nobody's summon. */
+  private isEnemyMonster(objectId: number): boolean {
+    return this.mobs.get(objectId) !== undefined && this.summonRoster.summon(this.activeConnectionId, objectId) === undefined;
   }
 
   private isLocalRewardActor(actorId: number): boolean {

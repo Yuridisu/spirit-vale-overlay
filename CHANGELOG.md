@@ -16,6 +16,14 @@ section as the GitHub Release notes, so write it for the people who use the app.
   files for each target, try it with Play, and set how loud target drops play. Your own sounds are
   the ones you add in the Companion's settings.
 
+### Fixed
+
+- **Boss DPS no longer mistakes a necromancer's Reanimation for a boss.** A raised monster keeps
+  the boss it was, so damage to it, and damage a real boss reflected onto it, opened a boss fight
+  of its own and listed the boss among the players. Summons are now left out, damage a monster
+  deals never counts as a player's, and a summon's hits on a boss count for the player who raised
+  it.
+
 ## 0.10.12
 
 ### Added

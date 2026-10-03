@@ -108,6 +108,18 @@ export class SummonRoster {
     return { rows };
   }
 
+  /**
+   * Whether an object is someone's summon, and whose. A Reanimation is a monster raised by a
+   * necromancer and still carries that monster's identity, bosses included, so this is what tells
+   * it apart from the real thing.
+   */
+  summon(connectionId: string | undefined, objectId: number): { ownerId?: number } | undefined {
+    if (connectionId === undefined) return undefined;
+    const summon = this.summons.get(summonKey(connectionId, objectId));
+    if (!summon) return undefined;
+    return summon.ownerId === undefined ? {} : { ownerId: summon.ownerId };
+  }
+
   reset(): void {
     this.summons.clear();
     this.pendingHealth.clear();

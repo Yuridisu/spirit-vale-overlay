@@ -2095,3 +2095,55 @@ function packed(value: number | bigint): Buffer {
   bytes.push(Number(encoded));
   return Buffer.from(bytes);
 }
+
+describe("boss fights", () => {
+  test("leaves a necromancer's Reanimation of a boss out, and credits a summon's hits to its owner", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture, clock }) => {
+      let fight: { bossNames: string[]; rows: Array<{ name: string; damage: number }> } | undefined;
+      coordinator.subscribeBossFight((state) => { fight = state; });
+      const hare = (tick: number, objectId: number): TestPacket => ({
+        ...monsterIdentityPacket(tick, objectId),
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed", value: "Hare" },
+          { name: "Data.Level", codec: "packedInt32", value: 30 },
+        ],
+      });
+      const raisedBy = (tick: number, objectId: number, ownerId: number): TestPacket => ({
+        tick,
+        packetId: 903,
+        packetName: "syncType",
+        objectId,
+        networkBehaviourType: "SummoningComponent",
+        syncEntries: [
+          { name: "SummonerSync", fields: [{ name: "SummonerSync", value: ownerId }] },
+          { name: "SummonSkillSync", fields: [{ name: "SkillId", value: "Reanimation" }] },
+        ],
+        raw: Buffer.alloc(0),
+        payload: Buffer.alloc(0),
+      } as TestPacket);
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      capture.packet(hare(4, 900));
+      // Another player's Reanimation of the same boss, fighting on the players' side.
+      capture.packet(hare(5, 901));
+      capture.packet(raisedBy(6, 901, 10));
+
+      // The real boss hitting the Reanimation, and its damage reflected onto the player, are no fight.
+      capture.packet(damagePacket(7, 901, 900));
+      capture.packet(damagePacket(8, 10, 900));
+      await clock.advanceBy(1_000);
+      expect(fight).toBeUndefined();
+
+      // The player's hit and the Reanimation's hit on the real boss are both the player's.
+      capture.packet(damagePacket(9, 900, 10));
+      capture.packet(damagePacket(10, 900, 901));
+      await clock.advanceBy(1_000);
+      expect(fight?.bossNames).toEqual(["Vorpal Hare"]);
+      expect(fight?.rows.map((row) => [row.name, row.damage])).toEqual([["Fictional Hero", 200]]);
+    });
+  });
+});
