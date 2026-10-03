@@ -111,6 +111,7 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   gearRating: { enabled: false, opacity: 0, x: 112, y: 125, width: 1049, height: 480 },
   itemCounter: { enabled: false, opacity: 0.4, x: 430, y: 650, width: 220, height: 150 },
   targetDrop: { enabled: false, opacity: 0, x: 810, y: 170, width: 300, height: 290 },
+  summons: { enabled: false, opacity: 0.5, x: 1660, y: 200, width: 240, height: 330 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative

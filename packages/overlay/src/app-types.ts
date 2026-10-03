@@ -15,7 +15,7 @@ import type { TargetDrop } from "./target-drop.ts";
 export type { TargetDrop, TargetDropStat } from "./target-drop.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset"] as const;
@@ -195,6 +195,11 @@ export interface OverlayDamageTakenState {
   killedBy?: { label: string; attacker?: string; damage: number; atMs: number };
 }
 
+/** The local player's summons, in the order they were raised. */
+export interface OverlaySummonsState {
+  rows: Array<{ id: string; name: string; health?: number; maxHealth?: number }>;
+}
+
 /** One equipped item's substats rated out of six stars. */
 export interface OverlayGearRating {
   slot: string;
@@ -245,6 +250,7 @@ export interface OverlayViewState {
   gearRating: OverlayGearRatingState;
   damageTaken: OverlayDamageTakenState;
   itemCounter: OverlayItemCounterState;
+  summons: OverlaySummonsState;
 }
 
 export interface OverlayLootToastEvent {
@@ -405,6 +411,7 @@ export type OverlayRpc = {
     damageTakenChanged: OverlayDamageTakenState;
     itemCounterChanged: OverlayItemCounterState;
     targetDropFound: OverlayGearPickupEvent;
+    summonsChanged: OverlaySummonsState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

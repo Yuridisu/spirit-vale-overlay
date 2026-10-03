@@ -1,6 +1,6 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatInteger } from "@svoverlay/ui-kit/format";
-import { damageTakenState, itemCounter, killState, meterState } from "../store.ts";
+import { damageTakenState, itemCounter, killState, meterState, summonsState } from "../store.ts";
 import { WaitingForDps } from "./common.tsx";
 
 const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
@@ -81,6 +81,59 @@ export function DamageTakenElement() {
           </span>
         </div>
       ))}</div> : <span class="detail-empty">{t("overlay.damageTaken.empty")}</span>}
+    </div>
+  );
+}
+
+/** Health as a share of maximum, 0-1, or undefined while either is unknown. */
+function healthShare(row: { health?: number; maxHealth?: number }): number | undefined {
+  if (row.health === undefined || row.maxHealth === undefined || row.maxHealth <= 0) return undefined;
+  return Math.max(0, Math.min(1, row.health / row.maxHealth));
+}
+
+/** Green when healthy, through amber, to red when nearly gone. */
+function healthColor(share: number): string {
+  if (share > 0.6) return "rgba(70, 170, 95, 0.6)";
+  if (share > 0.3) return "rgba(213, 160, 42, 0.6)";
+  return "rgba(210, 70, 60, 0.65)";
+}
+
+/** The local player's summons and their health, with the weakest called out at the top. */
+export function SummonsElement() {
+  const t = useTranslator();
+  const rows = summonsState.value?.rows ?? [];
+  const shares = rows.map(healthShare).filter((share): share is number => share !== undefined);
+  const lowest = shares.length ? Math.min(...shares) : undefined;
+  return (
+    <div class="element-content">
+      <div class="party-heading">
+        <h2 class="element-title">{t("overlay.summons.heading")}</h2>
+        {rows.length > 0 && (
+          <span class="party-reset-hint">
+            {lowest === undefined
+              ? t("overlay.summons.active", { count: formatInteger(rows.length) })
+              : t("overlay.summons.summary", { count: formatInteger(rows.length), lowest: Math.round(lowest * 100) })}
+          </span>
+        )}
+      </div>
+      {rows.length ? <div class="ranking summon-list">{rows.map((row) => {
+        const share = healthShare(row);
+        return (
+          <div
+            class="ranking-row detail-row"
+            key={row.id}
+            style={`--row-fill:${(share ?? 1) * 100}%;--row-color:${healthColor(share ?? 1)}`}
+          >
+            <span class="ranking-name">{row.name}</span>
+            <span class="detail-values">
+              {row.health !== undefined && row.maxHealth !== undefined && (
+                <span class="summon-health">{formatCompact(row.health)} / {formatCompact(row.maxHealth)}</span>
+              )}
+              <strong>{share === undefined ? "?" : `${Math.round(share * 100)}%`}</strong>
+            </span>
+          </div>
+        );
+      })}</div> : <span class="detail-empty">{t("overlay.summons.empty")}</span>}
     </div>
   );
 }

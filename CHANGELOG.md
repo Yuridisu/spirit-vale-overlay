@@ -30,6 +30,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
     listings you see while browsing the market in game are uploaded to that service, which is what
     fills the market for everyone. Your character, the sellers and raw game traffic are never
     sent. The setting says exactly what is.
+- **Summons element.** Your summons and how they are holding up: each one by the skill that
+  raised it (Skeleton, Skeleton Mage, Abomination, Reanimation and so on), its health and its share
+  of maximum, with how many are out and the lowest health at the top. Enable it under Settings >
+  Overlay > Visible elements.
 - **Overlay presets.** Save the overlay as it is, under a name, and switch between your saved
   layouts: which elements are on, where they sit, their size and opacity, the meter and minimap
   options, the timer, the item counter and the target drops. Manage them under Settings > Overlay >

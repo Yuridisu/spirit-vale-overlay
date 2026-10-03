@@ -280,6 +280,7 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
   subscribeInventory: (listener) => capture.subscribeInventory(listener),
   subscribeStackPickup: (listener) => capture.subscribeStackPickup(listener),
+  subscribeSummons: (listener) => capture.subscribeSummons(listener),
   onTargetDropSound: () => { playBuiltinSound("alert", 80); },
   subscribeGearRating: (listener) => {
     listener(rateGear(capture.characterState().snapshot));

@@ -41,6 +41,7 @@ import type {
   OverlayElementId,
   OverlayBossFightState,
   OverlayDamageTakenState,
+  OverlaySummonsState,
   OverlayGearPickupEvent,
   OverlayGearRatingState,
   OverlayKillState,
@@ -150,6 +151,8 @@ export interface OverlayControllerOptions {
   subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
   /** Calls the listener at once with the current tally, then on every change. */
   subscribeDamageTaken: (listener: (state: OverlayDamageTakenState) => void) => () => void;
+  /** Calls the listener at once with the local player's summons, then on every change. */
+  subscribeSummons: (listener: (state: OverlaySummonsState) => void) => () => void;
   /** Every stackable item picked up, which has a name and a count but no rolls. */
   subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
   /** A watched-for drop was just picked up, and the player asked to hear about it. */
@@ -190,6 +193,7 @@ export interface OverlaySurfaceSink {
   sendDamageTaken(state: OverlayDamageTakenState): void;
   sendItemCounter(state: OverlayItemCounterState): void;
   sendTargetDrop(event: OverlayGearPickupEvent): void;
+  sendSummons(state: OverlaySummonsState): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -330,6 +334,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     inventorySource = next;
     publishItemCounter();
   });
+  let summons: OverlaySummonsState = { rows: [] };
+  const unsubscribeSummons = options.subscribeSummons((next) => {
+    summons = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendSummons(next));
+  });
   let gearRating: OverlayGearRatingState = { slots: [] };
   let lastGearRatingJson = "";
   const unsubscribeGearRating = options.subscribeGearRating((next) => {
@@ -452,6 +462,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeGearPickup();
       unsubscribeArtifactPickup();
       unsubscribeStackPickup();
+      unsubscribeSummons();
       unsubscribeKills();
       unsubscribeBossFight();
       unsubscribeGearRating();
@@ -726,6 +737,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       gearRating,
       damageTaken,
       itemCounter: itemCounterState(settings.itemCounterItems, inventorySource),
+      summons,
     };
   }
 

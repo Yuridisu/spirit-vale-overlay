@@ -139,6 +139,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendDamageTaken: (state) => rpc.send.damageTakenChanged(state),
     sendItemCounter: (state) => rpc.send.itemCounterChanged(state),
     sendTargetDrop: (event) => rpc.send.targetDropFound(event),
+    sendSummons: (state) => rpc.send.summonsChanged(state),
   };
   controller.registerSurface(sink);
 

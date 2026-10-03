@@ -57,6 +57,7 @@ import { CaptureDiagnostics } from "./capture-diagnostics.ts";
 import { CaptureHealthMonitor } from "./capture-health-monitor.ts";
 import { systemClock, type Clock, type ClockTimer } from "./clock.ts";
 import { InventoryCounter, type InventoryCountState } from "./inventory-counter.ts";
+import { SummonRoster, type SummonRosterState } from "./summon-roster.ts";
 import { LocalCharacterRouter } from "./local-character-router.ts";
 import { RewardEventAttributor } from "./reward-event-attributor.ts";
 
@@ -202,6 +203,10 @@ export class CaptureCoordinator {
   private readonly damageTaken = new DamageTakenTracker();
   private damageTakenTimer?: ClockTimer;
   private readonly inventoryListeners = new Set<(state: InventoryCountState) => void>();
+  private readonly summonRoster = new SummonRoster();
+  private readonly summonListeners = new Set<(state: SummonRosterState) => void>();
+  private summonTimer?: ClockTimer;
+  private lastSummonsJson = "";
   private readonly inventoryCounter = new InventoryCounter();
   /** The bag report the counter was last filled from, so the same one is not applied over later pickups. */
   private inventoryRevision: number | undefined;
@@ -440,6 +445,41 @@ export class CaptureCoordinator {
   subscribeGearPickup(listener: (event: CaptureGearPickupEvent) => void): () => void {
     this.gearPickupListeners.add(listener);
     return () => this.gearPickupListeners.delete(listener);
+  }
+
+  subscribeSummons(listener: (state: SummonRosterState) => void): () => void {
+    this.summonListeners.add(listener);
+    listener(this.summonState());
+    return () => this.summonListeners.delete(listener);
+  }
+
+  private summonState(): SummonRosterState {
+    return this.summonRoster.state(this.activeConnectionId, this.character.physicalObjectId());
+  }
+
+  /**
+   * Follows the summons on every connection, and republishes the player's own a moment later. A
+   * `serverRpc` is how the player's own object is learned, which turns summons already known into
+   * the player's, so it also prompts a look.
+   */
+  private trackSummons(packet: CapturedFishNetPacket): void {
+    let changed = false;
+    try {
+      changed = this.summonRoster.consume(packet);
+    } catch (error) {
+      this.logDomainWarning("combat", error);
+    }
+    if (!changed && packet.packetName !== "serverRpc") return;
+    if (this.summonListeners.size === 0 || this.summonTimer !== undefined) return;
+    this.summonTimer = this.clock.setTimeout(() => {
+      this.summonTimer = undefined;
+      const state = this.summonState();
+      const json = JSON.stringify(state);
+      if (json === this.lastSummonsJson) return;
+      this.lastSummonsJson = json;
+      for (const listener of this.summonListeners) listener(state);
+    }, BOSS_FIGHT_PUBLISH_MS);
+    this.summonTimer.unref?.();
   }
 
   subscribeInventory(listener: (state: InventoryCountState) => void): () => void {
@@ -790,6 +830,8 @@ export class CaptureCoordinator {
     if (this.bossFightTimer !== undefined) this.clock.clearTimeout(this.bossFightTimer);
     this.bossFightTimer = undefined;
     if (this.damageTakenTimer !== undefined) this.clock.clearTimeout(this.damageTakenTimer);
+    if (this.summonTimer !== undefined) this.clock.clearTimeout(this.summonTimer);
+    this.summonTimer = undefined;
     this.damageTakenTimer = undefined;
     this.resetTrackers("full");
     this.rewards.reset();
@@ -1058,6 +1100,7 @@ export class CaptureCoordinator {
   private routePacket(packet: CapturedFishNetPacket): void {
     this.health.observeFishNet();
     this.notifyTap(() => this.options.onPacket?.(packet));
+    this.trackSummons(packet);
     // The account callback arrives on the login connection, before any packet is admitted.
     this.lootOwnership.observe(packet);
     if (this.deferPacketDuringTransition(packet)) return;
