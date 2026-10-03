@@ -128,3 +128,5 @@ main {
 .target-drop-field .input, .target-drop-stats .input { width: 100%; min-width: 0; }
 .target-drop-stats { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 6px 8px; align-items: center; }
 .target-drop-sound { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.target-drop-stats .input.is-unknown { border-color: var(--error); }
+.target-drop-warning { margin: 0; color: var(--error); font-size: 12px; }

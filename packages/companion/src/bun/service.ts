@@ -61,7 +61,9 @@ export async function createCompanionService(options: CompanionServiceOptions) {
 
   function defaultSettings(): Persisted {
     return {
-      soundsEnabled: true,
+      // Off until asked for: the starter rules sound on many ordinary drops, and the overlay's own
+      // target drops are the way to be told about the one item being hunted.
+      soundsEnabled: false,
       soundVolume: 100,
       // Uploading what the market shows is the one thing here that leaves the machine, so it is opt-in.
       contributionEnabled: false,
@@ -84,7 +86,7 @@ export async function createCompanionService(options: CompanionServiceOptions) {
       const requestedActive = typeof raw.active === "string" ? raw.active : "Default";
       const active = Object.hasOwn(profiles, requestedActive) ? requestedActive : Object.keys(profiles)[0]!;
       return {
-        soundsEnabled: typeof raw.soundsEnabled === "boolean" ? raw.soundsEnabled : true,
+        soundsEnabled: typeof raw.soundsEnabled === "boolean" ? raw.soundsEnabled : false,
         soundVolume: typeof raw.soundVolume === "number" && Number.isInteger(raw.soundVolume)
           && raw.soundVolume >= 0 && raw.soundVolume <= 100 ? raw.soundVolume : 100,
         contributionEnabled: typeof raw.contributionEnabled === "boolean" ? raw.contributionEnabled : false,

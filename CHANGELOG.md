@@ -18,7 +18,8 @@ section as the GitHub Release notes, so write it for the people who use the app.
     each with its own colour, tag and sound. Rules are kept in named profiles, and a starter set is
     included. Matching drops are listed in an alert history.
   - **Alert sounds.** Five built-in sounds, or your own `.wav` files, with a volume setting. They
-    play whether or not the Companion window is open.
+    play whether or not the Companion window is open. They start off; turn on Loot alerts in the
+    Companion's settings to hear your rules.
   - **Gold sessions.** Gross and net gold per hour, spending, a 15-minute pace, gold per kill and a
     history of your finished sessions.
   - **Market.** Browse the community listings and each item's seven-day asking prices. They come
@@ -61,6 +62,9 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Fixed
 
+- **Pickup cards and target drops name stats as the game does**, such as Multistrike rather than
+  Double Attack, so a target typed from the game's tooltip matches. A stat no item can have is
+  shown in red in the target drops editor.
 - **"Minimize launcher to tray" works** in the standard build. The minimise button ignored the
   setting and only minimised to the taskbar.
 - **No overlay process is left behind when the app closes.** Closing the app with the Settings

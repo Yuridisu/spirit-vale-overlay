@@ -3,6 +3,7 @@ import type { PickedUpArtifact, PickedUpEquipment, PickedUpSubstat } from "@kar-
 import { ARTIFACT_ITEM, scaleRoll, snapshot } from "@svoverlay/build-export";
 import type { SnapshotEquipment } from "@svoverlay/build-export";
 import type { OverlayGearPickupEvent, OverlayGearPickupStat } from "@svoverlay/overlay/app-types";
+import { STAT_LABEL } from "@svoverlay/companion";
 
 const EQUIPMENT_ITEM_TYPE = 2;
 const ARTIFACT_ITEM_TYPE = 3;
@@ -55,9 +56,15 @@ function describeSubstat(substat: PickedUpSubstat, item: SnapshotEquipment | und
   };
 }
 
-/** `HpMult` reads as `Hp %` and `PerfectDodge` as `Perfect Dodge`, the way the game labels them. */
+/**
+ * The stat as the game names it on an item, from Vale Companion's table where it has one: so
+ * `DoubleAttack` reads `Multistrike`. Otherwise `HpMult` reads as `Hp %` and `PerfectDodge` as
+ * `Perfect Dodge`.
+ */
 function statLabel(statName: string | undefined, type: number): string {
   if (statName === undefined) return `Stat ${type}`;
+  const known = STAT_LABEL[statName];
+  if (known !== undefined) return known;
   const multiplier = statName.endsWith("Mult");
   const words = (multiplier ? statName.slice(0, -"Mult".length) : statName)
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2");

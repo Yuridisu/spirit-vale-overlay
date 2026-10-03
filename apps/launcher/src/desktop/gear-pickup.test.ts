@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 
+import { snapshot } from "@svoverlay/build-export";
+
 import { describeArtifactPickup, describeGearPickup } from "./gear-pickup.ts";
 
 test("describes a picked-up artifact by its set name and piece, scaled with the artifact ranges", () => {
@@ -58,4 +60,14 @@ test("keeps the roll of a stat whose range is unknown, and an item the catalog d
       { label: "Stat 99999", roll: 12, qualifier: "Fire" },
     ],
   });
+});
+
+test("names stats the way the game's tooltip does", () => {
+  const type = (name: string) => Number(Object.entries(snapshot.statTypes).find(([, value]) => value === name)![0]);
+  const card = describeGearPickup({
+    itemId: "Repeater Crossbow",
+    refine: 0,
+    substats: [{ type: type("DoubleAttack"), roll: 100 }, { type: type("AtkSpd"), roll: 100 }],
+  });
+  expect(card.stats.map((stat) => stat.label)).toEqual(["Multistrike", "Attack Speed"]);
 });

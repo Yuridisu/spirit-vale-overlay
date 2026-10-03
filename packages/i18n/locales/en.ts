@@ -621,6 +621,7 @@ export const en = {
   "rewards.targetDrops.min": "At least",
   "rewards.targetDrops.clear": "Clear",
   "rewards.targetDrops.sound": "Play a sound when a target drops",
+  "rewards.targetDrops.unknownStat": "A stat in red is not one an item can have, so this target can never match. Pick it from the suggestions.",
   "rewards.targetDrops.help": "The name matches by words, in any case: \"starfire jewel\" finds the Jewel of the Starfire set. Leave the stats empty to be told about any roll of the item, or list the stats it must have and the least of each. Pick stats from the suggestions: \"Matk\" and \"Matk %\" are different stats. Enable the Target drops element under Settings > Overlay > Visible elements.",
   "rewards.itemCounter.heading": "Item counter",
   "rewards.itemCounter.hint": "Choose what the overlay's Item counter element follows.",

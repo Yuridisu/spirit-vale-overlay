@@ -279,6 +279,8 @@ function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }
   const save = (targets: RewardsAppState["targetDrops"]["targets"]): void => {
     void desktopView.rpc?.request.setTargetDrops({ targets });
   };
+  const knownStats = new Set(state.statChoices.map((stat) => stat.toLowerCase().replace(/\s+/g, "")));
+  const isKnown = (stat: string): boolean => !stat.trim() || knownStats.size === 0 || knownStats.has(stat.toLowerCase().replace(/\s+/g, ""));
   const update = (slot: number, change: (target: RewardsAppState["targetDrops"]["targets"][number]) => RewardsAppState["targetDrops"]["targets"][number]): void => {
     save(state.targets.map((target, index) => index === slot ? change(target) : target));
   };
@@ -300,11 +302,12 @@ function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }
               <span>{t("rewards.targetDrops.stat")}</span><span>{t("rewards.targetDrops.min")}</span>
               {target.stats.map((row, index) => (
                 <Fragment key={index}>
-                  <input class="input" type="text" list="target-drop-stats" maxLength={60} placeholder={t("rewards.targetDrops.statPlaceholder")} value={row.stat} onChange={(event) => update(slot, (current) => ({ ...current, stats: current.stats.map((entry, at) => at === index ? { ...entry, stat: event.currentTarget.value } : entry) }))} />
+                  <input class={`input${isKnown(row.stat) ? "" : " is-unknown"}`} title={isKnown(row.stat) ? undefined : t("rewards.targetDrops.unknownStat")} type="text" list="target-drop-stats" maxLength={60} placeholder={t("rewards.targetDrops.statPlaceholder")} value={row.stat} onChange={(event) => update(slot, (current) => ({ ...current, stats: current.stats.map((entry, at) => at === index ? { ...entry, stat: event.currentTarget.value } : entry) }))} />
                   <input class="input" type="number" min="0" step="any" value={row.min} disabled={!row.stat} onChange={(event) => update(slot, (current) => ({ ...current, stats: current.stats.map((entry, at) => at === index ? { ...entry, min: Number.isFinite(event.currentTarget.valueAsNumber) ? event.currentTarget.valueAsNumber : 0 } : entry) }))} />
                 </Fragment>
               ))}
             </div>
+            {target.stats.some((row) => !isKnown(row.stat)) && <p class="target-drop-warning">{t("rewards.targetDrops.unknownStat")}</p>}
           </div>
         ))}
       </div>
