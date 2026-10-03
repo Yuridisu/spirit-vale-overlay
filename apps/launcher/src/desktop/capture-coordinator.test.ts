@@ -2103,11 +2103,12 @@ describe("boss fights", () => {
     }, async ({ coordinator, capture, clock }) => {
       let fight: { bossNames: string[]; rows: Array<{ name: string; damage: number }> } | undefined;
       coordinator.subscribeBossFight((state) => { fight = state; });
-      const hare = (tick: number, objectId: number): TestPacket => ({
+      const hare = (tick: number, objectId: number, team = 1): TestPacket => ({
         ...monsterIdentityPacket(tick, objectId),
         decodedFields: [
           { name: "Data.Id", codec: "stringUtf8Packed", value: "Hare" },
           { name: "Data.Level", codec: "packedInt32", value: 30 },
+          { name: "Data.Team", codec: "packedInt32", value: team },
         ],
       });
       const raisedBy = (tick: number, objectId: number, ownerId: number): TestPacket => ({
@@ -2131,10 +2132,13 @@ describe("boss fights", () => {
       // Another player's Reanimation of the same boss, fighting on the players' side.
       capture.packet(hare(5, 901));
       capture.packet(raisedBy(6, 901, 10));
+      // Someone else's Reanimation: its summoner is not sent to this player, only its team.
+      capture.packet(hare(6, 902, 0));
 
       // The real boss hitting the Reanimation, and its damage reflected onto the player, are no fight.
       capture.packet(damagePacket(7, 901, 900));
       capture.packet(damagePacket(8, 10, 900));
+      capture.packet(damagePacket(8, 902, 20));
       await clock.advanceBy(1_000);
       expect(fight).toBeUndefined();
 
@@ -2144,6 +2148,31 @@ describe("boss fights", () => {
       await clock.advanceBy(1_000);
       expect(fight?.bossNames).toEqual(["Vorpal Hare"]);
       expect(fight?.rows.map((row) => [row.name, row.damage])).toEqual([["Fictional Hero", 200]]);
+    });
+  });
+});
+
+describe("reflected damage", () => {
+  test("counts what a monster reflects as damage taken, never as anyone's damage dealt", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture, clock, directory }) => {
+      let taken: { total: number } | undefined;
+      coordinator.subscribeDamageTaken((state) => { taken = state; });
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      capture.packet(monsterIdentityPacket(4, 900));
+      // The monster's reflection lands on the player with the players' team on it.
+      capture.packet(damagePacket(5, 10, 900));
+      await clock.advanceBy(1_000);
+      await coordinator.stop();
+
+      expect(taken?.total).toBe(100);
+      const pointer = await readCurrentLogStream("combat", directory);
+      const logged = records(await readFile(pointer!.path, "utf8")) as Array<{ type: string; data?: { kind?: string; team?: number; actorId?: number } }>;
+      const damage = logged.filter((record) => record.data?.kind === "damage");
+      expect(damage.map((record) => [record.data?.actorId, record.data?.team])).toEqual([[900, 1]]);
     });
   });
 });

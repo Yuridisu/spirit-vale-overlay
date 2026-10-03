@@ -12,6 +12,8 @@ export interface FishNetMobIdentity {
   displayName: string;
   level: number;
   rank?: number;
+  /** 1 for the monsters players fight; 0 for one fighting on the players' side, such as a Reanimation. */
+  team?: number;
   boss: boolean;
 }
 
@@ -93,6 +95,7 @@ export class FishNetMobDirectory {
       displayName: definition.displayName,
       level: spawn.level,
       ...(spawn.rank === undefined ? {} : { rank: spawn.rank }),
+      ...(spawn.team === undefined ? {} : { team: spawn.team }),
       boss: definition.boss,
     };
   }

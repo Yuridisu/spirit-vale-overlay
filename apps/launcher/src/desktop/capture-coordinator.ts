@@ -1257,6 +1257,14 @@ export class CaptureCoordinator {
       const identities = this.actors.consume(packet);
       if (this.minimapEnabled() && this.positions.consume(packet).length > 0) this.scheduleMinimapPublish();
       const events = this.combat.consume(packet);
+      // Damage a monster reflects arrives on the players' team with the monster as its dealer. It is
+      // damage the players took, so it is moved to the monsters' side before anything counts it:
+      // the meters, the boss fight and the combat log the Combat window reads all see it as taken.
+      for (const event of events) {
+        if ((event.kind === "damage" || event.kind === "death") && event.team === 0 && this.isEnemyMonster(event.actorId)) {
+          event.team = 1;
+        }
+      }
       if (isStatusPacket(packet)) {
         this.diagnostics.logStatusPacket(
           packet,
@@ -1416,9 +1424,13 @@ export class CaptureCoordinator {
     return relevant;
   }
 
-  /** A monster on the other side: known as a monster, and nobody's summon. */
+  /**
+   * A monster on the other side: known as a monster, not on the players' team, and nobody's summon.
+   * Another player's Reanimation is known only by its team, as its summoner is sent to its owner alone.
+   */
   private isEnemyMonster(objectId: number): boolean {
-    return this.mobs.get(objectId) !== undefined && this.summonRoster.summon(this.activeConnectionId, objectId) === undefined;
+    const mob = this.mobs.get(objectId);
+    return mob !== undefined && mob.team !== 0 && this.summonRoster.summon(this.activeConnectionId, objectId) === undefined;
   }
 
   private isLocalRewardActor(actorId: number): boolean {

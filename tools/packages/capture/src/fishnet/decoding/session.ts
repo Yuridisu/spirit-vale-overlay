@@ -166,9 +166,12 @@ export class FishNetSessionDecoder {
           state.staleLinks.delete(linkId);
         }
       }
+      // A despawn is not always the end of the object: the server despawns what leaves a player's
+      // view, and a reliable despawn can arrive after the spawn that reused its object id. A boss
+      // went on taking damage through links its despawns had deleted, so they are quarantined
+      // instead. A respawn of the object, or another object registering the same link, replaces them.
       if (parsed.packet.packetName === "objectDespawn" && parsed.packet.objectId !== undefined) {
-        removeObjectLinks(state, parsed.packet.objectId);
-        removeObjectComponents(state, parsed.packet.objectId);
+        quarantineObject(state, parsed.packet.objectId);
       }
       if (parsed.packet.packetName === "disconnect") {
         quarantineConnectionState(state);
@@ -224,6 +227,20 @@ function quarantineConnectionState(state: ConnectionState): void {
   }
   state.links = new Map();
   state.components = new Map();
+}
+
+function quarantineObject(state: ConnectionState, objectId: number): void {
+  for (const [linkId, registration] of state.links) {
+    if (registration.objectId !== objectId) continue;
+    state.links.delete(linkId);
+    state.staleLinks.set(linkId, registration);
+  }
+  const prefix = `${objectId}:`;
+  for (const [key, typeName] of state.components) {
+    if (!key.startsWith(prefix)) continue;
+    state.components.delete(key);
+    state.staleComponents.set(key, typeName);
+  }
 }
 
 function removeObjectLinks(state: ConnectionState, objectId: number): void {

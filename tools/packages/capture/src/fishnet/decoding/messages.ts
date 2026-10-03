@@ -253,7 +253,17 @@ function parseRpcLink(
 
   // Corroborated once is enough: promote it so later packets on this link cost a plain map hit, and report the weaker provenance.
   if (packet.rpcResolution === "verified") packet.rpcResolution = "recovered";
-  return { packet, end, stop, registrations: [[packetId, resolved]] };
+  // The object is plainly still there, so its component is live again too. That is what lets the
+  // links whose payloads cannot be checked (status displays, transforms) be trusted on it as well.
+  return {
+    packet,
+    end,
+    stop,
+    registrations: [[packetId, resolved]],
+    ...(behaviourType === undefined
+      ? {}
+      : { componentBindings: [[componentKey(resolved.objectId, resolved.componentIndex), behaviourType]] as Array<[string, string]> }),
+  };
 }
 
 /** Decides whether a quarantined link registration is trustworthy for this payload. */

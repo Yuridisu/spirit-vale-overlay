@@ -6,6 +6,11 @@ export interface FishNetMonsterSpawn {
   mobId: string;
   level: number;
   rank?: number;
+  /**
+   * The side it fights on. Monsters are on team 1; a monster on team 0 fights for the players, as
+   * a necromancer's Reanimation does while keeping the identity of the monster it raised.
+   */
+  team?: number;
 }
 
 export type FishNetMonsterDirectoryChange =
@@ -49,7 +54,13 @@ export class FishNetMonsterDirectory {
     const level = numberField(packet, ["Data.Level", "Monster.Level", "Level"]);
     if (!mobId || level === undefined || !this.levels.get(mobId)) return undefined;
     const rank = numberField(packet, ["Data.Rank", "Monster.Rank", "Rank"]);
-    return this.set(packet.objectId, { mobId, level, ...(rank === undefined ? {} : { rank }) });
+    const team = numberField(packet, ["Data.Team", "Monster.Team", "Team"]);
+    return this.set(packet.objectId, {
+      mobId,
+      level,
+      ...(rank === undefined ? {} : { rank }),
+      ...(team === undefined ? {} : { team }),
+    });
   }
 
   get(objectId: number): FishNetMonsterSpawn | undefined {
@@ -64,7 +75,8 @@ export class FishNetMonsterDirectory {
   private set(objectId: number, spawn: FishNetMonsterSpawn): FishNetMonsterDirectoryChange | undefined {
     const previous = this.objects.get(objectId);
     this.objects.set(objectId, spawn);
-    if (previous?.mobId === spawn.mobId && previous.level === spawn.level && previous.rank === spawn.rank) {
+    if (previous?.mobId === spawn.mobId && previous.level === spawn.level && previous.rank === spawn.rank
+      && previous.team === spawn.team) {
       return undefined;
     }
     return { operation: "upsert", objectId, spawn: { ...spawn } };
@@ -75,7 +87,7 @@ export class FishNetMonsterDirectory {
 export function decodeMonsterSpawn(
   packet: DecodedFishNetPacket,
   levels: FishNetMonsterLevels,
-): { mobId: string; level: number; rank?: number } | undefined {
+): FishNetMonsterSpawn | undefined {
   const entry = packet.spawnSyncEntries?.find(
     (candidate) => candidate.networkBehaviourType === "MonsterController" && candidate.name === "Data",
   );
@@ -83,8 +95,14 @@ export function decodeMonsterSpawn(
   const mobId = entry.fields.find((field) => field.name === "Id")?.value;
   const level = entry.fields.find((field) => field.name === "Level")?.value;
   const rank = entry.fields.find((field) => field.name === "Rank")?.value;
+  const team = entry.fields.find((field) => field.name === "Team")?.value;
   if (typeof mobId !== "string" || !mobId || typeof level !== "number" || !levels.get(mobId)) return undefined;
-  return { mobId, level, ...(typeof rank === "number" ? { rank } : {}) };
+  return {
+    mobId,
+    level,
+    ...(typeof rank === "number" ? { rank } : {}),
+    ...(typeof team === "number" ? { team } : {}),
+  };
 }
 
 function field(packet: DecodedFishNetPacket, names: readonly string[]): FishNetDecodedValue | undefined {

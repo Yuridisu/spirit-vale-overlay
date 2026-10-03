@@ -987,11 +987,20 @@ describe("FishNet bundles and sessions", () => {
       });
     });
 
-    test("drops a quarantined link once its object despawns", () => {
+    test("keeps a despawned object's links in quarantine, since traffic on it can carry on", () => {
+      // A boss despawned twice while players kept hitting it; every hit after that came on the old link.
       const { decoder, context } = decoderWithLink("quarantine-despawn");
-      decoder.decode(tick(3, authenticated()), context);
-      decoder.decode(tick(4, objectDespawn(80)), context);
-      expect(decoder.decode(tick(5, linked(900, source)), context)[0]).toMatchObject({ linkResolved: false });
+      decoder.decode(tick(3, objectDespawn(80)), context);
+      expect(decoder.decode(tick(4, linked(900, source)), context)[0]).toMatchObject({
+        linkResolved: true,
+        objectId: 80,
+        rpcName: "SyntheticApplyDamage",
+        rpcResolution: "recovered",
+      });
+      // Only a payload that fits the registered signature is taken.
+      decoder.decode(tick(5, objectDespawn(80)), context);
+      expect(decoder.decode(tick(6, linked(900, Buffer.concat([source, Buffer.from([0xff])]))), context)[0])
+        .toMatchObject({ linkResolved: false });
     });
 
     test("lets a fresh registration win over the quarantined one", () => {

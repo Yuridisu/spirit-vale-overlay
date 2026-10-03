@@ -25,6 +25,20 @@ describe("FishNetMonsterDirectory", () => {
     expect(directory.get(53)).toMatchObject({ mobId: "training-mob", level: 2 });
   });
 
+  test("reads the side a monster fights on, so a Reanimation on the players' team is told apart", () => {
+    const directory = new FishNetMonsterDirectory(LEVELS);
+    const raised = monsterSpawn(1, 54);
+    raised.spawnSyncEntries![0]!.fields.push({ name: "Team", typeName: "Team", codec: "packedInt32", value: 0 });
+    directory.consume(raised);
+    const sync = monsterSync(2, 55);
+    sync.decodedFields!.push({ name: "Team", typeName: "Team", codec: "packedInt32", value: 1 });
+    directory.consume(sync);
+
+    expect(directory.get(54)).toMatchObject({ mobId: "training-mob", team: 0 });
+    expect(directory.get(55)).toMatchObject({ mobId: "training-mob", team: 1 });
+    expect(directory.get(55)?.team).toBe(1);
+  });
+
   test("does not report an unchanged identity twice", () => {
     const directory = new FishNetMonsterDirectory(LEVELS);
 
