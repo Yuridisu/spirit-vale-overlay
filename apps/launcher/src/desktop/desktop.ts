@@ -1,3 +1,4 @@
+import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import DesktopRuntime, { BrowserView, BrowserWindow, Screen, Tray, Utils, isDesktopWindowProcess } from "@svoverlay/desktop-runtime";
 import { applyRoundedCorners, makeProcessDpiAware, setWindowIcon } from "@svoverlay/desktop-platform/win32";
@@ -651,6 +652,16 @@ function refreshTrayMenu(): void {
   ]);
 }
 refreshTrayMenu();
+// Starting the app again while it runs leaves a request beside it to show this launcher.
+const launcherRequestFile = process.env.SPIRIT_VALE_LAUNCHER_REQUEST_FILE;
+if (launcherRequestFile) {
+  const launcherRequestTimer = setInterval(() => {
+    if (!existsSync(launcherRequestFile)) return;
+    rmSync(launcherRequestFile, { force: true });
+    showLauncher();
+  }, 750);
+  launcherRequestTimer.unref?.();
+}
 tray.on("tray-clicked", (event) => {
   const action = trayAction((event as { data: { action: string } }).data.action);
   if (action === "show-launcher") showLauncher();

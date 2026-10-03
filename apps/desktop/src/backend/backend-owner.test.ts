@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { claimBackendOwner, releaseBackendOwner } from "./backend-owner.ts";
+import { claimBackendOwner, isSecondStart, releaseBackendOwner } from "./backend-owner.ts";
 
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
@@ -30,3 +30,12 @@ function ownerFile(): string {
   roots.push(root);
   return path.join(root, "owner.json");
 }
+
+test("tells a window the running app opened from the player starting the app again", () => {
+  // explorer 8564 started the app 15420, whose backend runs under it; the app opened the overlay
+  // 3660 through cmd.exe 2428. A second start 11644 also comes straight from explorer.
+  const parents = new Map([[15420, 8564], [2428, 15420], [3660, 2428], [11644, 8564], [8564, 8464]]);
+  const parentOf = (pid: number) => parents.get(pid);
+  expect(isSecondStart(3660, 15420, parentOf)).toBe(false);
+  expect(isSecondStart(11644, 15420, parentOf)).toBe(true);
+});

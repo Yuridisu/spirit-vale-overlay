@@ -16,6 +16,8 @@ export const bundleLayout = {
   portableMarker: ".spirit-vale-portable",
   portableReadme: "README.txt",
   backendOwnerFile: ".neutralino-backend-owner.json",
+  /** Left by a second start of the app, for the running one to bring its launcher forward. */
+  launcherRequestFile: ".neutralino-show-launcher",
   neutralinoLog: "neutralinojs.log",
   backendLog: "neutralino-backend.log",
   backendErrorLog: "neutralino-backend-stderr.log",

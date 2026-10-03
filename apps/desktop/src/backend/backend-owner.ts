@@ -20,6 +20,25 @@ export function claimBackendOwner(
   return false;
 }
 
+/**
+ * Whether a window whose extension found the backend already taken was opened by the running app
+ * or started by the player. The app opens its windows itself, each through a cmd.exe of its own,
+ * so they descend from the app process that owns the backend; a second start of the app does not.
+ */
+export function isSecondStart(
+  ownApp: number,
+  owningApp: number,
+  parentOf: (pid: number) => number | undefined,
+  depth = 4,
+): boolean {
+  let ancestor = parentOf(ownApp);
+  for (let level = 0; ancestor !== undefined && level < depth; level += 1) {
+    if (ancestor === owningApp) return false;
+    ancestor = parentOf(ancestor);
+  }
+  return true;
+}
+
 export function releaseBackendOwner(file: string, pid = process.pid): void {
   if (readOwner(file) !== pid) return;
   try { unlinkSync(file); } catch {}

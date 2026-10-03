@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { bundleLayout, bundledHotkeyHelperPath } from "@svoverlay/desktop-platform/bundle-layout";
 
@@ -6,12 +6,13 @@ import neutralinoConfig from "../../neutralino.config.json" with { type: "json" 
 import { createBackendLogger, runBackend } from "./create-backend.ts";
 import { terminateAllWindowProcesses } from "../frontend/runtime.ts";
 import { NeutralinoShellHost } from "./neutralino-host.ts";
-import { claimBackendOwner, readOwner, releaseBackendOwner } from "./backend-owner.ts";
+import { claimBackendOwner, isSecondStart, readOwner, releaseBackendOwner } from "./backend-owner.ts";
 import { findProcessEntry } from "./win32.ts";
 
 const neutralinoRoot = path.resolve(import.meta.dir, "../..");
 const backendLog = path.join(neutralinoRoot, bundleLayout.backendLog);
 const ownerFile = path.join(neutralinoRoot, bundleLayout.backendOwnerFile);
+const launcherRequestFile = path.join(neutralinoRoot, bundleLayout.launcherRequestFile);
 const logBackend = createBackendLogger(backendLog);
 
 // A previous session that closed and reopened faster than its old backend's own
@@ -23,9 +24,24 @@ terminateStaleOwner(ownerFile);
 // Neutralino launches the configured extension for every child window. Only the
 // first process may consume the parent application's extension socket.
 if (!claimBackendOwner(ownerFile)) {
-  logBackend("secondary window extension skipped");
+  const ownApp = appProcessOf(process.pid);
+  const owner = readOwner(ownerFile);
+  const owningApp = owner === undefined ? undefined : appProcessOf(owner);
+  if (ownApp !== undefined && owningApp !== undefined && isSecondStart(ownApp, owningApp, parentProcessOf)) {
+    // The player started the app again while it runs. This window would wait forever for a backend
+    // of its own, and its close button asks that backend to close it, so it could not even be
+    // closed. Ask the running app to show its launcher instead, and close this copy.
+    try { writeFileSync(launcherRequestFile, String(Date.now())); } catch {}
+    logBackend(`the app is already running (backend ${owner}); asked it to show its launcher and closed this copy`);
+    try { process.kill(ownApp); } catch {}
+  } else {
+    logBackend("secondary window extension skipped");
+  }
   process.exit(0);
 }
+// A request left while no copy was running is stale.
+rmSync(launcherRequestFile, { force: true });
+process.env.SPIRIT_VALE_LAUNCHER_REQUEST_FILE = launcherRequestFile;
 
 const releaseOwner = () => releaseBackendOwner(ownerFile);
 process.on("exit", releaseOwner);
@@ -63,6 +79,18 @@ function terminateStaleOwner(file: string): void {
   if (findProcessEntry(cmdEntry.parentProcessId)) return;
   logBackend(`stale backend owner ${owner} (${bunEntry.exeFile}) has no live app process; terminating`);
   try { process.kill(owner); } catch {}
+}
+
+/** The Neutralino process a backend extension belongs to: its parent is a cmd.exe, whose parent that is. */
+function appProcessOf(extensionPid: number): number | undefined {
+  if (process.platform !== "win32") return undefined;
+  const shell = parentProcessOf(extensionPid);
+  return shell === undefined ? undefined : parentProcessOf(shell);
+}
+
+function parentProcessOf(pid: number): number | undefined {
+  const parent = findProcessEntry(pid)?.parentProcessId;
+  return parent === undefined || parent === 0 ? undefined : parent;
 }
 
 // Neutralino launches `commandWindows` via `cmd.exe /c "..."` on Windows, so this
