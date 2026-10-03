@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { matchTargetDrop, normalizeTargetDrops, TARGET_DROP_SLOTS, TARGET_DROP_STATS } from "./target-drop.ts";
+import { isTargetDropUsed, matchTargetDrop, normalizeTargetDrops, TARGET_DROP_SLOTS, TARGET_DROP_STATS } from "./target-drop.ts";
 
 const starfireJewel = {
   displayName: "Starfire",
@@ -47,4 +47,34 @@ test("never matches an unused slot, and matches a stackable item by name alone",
   expect(matchTargetDrop(normalizeTargetDrops(undefined), starfireJewel)).toBeUndefined();
   expect(matchTargetDrop(targets({ name: "box of mastery" }), { displayName: "Box of Mastery", stats: [] })).toBe(0);
   expect(matchTargetDrop(targets({ name: "box of mastery", stats: [["Int", 1]] }), { displayName: "Box of Mastery", stats: [] })).toBeUndefined();
+});
+
+test("narrows a target to a type, with or without a name", () => {
+  const headgear = { displayName: "Wizard Hat", kind: "equipment" as const, slot: "Head", stats: [{ label: "Int", value: 3 }] };
+  const dagger = { displayName: "Kris", kind: "equipment" as const, slot: "Dagger", stats: [] };
+  const jewel = { ...starfireJewel, kind: "artifact" as const };
+  const card = { displayName: "Poring Card", kind: "item" as const, stats: [] };
+  const typed = (type: string, name = "", stats: Array<[string, number]> = []) => normalizeTargetDrops([{ name, type, stats: stats.map(([stat, min]) => ({ stat, min })) }]);
+
+  expect(matchTargetDrop(typed("Head"), headgear)).toBe(0);
+  expect(matchTargetDrop(typed("head", "", [["Int", 3]]), headgear)).toBe(0);
+  expect(matchTargetDrop(typed("Head", "", [["Int", 4]]), headgear)).toBeUndefined();
+  expect(matchTargetDrop(typed("Head"), dagger)).toBeUndefined();
+  expect(matchTargetDrop(typed("equipment"), dagger)).toBe(0);
+  expect(matchTargetDrop(typed("weapon"), dagger)).toBe(0);
+  expect(matchTargetDrop(typed("weapon"), headgear)).toBeUndefined();
+  expect(matchTargetDrop(typed("artifact", "", [["Matk %", 2]]), jewel)).toBe(0);
+  expect(matchTargetDrop(typed("artifact"), headgear)).toBeUndefined();
+  expect(matchTargetDrop(typed("Jewel", "starfire"), jewel)).toBe(0);
+  expect(matchTargetDrop(typed("Rune", "starfire"), jewel)).toBeUndefined();
+  expect(matchTargetDrop(typed("equipment"), card)).toBeUndefined();
+  expect(matchTargetDrop(typed("any", "poring card"), card)).toBe(0);
+});
+
+test("reads a target's type and sound, falling back to anything and the default tone", () => {
+  const [typed, plain] = normalizeTargetDrops([{ name: "", type: "ARTIFACT", sound: " ding " }, { name: "x", type: "Helmet" }]);
+  expect(typed).toMatchObject({ type: "artifact", sound: "ding" });
+  expect(plain).toMatchObject({ type: "any", sound: "alert" });
+  expect(isTargetDropUsed(typed!)).toBe(true);
+  expect(isTargetDropUsed(normalizeTargetDrops(undefined)[0]!)).toBe(false);
 });

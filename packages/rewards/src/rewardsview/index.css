@@ -127,6 +127,10 @@ main {
 .target-drop-field > span, .target-drop-stats > span { color: var(--on-surface-variant); font-size: 12px; }
 .target-drop-field .input, .target-drop-stats .input { width: 100%; min-width: 0; }
 .target-drop-stats { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 6px 8px; align-items: center; }
-.target-drop-sound { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.target-drop-sound { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; font-size: 13px; }
+.target-drop-sound label { display: flex; align-items: center; gap: 8px; }
+.target-drop-volume input { width: 160px; }
+.target-drop-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px; }
+.target-drop-sound-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 .target-drop-stats .input.is-unknown { border-color: var(--error); }
 .target-drop-warning { margin: 0; color: var(--error); font-size: 12px; }

@@ -273,9 +273,21 @@ function App() {
   );
 }
 
-/** Describes the drops the player is hunting: a name, and the stats the item must have. */
+type TargetDropTypeChoice = RewardsAppState["targetDrops"]["typeChoices"][number];
+const TARGET_DROP_TYPE_GROUPS: ReadonlyArray<TargetDropTypeChoice["group"]> = ["generic", "armor", "weapon", "artifact"];
+/** The types named in words rather than by the slot the game gives. */
+const GENERIC_TARGET_DROP_TYPES: readonly string[] = ["any", "equipment", "weapon", "artifact"];
+
+/** Describes the drops the player is hunting: a type, a name, the stats the item must have, and a sound. */
 function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }) {
   const t = useTranslator();
+  const [volume, setVolume] = useState<number | undefined>(undefined);
+  const shownVolume = volume ?? state.volume;
+  const typeLabel = (id: string): string => GENERIC_TARGET_DROP_TYPES.includes(id)
+    ? t(`rewards.targetDrops.type.${id}` as Parameters<typeof t>[0])
+    : id.replace(/([a-z])([A-Z])/g, "$1 $2");
+  // A sound chosen before its file was removed stays listed, so the picker never shows another.
+  const soundChoices = (current: string): string[] => state.soundChoices.includes(current) || !current ? state.soundChoices : [...state.soundChoices, current];
   const save = (targets: RewardsAppState["targetDrops"]["targets"]): void => {
     void desktopView.rpc?.request.setTargetDrops({ targets });
   };
@@ -292,12 +304,24 @@ function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }
           <div class="target-drop-card" key={slot}>
             <div class="target-drop-card-head">
               <strong>{t("rewards.targetDrops.slot", { slot: slot + 1 })}</strong>
-              <button class="btn" type="button" disabled={!target.name && target.stats.every((row) => !row.stat)} onClick={() => update(slot, () => ({ name: "", stats: target.stats.map(() => ({ stat: "", min: 0 })) }))}>{t("rewards.targetDrops.clear")}</button>
+              <button class="btn" type="button" disabled={!target.name && target.type === "any" && target.stats.every((row) => !row.stat)} onClick={() => update(slot, (current) => ({ ...current, name: "", type: "any", stats: current.stats.map(() => ({ stat: "", min: 0 })) }))}>{t("rewards.targetDrops.clear")}</button>
             </div>
-            <label class="target-drop-field">
-              <span>{t("rewards.targetDrops.name")}</span>
-              <input class="input" type="text" maxLength={60} placeholder={t("rewards.targetDrops.namePlaceholder")} value={target.name} onChange={(event) => update(slot, (current) => ({ ...current, name: event.currentTarget.value }))} />
-            </label>
+            <div class="target-drop-pair">
+              <label class="target-drop-field">
+                <span>{t("rewards.targetDrops.type")}</span>
+                <select class="input" value={target.type} onChange={(event) => update(slot, (current) => ({ ...current, type: event.currentTarget.value }))}>
+                  {TARGET_DROP_TYPE_GROUPS.map((group) => {
+                    const choices = state.typeChoices.filter((choice) => choice.group === group);
+                    const options = choices.map((choice) => <option key={choice.id} value={choice.id}>{typeLabel(choice.id)}</option>);
+                    return group === "generic" ? options : <optgroup key={group} label={t(`rewards.targetDrops.group.${group}` as Parameters<typeof t>[0])}>{options}</optgroup>;
+                  })}
+                </select>
+              </label>
+              <label class="target-drop-field">
+                <span>{t("rewards.targetDrops.name")}</span>
+                <input class="input" type="text" maxLength={60} placeholder={t(target.type === "any" ? "rewards.targetDrops.namePlaceholder" : "rewards.targetDrops.nameOptional")} value={target.name} onChange={(event) => update(slot, (current) => ({ ...current, name: event.currentTarget.value }))} />
+              </label>
+            </div>
             <div class="target-drop-stats">
               <span>{t("rewards.targetDrops.stat")}</span><span>{t("rewards.targetDrops.min")}</span>
               {target.stats.map((row, index) => (
@@ -308,10 +332,30 @@ function TargetDropsSection({ state }: { state: RewardsAppState["targetDrops"] }
               ))}
             </div>
             {target.stats.some((row) => !isKnown(row.stat)) && <p class="target-drop-warning">{t("rewards.targetDrops.unknownStat")}</p>}
+            <div class="target-drop-sound-row">
+              <label class="target-drop-field">
+                <span>{t("rewards.targetDrops.soundName")}</span>
+                <select class="input" value={target.sound} disabled={!state.sound} onChange={(event) => update(slot, (current) => ({ ...current, sound: event.currentTarget.value }))}>
+                  {soundChoices(target.sound).map((sound) => <option key={sound} value={sound}>{sound}</option>)}
+                </select>
+              </label>
+              <button class="btn" type="button" disabled={!state.sound || shownVolume <= 0} onClick={() => void desktopView.rpc?.request.previewTargetDropSound({ sound: target.sound })}>{t("rewards.targetDrops.play")}</button>
+            </div>
           </div>
         ))}
       </div>
-      <label class="target-drop-sound"><input type="checkbox" checked={state.sound} onChange={(event) => void desktopView.rpc?.request.setTargetDropSound({ enabled: event.currentTarget.checked })} /><span>{t("rewards.targetDrops.sound")}</span></label>
+      <div class="target-drop-sound">
+        <label><input type="checkbox" checked={state.sound} onChange={(event) => void desktopView.rpc?.request.setTargetDropSound({ enabled: event.currentTarget.checked })} /><span>{t("rewards.targetDrops.sound")}</span></label>
+        <label class="target-drop-volume">
+          <span>{t("rewards.targetDrops.volume", { volume: shownVolume })}</span>
+          <input type="range" min="0" max="100" step="1" value={shownVolume} disabled={!state.sound}
+            onInput={(event) => setVolume(event.currentTarget.valueAsNumber)}
+            onChange={(event) => {
+              const next = event.currentTarget.valueAsNumber;
+              void desktopView.rpc?.request.setTargetDropVolume({ volume: next }).then(() => setVolume(undefined));
+            }} />
+        </label>
+      </div>
       <p class="item-counter-empty">{t("rewards.targetDrops.help")}</p>
     </div>
   );

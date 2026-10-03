@@ -341,9 +341,10 @@ export interface OverlaySettingsState {
   itemCounterItems: string[];
   /** Items in the bag right now, offered as suggestions when choosing what to follow. */
   itemCounterChoices: string[];
-  /** The drops being watched for, one per slot; a slot with no name is unused. */
+  /** The drops being watched for, one per slot; a slot with no name or type is unused. */
   targetDrops: TargetDrop[];
   targetDropSound: boolean;
+  targetDropVolume: number;
   /** The saved presets, by name, in the order they cycle. */
   presets: string[];
   /** The preset last saved or applied. The overlay may have been changed since. */

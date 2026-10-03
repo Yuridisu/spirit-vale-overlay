@@ -78,6 +78,9 @@ export interface RewardsWindowOptions {
     getState(): RewardsTargetDropState;
     setTargets(targets: RewardsTargetDrop[]): Promise<void> | void;
     setSound(enabled: boolean): Promise<void> | void;
+    setVolume(volume: number): Promise<void> | void;
+    /** Plays a sound at the chosen volume, so it can be heard before it is picked. */
+    previewSound(sound: string): boolean;
   };
 }
 
@@ -180,6 +183,11 @@ const rpc = BrowserView.defineRPC<RewardsAppRpc>({
         await options.targetDrops?.setSound(enabled);
         return appState();
       },
+      setTargetDropVolume: async ({ volume }) => {
+        await options.targetDrops?.setVolume(volume);
+        return appState();
+      },
+      previewTargetDropSound: ({ sound }) => ({ played: options.targetDrops?.previewSound(sound) ?? false }),
       setPinned: ({ pinned }) => {
         settings.pinned = pinned;
         window.setAlwaysOnTop(pinned);
@@ -287,7 +295,7 @@ function appState(): RewardsAppState {
     xp: options.xp.getSnapshot(),
     gold: options.xp.getCoinsSnapshot(),
     itemCounter: options.itemCounter?.getState() ?? { slots: [], known: false, items: [] },
-    targetDrops: options.targetDrops?.getState() ?? { targets: [], sound: true, statChoices: [] },
+    targetDrops: options.targetDrops?.getState() ?? { targets: [], sound: true, volume: 80, statChoices: [], typeChoices: [], soundChoices: [] },
   };
 }
 

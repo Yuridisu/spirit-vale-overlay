@@ -565,8 +565,26 @@ export async function createCompanionService(options: CompanionServiceOptions) {
       diagnostics.warn("Market contributor did not stop cleanly during shutdown", { error: formatError(error) }));
   }
 
+  /** Every alert sound by name: the built-in tones, then the player's own `.wav` files. */
+  function soundNames(): string[] {
+    return [...SOUND_NAMES, ...listCustomSounds(soundsDirectory).map((sound) => sound.name)];
+  }
+
+  /** Plays an alert sound by name at 0-100 volume, whatever the Companion's own alert settings say. */
+  function playNamedSound(name: string, volume: number): boolean {
+    try {
+      const bytes = soundBytes(name);
+      return bytes !== undefined && (options.playSound?.(bytes, volume) ?? false);
+    } catch (error) {
+      warning = `Could not play alert sound: ${formatError(error)}`;
+      return false;
+    }
+  }
+
   return {
     origin: `http://127.0.0.1:${port}`,
+    soundNames,
+    playNamedSound,
     consumePacket,
     connectionOpened,
     connectionClosed,

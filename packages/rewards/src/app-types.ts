@@ -52,18 +52,27 @@ export interface RewardsItemCounterState {
   items: Array<{ name: string; count: number; gained: number }>;
 }
 
-/** One drop the player is hunting: words of its name, and the stats it must have. */
+/** One drop the player is hunting: its type, words of its name, the stats it must have, and its sound. */
 export interface RewardsTargetDrop {
   name: string;
+  /** `any`, `equipment`, `weapon`, `artifact`, or one slot or artifact piece. */
+  type: string;
+  sound: string;
   stats: Array<{ stat: string; min: number }>;
 }
 
 export interface RewardsTargetDropState {
-  /** One per slot; a slot with no name is unused. */
+  /** One per slot; a slot with no name and no type is unused. */
   targets: RewardsTargetDrop[];
   sound: boolean;
+  /** 0-100. */
+  volume: number;
   /** Every stat a drop can carry, as the overlay labels it. */
   statChoices: string[];
+  /** The types a target can be narrowed to, grouped for the picker. */
+  typeChoices: Array<{ id: string; group: "generic" | "armor" | "weapon" | "artifact" }>;
+  /** The built-in tones, then the player's own sounds. */
+  soundChoices: string[];
 }
 
 export interface RewardsUiGraphSample {
@@ -116,6 +125,8 @@ export type RewardsAppRpc = {
       setItemCounterItems: { params: { items: string[] }; response: RewardsAppState };
       setTargetDrops: { params: { targets: RewardsTargetDrop[] }; response: RewardsAppState };
       setTargetDropSound: { params: { enabled: boolean }; response: RewardsAppState };
+      setTargetDropVolume: { params: { volume: number }; response: RewardsAppState };
+      previewTargetDropSound: { params: { sound: string }; response: { played: boolean } };
     };
   }>;
   webview: RPCSchema<{ messages: { stateChanged: RewardsAppState } }>;

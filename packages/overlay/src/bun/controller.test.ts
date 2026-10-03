@@ -5,7 +5,8 @@ import path from "node:path";
 
 import type { CharacterViewState } from "@kar-mi/spirit-vale-tools-character";
 
-import type { BossTimerState, OverlayControlState } from "../app-types.ts";
+import type { BossTimerState, OverlayControlState, OverlayGearPickupEvent } from "../app-types.ts";
+import { normalizeTargetDrops } from "../target-drop.ts";
 import { defaultOverlaySettings, type OverlaySettings } from "../settings.ts";
 import { createOverlayController, type OverlayController, type OverlaySurfaceSink } from "./controller.ts";
 
@@ -49,7 +50,10 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
   };
 }
 
-async function createController(settingsPath: string): Promise<OverlayController> {
+async function createController(
+  settingsPath: string,
+  overrides: Partial<Parameters<typeof createOverlayController>[0]> = {},
+): Promise<OverlayController> {
   const controller = await createOverlayController({
     logDirectory: path.dirname(settingsPath),
     settingsPath,
@@ -78,6 +82,7 @@ async function createController(settingsPath: string): Promise<OverlayController
       getState: (): BossTimerState => ({ timers: [] }),
       subscribe: () => () => {},
     },
+    ...overrides,
   });
   controllers.push(controller);
   return controller;
@@ -207,5 +212,34 @@ describe("presets", () => {
     restarted.setMinimapRange(100);
     expect(restarted.applyPreset("Keep")).toBe(true);
     expect(restarted.settingsState().minimapRange).toBe(260);
+  });
+});
+
+describe("target drops", () => {
+  test("announces a pickup of the target's type and plays the target's own sound", async () => {
+    let gearPickup: ((event: OverlayGearPickupEvent) => void) | undefined;
+    let artifactPickup: ((event: OverlayGearPickupEvent) => void) | undefined;
+    const sounds: Array<[string, number]> = [];
+    const controller = await createController(await settingsFile(), {
+      subscribeGearPickup: (listener) => { gearPickup = listener; return () => {}; },
+      subscribeArtifactPickup: (listener) => { artifactPickup = listener; return () => {}; },
+      onTargetDropSound: (sound, volume) => { sounds.push([sound, volume]); },
+    });
+    const announced: string[] = [];
+    controller.registerSurface({ ...recordingSurface(controller.wantedSurfaces()[0]!), sendTargetDrop: (event) => { announced.push(event.slot ?? ""); } });
+    const defaults = defaultOverlaySettings(controller.displays);
+    controller.replaceSettings(importedSettings(controller, {
+      elements: { ...defaults.elements, targetDrop: { ...defaults.elements.targetDrop, enabled: true } },
+    }));
+    controller.setTargetDrops(normalizeTargetDrops([{ name: "", type: "artifact", sound: "ding", stats: [{ stat: "Matk %", min: 2 }] }]));
+    controller.setTargetDropVolume(40);
+
+    // A headgear with the stat is not an artifact; an artifact without enough of it is not wanted.
+    gearPickup?.({ itemId: "hat", displayName: "Wizard Hat", slot: "Head", refine: 0, stats: [{ label: "Matk %", roll: 1, value: 3 }] });
+    artifactPickup?.({ itemId: "jewel", displayName: "Starfire", slot: "Jewel", refine: 0, stats: [{ label: "Matk %", roll: 1, value: 1 }] });
+    artifactPickup?.({ itemId: "rune", displayName: "Starfire", slot: "Rune", refine: 0, stats: [{ label: "Matk %", roll: 1, value: 2 }] });
+
+    expect(announced).toEqual(["Rune"]);
+    expect(sounds).toEqual([["ding", 40]]);
   });
 });

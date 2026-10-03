@@ -155,8 +155,8 @@ export interface OverlayControllerOptions {
   subscribeSummons: (listener: (state: OverlaySummonsState) => void) => () => void;
   /** Every stackable item picked up, which has a name and a count but no rolls. */
   subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
-  /** A watched-for drop was just picked up, and the player asked to hear about it. */
-  onTargetDropSound?: () => void;
+  /** A watched-for drop was just picked up, and the player asked to hear about it: its sound, at 0-100 volume. */
+  onTargetDropSound?: (sound: string, volume: number) => void;
   /** Calls the listener at once with the bag as it is known, then on every change. */
   subscribeInventory: (listener: (state: ItemCounterSource) => void) => () => void;
   xp: XpTrackerSource;
@@ -316,7 +316,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
   });
   const unsubscribeGearPickup = options.subscribeGearPickup((event) => {
     if (shuttingDown) return;
-    announceTargetDrop(event);
+    announceTargetDrop(event, "equipment");
     const element = settings.elements.gearPickup;
     if (!element.enabled) return;
     const surface = surfaces.get(element.display);
@@ -364,11 +364,11 @@ export async function createOverlayController(options: OverlayControllerOptions)
   });
   const unsubscribeStackPickup = options.subscribeStackPickup((event) => {
     if (shuttingDown) return;
-    announceTargetDrop({ itemId: event.displayName, displayName: event.displayName, refine: 0, stats: [], count: event.count });
+    announceTargetDrop({ itemId: event.displayName, displayName: event.displayName, refine: 0, stats: [], count: event.count }, "item");
   });
   const unsubscribeArtifactPickup = options.subscribeArtifactPickup((event) => {
     if (shuttingDown) return;
-    announceTargetDrop(event);
+    announceTargetDrop(event, "artifact");
     const element = settings.elements.artifactPickup;
     if (!element.enabled) return;
     const surface = surfaces.get(element.display);
@@ -426,6 +426,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
     setItemCounterItems,
     setTargetDrops,
     setTargetDropSound,
+    setTargetDropVolume,
     savePreset,
     applyPreset,
     deletePreset,
@@ -540,6 +541,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       itemCounterChoices: inventorySource.items.filter((item) => item.count > 0).map((item) => item.name),
       targetDrops: settings.targetDrops,
       targetDropSound: settings.targetDropSound,
+      targetDropVolume: settings.targetDropVolume,
       presets: presetStore.presets.map((preset) => preset.name),
       ...(presetStore.active === undefined ? {} : { activePreset: presetStore.active }),
     };
@@ -619,18 +621,20 @@ export async function createOverlayController(options: OverlayControllerOptions)
   }
 
   /** Shows a pickup on the target-drop element when it is one of the drops being watched for. */
-  function announceTargetDrop(event: OverlayGearPickupEvent): void {
+  function announceTargetDrop(event: OverlayGearPickupEvent, kind: "equipment" | "artifact" | "item"): void {
     const element = settings.elements.targetDrop;
     if (!element.enabled) return;
     const matched = matchTargetDrop(settings.targetDrops, {
       displayName: event.displayName,
+      kind,
       ...(event.slot === undefined ? {} : { slot: event.slot }),
       stats: event.stats,
     });
     if (matched === undefined) return;
     const surface = surfaces.get(element.display);
     if (surface) publishSafely(() => surface.sendTargetDrop(event));
-    if (settings.targetDropSound) publishSafely(() => options.onTargetDropSound?.());
+    const sound = settings.targetDrops[matched]!.sound;
+    if (settings.targetDropSound) publishSafely(() => options.onTargetDropSound?.(sound, settings.targetDropVolume));
   }
 
   function setTargetDrops(targets: TargetDrop[]): TargetDrop[] {
@@ -638,6 +642,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
     persist();
     publishControl();
     return settings.targetDrops;
+  }
+
+  function setTargetDropVolume(volume: number): number {
+    settings = normalizeOverlaySettings({ ...settings, targetDropVolume: volume }, displays);
+    persist();
+    publishControl();
+    return settings.targetDropVolume;
   }
 
   function setTargetDropSound(enabled: boolean): boolean {

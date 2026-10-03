@@ -26,6 +26,7 @@ const PRESET_KEYS = [
   "itemCounterItems",
   "targetDrops",
   "targetDropSound",
+  "targetDropVolume",
 ] as const satisfies ReadonlyArray<keyof OverlaySettings>;
 
 export type OverlayPresetSettings = Pick<OverlaySettings, typeof PRESET_KEYS[number]>;

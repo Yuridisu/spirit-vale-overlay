@@ -57,7 +57,7 @@ import { readCombatLocations } from "@svoverlay/combat/zone-log";
 import { createOverlayWindow } from "@svoverlay/overlay";
 import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
 import { normalizeItemCounterItems } from "@svoverlay/overlay/item-counter";
-import { normalizeTargetDrops } from "@svoverlay/overlay/target-drop";
+import { DEFAULT_TARGET_DROP_SOUND, normalizeTargetDrops, TARGET_DROP_TYPES } from "@svoverlay/overlay/target-drop";
 import {
   KEYBIND_ACTIONS,
   type KeybindAction,
@@ -281,7 +281,10 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeInventory: (listener) => capture.subscribeInventory(listener),
   subscribeStackPickup: (listener) => capture.subscribeStackPickup(listener),
   subscribeSummons: (listener) => capture.subscribeSummons(listener),
-  onTargetDropSound: () => { playBuiltinSound("alert", 80); },
+  onTargetDropSound: (sound, volume) => {
+    // A custom sound since deleted from the folder still makes a sound.
+    if (!companion.playNamedSound(sound, volume)) playBuiltinSound(DEFAULT_TARGET_DROP_SOUND, volume);
+  },
   subscribeGearRating: (listener) => {
     listener(rateGear(capture.characterState().snapshot));
     return capture.subscribeCharacter((state) => listener(rateGear(state.snapshot)));
@@ -301,9 +304,9 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   },
   onTimerChanged: rememberTimer,
   onSettingsStateChanged: (overlayState) => {
-    const nextTargetDrops = JSON.stringify([overlayState.targetDrops, overlayState.targetDropSound]);
-    if (nextTargetDrops !== JSON.stringify([targetDropState.targets, targetDropState.sound])) {
-      targetDropState = { targets: overlayState.targetDrops, sound: overlayState.targetDropSound };
+    const nextTargetDrops = JSON.stringify([overlayState.targetDrops, overlayState.targetDropSound, overlayState.targetDropVolume]);
+    if (nextTargetDrops !== JSON.stringify([targetDropState.targets, targetDropState.sound, targetDropState.volume])) {
+      targetDropState = { targets: overlayState.targetDrops, sound: overlayState.targetDropSound, volume: overlayState.targetDropVolume };
       for (const listener of itemCounterListeners) listener();
     }
     if (overlayState.itemCounterItems.join("\n") !== itemCounterSlots.join("\n")) {
@@ -335,7 +338,7 @@ const companionWindow = new WindowSlot((onClosed) => createCompanionWindow({
 let itemCounterSlots: string[] = normalizeItemCounterItems(undefined);
 const itemCounterListeners = new Set<() => void>();
 /** The drops the overlay watches for, likewise as last reported by the overlay. */
-let targetDropState = { targets: normalizeTargetDrops(undefined), sound: true };
+let targetDropState = { targets: normalizeTargetDrops(undefined), sound: true, volume: 80 };
 const targetDropStatChoices = pickupStatLabels();
 const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   logDirectory,
@@ -350,13 +353,22 @@ const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
   onReset: () => capture.resetSession(),
   onOpenSettings: openSettings,
   targetDrops: {
-    getState: () => ({ ...targetDropState, statChoices: targetDropStatChoices }),
+    getState: () => ({
+      ...targetDropState,
+      statChoices: targetDropStatChoices,
+      typeChoices: [...TARGET_DROP_TYPES],
+      soundChoices: companion.soundNames(),
+    }),
     setTargets: async (targets) => {
       await overlayWindow.withWindow((overlay) => overlay.setTargetDrops(targets));
     },
     setSound: async (enabled) => {
       await overlayWindow.withWindow((overlay) => overlay.setTargetDropSound(enabled));
     },
+    setVolume: async (volume) => {
+      await overlayWindow.withWindow((overlay) => overlay.setTargetDropVolume(volume));
+    },
+    previewSound: (sound) => companion.playNamedSound(sound, targetDropState.volume),
   },
   itemCounter: {
     getState: () => ({ slots: itemCounterSlots, ...capture.inventoryState() }),

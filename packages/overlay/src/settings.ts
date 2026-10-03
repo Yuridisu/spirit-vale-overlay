@@ -56,10 +56,12 @@ export interface OverlaySettings {
   timerDurationSeconds: number;
   /** The item followed in each counter slot; an empty string is a free slot. */
   itemCounterItems: string[];
-  /** The drops being watched for, one per slot; a slot with no name is unused. */
+  /** The drops being watched for, one per slot; a slot with no name or type is unused. */
   targetDrops: TargetDrop[];
-  /** Whether finding one also plays a sound. */
+  /** Whether finding one also plays its sound. */
   targetDropSound: boolean;
+  /** How loud that sound plays, 0-100. */
+  targetDropVolume: number;
 }
 
 const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
@@ -233,6 +235,7 @@ export function normalizeOverlaySettings(
     itemCounterItems: normalizeItemCounterItems(source.itemCounterItems),
     targetDrops: normalizeTargetDrops(source.targetDrops),
     targetDropSound: typeof source.targetDropSound === "boolean" ? source.targetDropSound : true,
+    targetDropVolume: normalizeTargetDropVolume(source.targetDropVolume),
   };
 }
 
@@ -370,4 +373,9 @@ function clampNumber(value: unknown, fallback: number, minimum: number, maximum:
 export async function resolveSettingsPath(settingsPath: string | undefined): Promise<string> {
   if (settingsPath) return settingsPath;
   return path.join(resolveLocalStorageRoot(), "data", "settings", "overlay.json");
+}
+
+/** A whole percentage; anything unreadable is the 80% the alert has always played at. */
+export function normalizeTargetDropVolume(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(Math.max(0, Math.min(100, value))) : 80;
 }

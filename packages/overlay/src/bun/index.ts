@@ -67,6 +67,7 @@ export async function createOverlayWindow(options: OverlayWindowOptions) {
     applyPreset: (name: string) => controller.applyPreset(name),
     deletePreset: (name: string) => controller.deletePreset(name),
     setTargetDropSound: (enabled: boolean) => controller.setTargetDropSound(enabled),
+    setTargetDropVolume: (volume: number) => controller.setTargetDropVolume(volume),
     toggleTimer: () => controller.toggleTimer(),
     resetTimer: () => controller.resetTimer(),
     getTimerState: () => controller.timerState(),

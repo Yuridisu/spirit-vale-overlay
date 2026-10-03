@@ -3,6 +3,19 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.13
+
+### Added
+
+- **Target drops by type.** Each target now has a Type next to its name: any equipment, any
+  weapon, any artifact, one equipment slot (Head, Chest, Feet and so on), one weapon kind, or one
+  artifact piece (Rune, Jewel, Scroll, Relic). With a type the name is optional, so a target can be
+  any headgear with Int 3, or any artifact with Matk % 2. Targets saved before keep working as they
+  were.
+- **A sound for each target drop.** Pick one of the five built-in tones or one of your own `.wav`
+  files for each target, try it with Play, and set how loud target drops play. Your own sounds are
+  the ones you add in the Companion's settings.
+
 ## 0.10.12
 
 ### Added
