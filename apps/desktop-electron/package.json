@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@kar-mi/spirit-vale-tools-capture": "workspace:*",
+    "@svoverlay/companion": "workspace:*",
     "@svoverlay/contracts": "workspace:*",
     "@svoverlay/desktop": "workspace:*",
     "@svoverlay/desktop-platform": "workspace:*",
     "@svoverlay/overlay": "workspace:*",
     "@svoverlay/ui-kit": "workspace:*",
+    "lucide-preact": "^0.544.0",
     "preact": "^10.29.7"
   },
   "devDependencies": {
