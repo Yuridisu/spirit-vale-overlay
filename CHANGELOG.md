@@ -34,10 +34,6 @@ section as the GitHub Release notes, so write it for the people who use the app.
   dropped, so long boss fights showed little or no damage on the boss. Those hits are now kept, as
   long as they match what the boss registered when it appeared. Status effects and movement on such
   objects come back the same way.
-- **Boss DPS no longer mistakes a necromancer's Reanimation for a boss.** A raised monster keeps
-  the boss it was, so hits on it opened a boss fight of its own. Monsters fighting on the players'
-  side, which the game marks with their team, are now left out, and a summon's hits on a boss
-  count for the player who raised it.
 - **Reflected damage counts as damage taken.** Damage a monster reflects reached the meters as if a
   player had dealt it, filling them with "Unidentified" rows and the reflecting monster itself.
 

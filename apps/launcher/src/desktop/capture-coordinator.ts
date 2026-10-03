@@ -608,16 +608,11 @@ export class CaptureCoordinator {
         continue;
       }
       const mob = this.mobs.get(event.targetId);
-      // A necromancer's Reanimation of a boss is still that boss to the game, but it is on the players' side.
-      if (!mob?.boss || !this.isEnemyMonster(event.targetId)) continue;
-      // Damage a boss reflects is not anyone's damage to it.
-      if (this.isEnemyMonster(event.actorId)) continue;
-      // A summon's hits count for the player who raised it.
-      const dealer = this.summonRoster.summon(this.activeConnectionId, event.actorId)?.ownerId ?? event.actorId;
-      const identity = this.actors.getAttribution(dealer);
+      if (!mob?.boss) continue;
+      const identity = this.actors.getAttribution(event.actorId);
       const name = identity?.displayName
-        ?? (this.isLocalRewardActor(dealer) ? this.character.current()?.name : undefined)
-        ?? `Unidentified (${dealer})`;
+        ?? (this.isLocalRewardActor(event.actorId) ? this.character.current()?.name : undefined)
+        ?? `Unidentified (${event.actorId})`;
       this.bossFight.observeDamage(
         { objectId: mob.objectId, name: mob.displayName },
         { name, ...(identity?.archetype === undefined ? {} : { archetype: identity.archetype }) },
