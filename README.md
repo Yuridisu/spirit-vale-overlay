@@ -18,14 +18,15 @@ The same guides live in this repository: [docs/install/index.md](docs/install/in
 > under [tools/](tools/).
 
 > The Companion window (bag, loot rules, gold sessions and market) is
-> [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2, brought in with the author's
+> [Vale Companion](https://github.com/bjb2/valecompanion) by Buh (bjb2), brought in with the author's
 > agreement. See [packages/companion/README.md](packages/companion/README.md) for what came from
 > where, and for what it sends to the market service when you opt in.
 
 > **Default overlay hotkeys:** `Ctrl+Shift+1` locks or unlocks the overlay, `Ctrl+Shift+2` resets the
 > session, `Ctrl+Shift+3` opens the live death log, `Ctrl+Shift+4` shows or hides the overlay,
 > `Ctrl+Shift+5` cycles the party meter, `Ctrl+Shift+6` / `Ctrl+Shift+7` reset all-time XP / gold, and
-> `Ctrl+Shift+8` cycles the boss timer tile between regions when you have timers in more than one.
+> `Ctrl+Shift+8` cycles the boss timer tile between regions when you have timers in more than one,
+> and `Ctrl+Shift+P` steps through your overlay presets.
 > These can be rebound in Settings. Hotkeys pass through to the foreground program, so its normal
 > action for the same combination still runs. Windows may also use Ctrl+Shift to switch input languages
 > when configured that way.
@@ -112,6 +113,12 @@ plus connection-admission decisions and status-RPC decoder input/output. Raw tra
 bounded to 8 MiB before and 32 MiB after authentication; a `capture.diagnosticLimit` record reports
 truncation. Diagnostic logs contain raw game-network payloads and endpoint addresses, so review them
 before sharing and disable the environment variable after reproducing the issue.
+
+## Credits
+
+- [kar-mi](https://github.com/kar-mi) created Spirit Vale Overlay and spirit-vale-tools.
+- Buh ([bjb2](https://github.com/bjb2)) wrote [Vale Companion](https://github.com/bjb2/valecompanion),
+  which the Companion window is built on, and runs the market service its prices come from.
 
 ## Support
 

@@ -8,8 +8,8 @@ section as the GitHub Release notes, so write it for the people who use the app.
 ### Added
 
 - **Companion window.** The bag, loot rules, gold sessions and market of
-  [Vale Companion](https://github.com/bjb2/valecompanion) by bjb2 are now part of this app, with the
-  author's agreement. Open it from the Companion tile on the main window.
+  [Vale Companion](https://github.com/bjb2/valecompanion) by Buh (bjb2) are now part of this app,
+  with the author's agreement. Open it from the Companion tile on the main window.
   - **Bag and storage.** Everything you carry and everything in your personal storage, with item
     icons, each item's rolled stats and roll percentages, and an estimated market value. The game
     sends the bag with your first kill or pickup after the app starts, so it is empty until then;
@@ -75,6 +75,12 @@ section as the GitHub Release notes, so write it for the people who use the app.
 - **No overlay process is left behind when the app closes.** Closing the app with the Settings
   window open could leave a hidden overlay process running.
 - **The killing blow is counted once** in the Damage taken total. It was added twice.
+
+### Credits
+
+- **Buh ([bjb2](https://github.com/bjb2))** wrote [Vale Companion](https://github.com/bjb2/valecompanion),
+  which the Companion window is built on, agreed to have it brought into this app, and runs the
+  market service its prices come from. Thank you, Buh.
 
 ### For developers
 
