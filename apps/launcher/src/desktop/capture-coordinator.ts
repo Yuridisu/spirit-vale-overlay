@@ -57,7 +57,7 @@ import { CaptureDiagnostics } from "./capture-diagnostics.ts";
 import { CaptureHealthMonitor } from "./capture-health-monitor.ts";
 import { systemClock, type Clock, type ClockTimer } from "./clock.ts";
 import { InventoryCounter, type InventoryCountState } from "./inventory-counter.ts";
-import { SummonRoster, type CaptureSummonsState } from "./summon-roster.ts";
+import { SUMMON_GONE_GRACE_MS, SummonRoster, type CaptureSummonsState } from "./summon-roster.ts";
 import { LocalCharacterRouter } from "./local-character-router.ts";
 import { RewardEventAttributor } from "./reward-event-attributor.ts";
 
@@ -203,7 +203,8 @@ export class CaptureCoordinator {
   private readonly damageTaken = new DamageTakenTracker();
   private damageTakenTimer?: ClockTimer;
   private readonly inventoryListeners = new Set<(state: InventoryCountState) => void>();
-  private readonly summonRoster = new SummonRoster();
+  private readonly summonRoster = new SummonRoster(() => this.clock.now());
+  private summonGoneTimer?: ClockTimer;
   private readonly summonListeners = new Set<(state: CaptureSummonsState) => void>();
   private summonTimer?: ClockTimer;
   private lastSummonsJson = "";
@@ -478,6 +479,14 @@ export class CaptureCoordinator {
     }
     if (!changed && packet.packetName !== "serverRpc") return;
     this.scheduleSummonsPublish();
+    // A summon reported gone leaves the list only once it has stayed quiet; look again after that.
+    if (this.summonRoster.hasPendingGone() && this.summonGoneTimer === undefined) {
+      this.summonGoneTimer = this.clock.setTimeout(() => {
+        this.summonGoneTimer = undefined;
+        this.scheduleSummonsPublish();
+      }, SUMMON_GONE_GRACE_MS + 100);
+      this.summonGoneTimer.unref?.();
+    }
   }
 
   private scheduleSummonsPublish(): void {
@@ -844,6 +853,8 @@ export class CaptureCoordinator {
     if (this.damageTakenTimer !== undefined) this.clock.clearTimeout(this.damageTakenTimer);
     if (this.summonTimer !== undefined) this.clock.clearTimeout(this.summonTimer);
     this.summonTimer = undefined;
+    if (this.summonGoneTimer !== undefined) this.clock.clearTimeout(this.summonGoneTimer);
+    this.summonGoneTimer = undefined;
     this.damageTakenTimer = undefined;
     this.resetTrackers("full");
     this.rewards.reset();

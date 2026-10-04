@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
 
-import { SummonRoster, summonName } from "./summon-roster.ts";
+import { SUMMON_GONE_GRACE_MS, SummonRoster, summonName } from "./summon-roster.ts";
 
 const CONNECTION = "local:5000#1";
 const OWNER = 48_548;
@@ -58,18 +58,43 @@ test("lists the local player's summons with their health, in the order they were
   expect(roster.state(CONNECTION, 7).rows.map((row) => row.name)).toEqual(["Skeleton"]);
 });
 
-test("follows health changes, and drops a summon when it despawns or its connection ends", () => {
-  const roster = new SummonRoster();
+test("follows health changes, and drops a summon only once it stays quiet after being reported gone", () => {
+  let now = 0;
+  const roster = new SummonRoster(() => now);
   roster.consume(summoning(10, OWNER, "SummonSkeleton"));
   roster.consume(health(10, 17_401, 17_401));
   expect(roster.consume(health(10, 9_000))).toBe(true);
   expect(roster.state(CONNECTION, OWNER).rows[0]).toMatchObject({ health: 9_000, maxHealth: 17_401 });
 
+  // The server despawns summons that are still out; while it goes on sending about one, it stays.
   expect(roster.consume(packet({ packetName: "objectDespawn", objectId: 10 }))).toBe(true);
-  expect(roster.state(CONNECTION, OWNER).rows).toEqual([]);
+  now = 3_000;
+  roster.consume(health(10, 8_000));
+  now = 9_000;
+  expect(roster.state(CONNECTION, OWNER).rows).toMatchObject([{ health: 8_000 }]);
 
+  // Gone and quiet past the grace: it is gone.
+  roster.consume(packet({ packetName: "objectDespawn", objectId: 10 }));
+  now += SUMMON_GONE_GRACE_MS - 1;
+  expect(roster.state(CONNECTION, OWNER).rows).toHaveLength(1);
+  now += 1;
+  expect(roster.state(CONNECTION, OWNER).rows).toEqual([]);
+});
+
+test("keeps the summons a re-authentication carries over, and forgets a closed connection", () => {
+  let now = 0;
+  const roster = new SummonRoster(() => now);
   roster.consume(summoning(20, OWNER, "Reanimation"));
-  roster.consume(summoning(21, OWNER, "SummonSkeleton", "other-connection"));
+  roster.consume(summoning(21, OWNER, "SummonSkeletonMage"));
+  roster.consume(summoning(22, OWNER, "SummonSkeleton", "other-connection"));
+
+  // A tower floor re-authenticates; the mage keeps fighting, the reanimation was left behind.
+  roster.consume(packet({ packetName: "authenticated" }));
+  now = 1_000;
+  roster.consume(health(21, 15_000, 16_180));
+  now = 1_000 + SUMMON_GONE_GRACE_MS;
+  expect(roster.state(CONNECTION, OWNER).rows.map((row) => row.name)).toEqual(["Skeleton Mage"]);
+
   expect(roster.consume(packet({ packetName: "disconnect" }))).toBe(true);
   expect(roster.state(CONNECTION, OWNER).rows).toEqual([]);
   expect(roster.state("other-connection", OWNER).rows).toHaveLength(1);

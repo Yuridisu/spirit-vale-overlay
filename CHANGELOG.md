@@ -34,6 +34,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
   dropped, so long boss fights showed little or no damage on the boss. Those hits are now kept, as
   long as they match what the boss registered when it appeared. Status effects and movement on such
   objects come back the same way.
+- **Summons stay on the Summons element while they are out.** The game reports summons as gone
+  when they are not, on a new floor of the Eternal Tower and now and then mid-fight, and they
+  dropped off the list for good. A summon reported gone now leaves only once nothing more is heard
+  of it for a few seconds.
 - **Reflected damage counts as damage taken.** Damage a monster reflects reached the meters as if a
   player had dealt it, filling them with "Unidentified" rows and the reflecting monster itself.
 

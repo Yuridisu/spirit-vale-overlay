@@ -36,7 +36,16 @@ interface TrackedSummon {
   maxHealth?: number;
   /** Order of first sighting, so a row keeps its place as others come and go. */
   order: number;
+  /**
+   * When the server last said the summon was gone (a despawn, or the connection re-authenticating)
+   * without anything about it arriving since. The server says so of summons that are still out, so
+   * this is only believed once the summon has gone quiet.
+   */
+  goneAtMs?: number;
 }
+
+/** How long a summon reported gone may stay quiet before it is taken to be gone. */
+export const SUMMON_GONE_GRACE_MS = 4_000;
 
 /**
  * Follows every summon in range: who it belongs to, the skill that raised it, and its health.
@@ -52,16 +61,28 @@ export class SummonRoster {
   private readonly pendingHealth = new Map<string, { health?: number; maxHealth?: number }>();
   private nextOrder = 0;
 
+  constructor(private readonly now: () => number = Date.now) {}
+
   /** Returns whether anything about a summon changed. */
   consume(packet: CapturedFishNetPacket): boolean {
-    if (packet.packetName === "authenticated" || packet.packetName === "disconnect") return this.forgetConnection(packet.connectionId);
+    if (packet.packetName === "disconnect") return this.forgetConnection(packet.connectionId);
+    // A floor of the Eternal Tower re-authenticates the same connection while the summons follow the
+    // player over unchanged, without being spawned again.
+    if (packet.packetName === "authenticated") return this.markConnectionGone(packet.connectionId);
     if (packet.objectId === undefined) return false;
     const key = summonKey(packet.connectionId, packet.objectId);
 
     if (packet.packetName === "objectDespawn") {
       this.pendingHealth.delete(key);
-      return this.summons.delete(key);
+      const summon = this.summons.get(key);
+      if (!summon) return false;
+      summon.goneAtMs = this.now();
+      return true;
     }
+    // Anything at all about a summon reported gone shows it is still out.
+    const known = this.summons.get(key);
+    const revived = known?.goneAtMs !== undefined && packet.packetName !== "objectSpawn";
+    if (revived) delete known.goneAtMs;
     if (packet.packetName === "objectSpawn") {
       // A reused object id is a new object.
       const replaced = this.summons.delete(key);
@@ -72,9 +93,9 @@ export class SummonRoster {
       const summoned = this.noteSummon(key, packet, entryValue(entries, "SummonerSync", "SummonerSync"), entryValue(entries, "SummonSkillSync", "SkillId"));
       return replaced || summoned;
     }
-    if (packet.packetName !== "syncType") return false;
+    if (packet.packetName !== "syncType") return revived;
 
-    let changed = false;
+    let changed = revived;
     if (packet.networkBehaviourType === "SummoningComponent") {
       const owner = entryValue(packet.syncEntries ?? [], "SummonerSync", "SummonerSync")
         ?? packet.decodedFields?.find((field) => field.name === "SummonerSync")?.value;
@@ -91,6 +112,7 @@ export class SummonRoster {
   /** The summons belonging to one object on one connection, in the order they were raised. */
   state(connectionId: string | undefined, ownerId: number | undefined): SummonRosterState {
     if (connectionId === undefined || ownerId === undefined) return { rows: [] };
+    this.dropQuietGone();
     const rows = [...this.summons.values()]
       .filter((summon) => summon.connectionId === connectionId && summon.ownerId === ownerId && summon.skillId !== undefined)
       .sort((left, right) => left.order - right.order)
@@ -115,6 +137,7 @@ export class SummonRoster {
    */
   summon(connectionId: string | undefined, objectId: number): { ownerId?: number } | undefined {
     if (connectionId === undefined) return undefined;
+    this.dropQuietGone();
     const summon = this.summons.get(summonKey(connectionId, objectId));
     if (!summon) return undefined;
     return summon.ownerId === undefined ? {} : { ownerId: summon.ownerId };
@@ -155,6 +178,29 @@ export class SummonRoster {
     let changed = false;
     if (health !== undefined && summon.health !== health) { summon.health = health; changed = true; }
     if (maxHealth !== undefined && summon.maxHealth !== maxHealth) { summon.maxHealth = maxHealth; changed = true; }
+    return changed;
+  }
+
+  /** Whether a summon reported gone is still waiting out its grace, and so worth another look later. */
+  hasPendingGone(): boolean {
+    return [...this.summons.values()].some((summon) => summon.goneAtMs !== undefined);
+  }
+
+  private dropQuietGone(): void {
+    const now = this.now();
+    for (const [key, summon] of this.summons) {
+      if (summon.goneAtMs !== undefined && now - summon.goneAtMs >= SUMMON_GONE_GRACE_MS) this.summons.delete(key);
+    }
+  }
+
+  private markConnectionGone(connectionId: string): boolean {
+    const now = this.now();
+    let changed = false;
+    for (const summon of this.summons.values()) {
+      if (summon.connectionId !== connectionId || summon.goneAtMs !== undefined) continue;
+      summon.goneAtMs = now;
+      changed = true;
+    }
     return changed;
   }
 
