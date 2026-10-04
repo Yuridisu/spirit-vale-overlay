@@ -7,6 +7,7 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ### Added
 
+- **Twelve target drops.** Hunt up to twelve drops at once instead of four.
 - **Target drops by type.** Each target now has a Type next to its name: any equipment, any
   weapon, any artifact, one equipment slot (Head, Chest, Feet and so on), one weapon kind, or one
   artifact piece (Rune, Jewel, Scroll, Relic). With a type the name is optional, so a target can be

@@ -1,5 +1,5 @@
 /** How many drops the player can be watching for at once. */
-export const TARGET_DROP_SLOTS = 4;
+export const TARGET_DROP_SLOTS = 12;
 /** How many stats one target can ask for. */
 export const TARGET_DROP_STATS = 4;
 /** The sound a target plays unless another is chosen: one of the Companion's built-in tones. */

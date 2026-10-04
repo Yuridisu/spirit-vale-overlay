@@ -619,7 +619,7 @@ export const en = {
   "rewards.view.itemCounter": "Item counter",
   "rewards.view.targetDrops": "Target drops",
   "rewards.targetDrops.heading": "Target drops",
-  "rewards.targetDrops.hint": "Describe up to four drops you are hunting, by name, by type or both. When you pick one up, the overlay's Target drops element announces it with its sound.",
+  "rewards.targetDrops.hint": "Describe up to twelve drops you are hunting, by name, by type or both. When you pick one up, the overlay's Target drops element announces it with its sound.",
   "rewards.targetDrops.slot": "Target {slot}",
   "rewards.targetDrops.name": "Item name",
   "rewards.targetDrops.nameOptional": "optional",
