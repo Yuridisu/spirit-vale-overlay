@@ -11,18 +11,16 @@ section as the GitHub Release notes, so write it for the people who use the app.
   [spiritvalers.com](https://spiritvalers.com/builds) for your class, ordered by trending, most
   liked or most recent. Pick one, and a stage if it has several, and the guide lays it over your
   character:
-  - **Skills:** your class's skill tree on the game's own grid, each skill with your level and the
-    build's, and the order to spend your points in, with any skill another one needs first.
+  - **Skills:** your class's skill tree laid out as in the game, with a tab for the base class and
+    one for the advanced class, each skill with your level and the build's, and the order to spend
+    your points in, with any skill another one needs first.
   - **Farm:** every item the build uses that you do not have, gear, cards, gems and artifacts, each
-    with where it best drops (chance, monster, about how many kills, maps), or its recipe, and a
-    world map with the squares to farm on.
+    with where it best drops (chance, monster, about how many kills, maps), or its recipe.
   - **Attributes:** what the build puts in each attribute and how many you still have to add.
-- **The Build Guide in the overlay.** Press Guide me in the overlay and four new overlay elements
-  follow that build: a skills panel with the next skill to raise, a farm panel with what is
-  missing and where, and two grids you stretch once over the game's skill window and world map.
-  Over the skill window, the skills to raise light up with the level the build wants; over the
-  world map, the squares where your missing items drop. Ctrl+Shift+K and Ctrl+Shift+M show and
-  hide those two, and Escape hides them, like the gear ratings.
+- **The Build Guide in the overlay.** Press Guide me in the overlay and two new overlay elements
+  follow that build: Build guide: skills, with the skill tree, the skills to raise and the next one
+  first, and Build guide: farm, with what is still missing and where it best drops. Turn them on
+  in Settings > Overlay.
 - **Loot filter alerts on screen.** Items that match one of your Companion loot rules now also
   show on the overlay, as a card in the rule's colour with the item's icon and rolls. Turn on the
   Loot filter alerts element in Settings > Overlay.
@@ -42,7 +40,7 @@ section as the GitHub Release notes, so write it for the people who use the app.
 ### Credits
 
 - Builds are written by their authors on spiritvalers.com and shown with their names. The skill
-  trees, drops, maps and world map come from spiritvalers.com by **Buh
+  trees, drops and maps come from spiritvalers.com by **Buh
   ([bjb2](https://github.com/bjb2))**. Thank you, Buh.
 
 ## 0.10.13

@@ -73,40 +73,6 @@ export function SkillGuideElement() {
   );
 }
 
-/**
- * Stretched over the game's skill window, one square per skill icon: the skills to raise light up
- * with the level the build wants, the next one brightest. Nothing is drawn over skills that are done.
- */
-export function SkillAlignedElement({ locked }: { locked: boolean }) {
-  const t = useTranslator();
-  const guide = buildGuideState.value;
-  const tree = guide ? currentTree(guide) : undefined;
-  const rows = tree?.rows ?? 6;
-  const cols = tree?.cols ?? 7;
-  const next = guide?.skills.next[0];
-  return (
-    <div class={`aligned-grid${locked ? "" : " is-editing"}`} style={`--cols:${cols};--rows:${rows}`}>
-      {!locked && Array.from({ length: rows * cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" style={`grid-row:${Math.floor(index / cols) + 1};grid-column:${index % cols + 1}`} />)}
-      {/* While lining up, each square names its skill, to match the game's window. */}
-      {!locked && tree?.cells.map((cell) => (
-        <span key={`name-${cell.gameId}`} class="aligned-label" style={`grid-row:${cell.row + 1};grid-column:${cell.col + 1}`}>{cell.name}</span>
-      ))}
-      {guide && (guide.skills.trees.length > 1) && <span class="aligned-tab">{t("overlay.buildGuide.openTab", { tab: tree?.className ?? "" })}</span>}
-      {tree?.cells.map((cell) => {
-        const state = cellState(cell);
-        if (state !== "raise" && state !== "over") return null;
-        return (
-          <span key={cell.gameId} class={`aligned-skill is-${state}${next?.gameId === cell.gameId ? " is-next" : ""}`}
-            style={`grid-row:${cell.row + 1};grid-column:${cell.col + 1}`}>
-            <span class="aligned-badge">{cell.current}→<b>{cell.target}</b></span>
-          </span>
-        );
-      })}
-      {!locked && <p class="aligned-hint">{t("overlay.buildGuide.alignSkills")}</p>}
-    </div>
-  );
-}
-
 /** What the build still needs, each with where it best drops. */
 export function FarmGuideElement() {
   const t = useTranslator();
@@ -140,24 +106,3 @@ export function FarmGuideElement() {
   );
 }
 
-/** Stretched over the game's world map, one square per map: where the missing items drop. */
-export function MapAlignedElement({ locked }: { locked: boolean }) {
-  const t = useTranslator();
-  const guide = buildGuideState.value;
-  const grid = guide?.farm.grid ?? { rows: 10, cols: 11 };
-  return (
-    <div class={`aligned-grid is-map${locked ? "" : " is-editing"}`} style={`--cols:${grid.cols};--rows:${grid.rows}`}>
-      {!locked && Array.from({ length: grid.rows * grid.cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" style={`grid-row:${Math.floor(index / grid.cols) + 1};grid-column:${index % grid.cols + 1}`} />)}
-      {!locked && guide?.farm.tiles.map((tile) => (
-        <span key={`name-${tile.row}-${tile.col}`} class="aligned-label" style={`grid-row:${tile.row};grid-column:${tile.col}`}>{tile.name}</span>
-      ))}
-      {guide?.farm.squares.map((square) => (
-        <span key={`${square.row}-${square.col}`} class="aligned-square" style={`grid-row:${square.row};grid-column:${square.col}`}
-          title={`${square.name} · Lv ${square.minLevel}-${square.maxLevel}`}>
-          <b>{square.items}</b>
-        </span>
-      ))}
-      {!locked && <p class="aligned-hint">{t("overlay.buildGuide.alignMap")}</p>}
-    </div>
-  );
-}

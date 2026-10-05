@@ -58,7 +58,6 @@ describe("build guide service", () => {
     character = weaver({ Heal: 5, WeaverMastery: 10 });
     for (const listener of characterListeners) listener();
     expect(service.overlayState()!.skills.pointsLeft).toBe(before - 10);
-    expect(service.overlayState()!.farm.grid).toEqual({ rows: 10, cols: 11 });
 
     await Bun.sleep(50);
     const saved = normalizeBuildGuideSettings(JSON.parse(await readFile(path.join(dir, "build-guide.json"), "utf8")));

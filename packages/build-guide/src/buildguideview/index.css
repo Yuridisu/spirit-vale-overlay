@@ -103,8 +103,8 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 .step-levels b { color: var(--gold); font-weight: 800; }
 .steps-done { display: flex; align-items: center; gap: 7px; margin: 4px 0; color: var(--lime); font-size: 13px; font-weight: 700; }
 
-/* Farm: what is missing and where it best drops, then where on the world map. */
-.farm-panel { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+/* Farm: what is missing and where it best drops. */
+.farm-panel { display: grid; gap: 14px; align-items: start; }
 .farm-list { display: grid; gap: 2px; }
 .farm-item { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 8px 10px; background: var(--stripe); }
 .farm-item:nth-child(even) { background: var(--stripe-alt); }
@@ -122,32 +122,6 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 .farm-maps { color: var(--paper); }
 .farm-owned { margin: 8px 2px 0; color: var(--lime); font-size: 12px; }
 
-.world { display: grid; gap: 8px; padding: 10px 12px 12px; background: var(--plate); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent); }
-.world h2 { margin: 0; justify-self: start; }
-.world-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols), 1fr);
-  grid-template-rows: repeat(var(--rows), 1fr);
-  gap: 2px;
-  aspect-ratio: var(--cols) / var(--rows);
-  background-image:
-    linear-gradient(var(--rule) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
-}
-.world-square {
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--gold) calc(35% + 65% * var(--weight)), transparent);
-  color: var(--ink);
-  font-family: var(--font-num);
-  font-size: 13px;
-  font-weight: 800;
-}
-.world-legend { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
-.world-legend li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 3px 6px; background: var(--stripe); font-size: 12px; }
-.world-legend b { color: var(--gold); font-family: var(--font-num); font-size: 14px; font-weight: 800; text-align: right; }
-.world-legend span { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; }
 
 .attributes .data-table { min-width: 0; max-width: 520px; }
 .attributes td.is-left { color: var(--gold); }
@@ -155,6 +129,6 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 .credit { padding: 8px 0 10px; color: var(--paper-3); font-size: 11px; line-height: 1.5; box-shadow: inset 0 1px 0 var(--rule); }
 
 @media (max-width: 1100px) {
-  .skills-panel, .farm-panel { grid-template-columns: minmax(0, 1fr); }
+  .skills-panel { grid-template-columns: minmax(0, 1fr); }
   .skill-grid { grid-template-columns: repeat(var(--cols), minmax(60px, 1fr)); }
 }

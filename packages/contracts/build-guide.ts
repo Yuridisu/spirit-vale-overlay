@@ -58,29 +58,12 @@ export interface BuildGuideFarmItem {
   chance?: number;
   expectedKills?: number;
   map?: string;
-  /** One-based row and column on the world map. */
-  square?: { row: number; col: number };
   /** Set when the item is made rather than dropped. */
   craftedAt?: string;
 }
 
-/** A world-map square where missing items drop. */
-export interface BuildGuideSquare {
-  name: string;
-  row: number;
-  col: number;
-  minLevel: number;
-  maxLevel: number;
-  items: number;
-}
-
 export interface BuildGuideFarm {
   items: BuildGuideFarmItem[];
-  squares: BuildGuideSquare[];
-  /** Every square of the world map with its name, to line the grid up with the game's map. */
-  tiles: Array<{ name: string; row: number; col: number }>;
-  /** The world map's grid, one-based: rows 1..rows, cols 1..cols. */
-  grid: { rows: number; cols: number };
 }
 
 export interface OverlayBuildGuideState {

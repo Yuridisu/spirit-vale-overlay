@@ -1,5 +1,5 @@
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
-import type { BuildGuideFarmItem, BuildGuideSquare, OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
+import type { BuildGuideFarmItem, OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
 import type { CharacterSnapshot } from "@kar-mi/spirit-vale-tools-character";
 
 import type { BuildGuideItemView, BuildGuideSelected, BuildGuideSourceView, BuildGuideState } from "./app-types.ts";
@@ -149,7 +149,7 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
   };
 
   const info = (kind: NeededKind | "material", itemId: string, slot?: string): ItemInfo => options.itemInfo?.(kind, itemId, slot) ?? { name: itemId };
-  const mapView = (map: MapRef) => ({ name: map.name, minLevel: map.minLevel, maxLevel: map.maxLevel, ...(map.tile ? { square: map.tile } : {}) });
+  const mapView = (map: MapRef) => ({ name: map.name, minLevel: map.minLevel, maxLevel: map.maxLevel });
   const itemView = (item: FarmItem): BuildGuideItemView => {
     const { name, icon } = info(item.kind, item.itemId, item.slots[0]);
     const sources: BuildGuideSourceView[] = item.sources.map((source) => source.kind === "drop"
@@ -158,9 +158,6 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
     return { itemId: item.itemId, name, kind: item.kind, ...(icon ? { icon } : {}), need: item.count, have: item.have, slots: item.slots, sources };
   };
 
-  const squares = (farm: FarmPlan): BuildGuideSquare[] => farm.squares
-    .filter((square) => square.map.tile)
-    .map((square) => ({ name: square.map.name, row: square.map.tile!.row, col: square.map.tile!.col, minLevel: square.map.minLevel, maxLevel: square.map.maxLevel, items: square.items.length }));
 
   const skillsView = (trees: SkillTreePlan[], count?: number) => ({
     trees: trees.map((tree) => ({
@@ -201,7 +198,6 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
       skills: skillsView(plans.skills),
       missing: plans.farm?.missing.map(itemView) ?? [],
       owned: plans.farm?.owned.map(itemView) ?? [],
-      squares: plans.farm ? squares(plans.farm) : [],
     };
   };
 
@@ -314,11 +310,10 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
         return {
           itemId: item.itemId, name, kind: item.kind, ...(icon ? { icon } : {}), need: item.count, have: item.have,
           ...(best?.kind === "drop" ? { monster: best.monster, monsterLevel: best.level, boss: best.boss, chance: best.chance, expectedKills: best.expectedKills } : {}),
-          ...(map ? { map: map.name, ...(map.tile ? { square: map.tile } : {}) } : {}),
+          ...(map ? { map: map.name } : {}),
           ...(!best && craft?.kind === "craft" ? { craftedAt: craft.crafter } : {}),
         };
       });
-      const tiles = world?.worldmap.tiles ?? [];
       return {
         buildName: build.name,
         author: build.author,
@@ -327,9 +322,6 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
         skills: skillsView(plans.skills, NEXT_STEPS),
         farm: {
           items,
-          squares: plans.farm ? squares(plans.farm) : [],
-          tiles: tiles.map((tile) => ({ name: tile.name, row: tile.row, col: tile.col })),
-          grid: { rows: Math.max(1, ...tiles.map((tile) => tile.row)), cols: Math.max(1, ...tiles.map((tile) => tile.col)) },
         },
       };
     },

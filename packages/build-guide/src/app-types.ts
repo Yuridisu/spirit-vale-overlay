@@ -1,6 +1,6 @@
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
 import type { WindowChromeRequests } from "@svoverlay/contracts/window-rpc";
-import type { BuildGuideSkills, BuildGuideSquare } from "@svoverlay/contracts/build-guide";
+import type { BuildGuideSkills } from "@svoverlay/contracts/build-guide";
 import type { BuildSort } from "./spiritvalers-client.ts";
 
 export interface BuildGuideLibraryRow {
@@ -23,7 +23,6 @@ export interface BuildGuideMapView {
   name: string;
   minLevel: number;
   maxLevel: number;
-  square?: { row: number; col: number };
 }
 
 export type BuildGuideSourceView =
@@ -54,7 +53,6 @@ export interface BuildGuideSelected {
   skills: BuildGuideSkills;
   missing: BuildGuideItemView[];
   owned: BuildGuideItemView[];
-  squares: BuildGuideSquare[];
 }
 
 export interface BuildGuideCharacter {

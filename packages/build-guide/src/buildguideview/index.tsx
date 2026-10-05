@@ -9,7 +9,7 @@ import { CustomSelect } from "@svoverlay/ui-kit/custom-select";
 import { CheckIcon, ExternalIcon } from "@svoverlay/ui-kit/icons";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { Translator } from "@svoverlay/i18n/translate";
-import type { BuildGuideSkillCell, BuildGuideSquare } from "@svoverlay/contracts/build-guide";
+import type { BuildGuideSkillCell } from "@svoverlay/contracts/build-guide";
 
 import type { BuildGuideItemView, BuildGuideRpc, BuildGuideSelected, BuildGuideState } from "../app-types.ts";
 import type { BuildSort } from "../spiritvalers-client.ts";
@@ -232,7 +232,6 @@ function FarmPanel({ t, selected }: { t: Translator; selected: BuildGuideSelecte
       {selected.missing.map((item) => <FarmRow key={`${item.kind}:${item.itemId}:${item.slots[0]}`} t={t} item={item} />)}
       {selected.owned.length > 0 && <p class="farm-owned">{t("buildGuide.farm.owned", { count: selected.owned.length })}</p>}
     </section>
-    <WorldGrid t={t} squares={selected.squares} />
   </div>;
 }
 
@@ -259,27 +258,6 @@ function FarmRow({ t, item }: { t: Translator; item: BuildGuideItemView }) {
       {drops.length === 0 && crafts.length === 0 && <p class="farm-source is-unknown">{t("buildGuide.farm.unknown")}</p>}
     </div>
   </article>;
-}
-
-/** Where the missing items drop, on the world map's own grid. */
-function WorldGrid({ t, squares }: { t: Translator; squares: BuildGuideSquare[] }) {
-  if (squares.length === 0) return null;
-  const rows = Math.max(...squares.map((square) => square.row), 10);
-  const cols = Math.max(...squares.map((square) => square.col), 11);
-  return <section class="world" aria-label={t("buildGuide.farm.map")}>
-    <h2 class="tag">{t("buildGuide.farm.map")}</h2>
-    <div class="world-grid" style={`--rows:${rows};--cols:${cols}`}>
-      {squares.map((square) => (
-        <span key={`${square.row}-${square.col}`} class="world-square" style={`grid-row:${square.row};grid-column:${square.col};--weight:${Math.min(1, square.items / 4)}`}
-          title={`${square.name} · Lv ${square.minLevel}-${square.maxLevel} · ${t("buildGuide.farm.squareItems", { count: square.items })}`}>
-          {square.items}
-        </span>
-      ))}
-    </div>
-    <ul class="world-legend">
-      {squares.slice(0, 6).map((square) => <li key={square.name}><b>{square.items}</b> {square.name} <span>Lv {square.minLevel}-{square.maxLevel}</span></li>)}
-    </ul>
-  </section>;
 }
 
 function AttributesPanel({ t, selected }: { t: Translator; selected: BuildGuideSelected }) {

@@ -114,8 +114,6 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   resetTimer: "reset timer",
   toggleGearRating: "show/hide gear ratings",
   cyclePreset: "switch to the next preset",
-  toggleSkillGuide: "show/hide the build guide over the skill window",
-  toggleMapGuide: "show/hide the build guide over the world map",
 };
 
 export interface OverlayMinimapSourceState {
@@ -1104,12 +1102,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown || shortcutsSuspended) return;
     if (action === "lockOnEscape") {
       if (!settings.locked) updateLocked(true);
-      // Escape leaves the game's screens, so what sits over them goes too.
-      else {
-        for (const id of ["gearRating", "skillAligned", "mapAligned"] as const) {
-          if (settings.elements[id].enabled) setElementEnabled(id, false);
-        }
-      }
+      // Escape leaves the game's equipment screen, so the ratings that sit over it go too.
+      else if (settings.elements.gearRating.enabled) setElementEnabled("gearRating", false);
     } else if (action === "toggleLock") updateLocked(!settings.locked);
     else if (action === "toggleOverlayVisible") setOverlayVisibleManually(!overlayVisible);
     else if (action === "cycleMeterStatType") cycleMeterStatType();
@@ -1132,10 +1126,6 @@ export async function createOverlayController(options: OverlayControllerOptions)
       cycleBossRegion();
     } else if (action === "toggleGearRating") {
       setElementEnabled("gearRating", !settings.elements.gearRating.enabled);
-    } else if (action === "toggleSkillGuide") {
-      setElementEnabled("skillAligned", !settings.elements.skillAligned.enabled);
-    } else if (action === "toggleMapGuide") {
-      setElementEnabled("mapAligned", !settings.elements.mapAligned.enabled);
     } else if (action === "cyclePreset") {
       cyclePreset();
     } else if (action === "toggleTimer") {
