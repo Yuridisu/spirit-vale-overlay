@@ -247,6 +247,11 @@ function readSkill(node: FieldNode | undefined): CharacterSkill | undefined {
   const id = leafString(node, "Id");
   const level = leafNumber(node, "Level", -1);
   if (!id || level < 0) return undefined;
+  return characterSkill(id, level);
+}
+
+/** A skill at a level, with its effects at that level. */
+export function characterSkill(id: string, level: number): CharacterSkill {
   const definition = resolveFishNetSkill(id);
   return {
     id,

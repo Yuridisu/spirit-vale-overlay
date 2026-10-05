@@ -40,6 +40,8 @@ export interface FarmPlan {
 }
 
 const GEAR_SLOTS = ["mainhand", "offhand", "head", "eyewear", "chest", "back", "legs", "feet", "acc1", "acc2"];
+/** Artifact slots as the build names them, in the game's slot order. */
+export const ARTIFACT_SLOTS = ["rune", "jewel", "scroll", "relic"] as const;
 
 /** Every item a build (or one of its stages) uses: gear, the cards in it, artifacts and their gems. */
 export function neededItems(build: SiteBuildParts): NeededItem[] {
@@ -53,15 +55,19 @@ export function neededItems(build: SiteBuildParts): NeededItem[] {
       item.slots.push(slot);
     } else items.set(key, { itemId, kind, count: 1, slots: [slot] });
   };
+  const addArtifact = (itemId: string | undefined, slot: string): void => {
+    if (itemId) items.set(`artifact:${itemId}:${slot}`, { itemId, kind: "artifact", count: 1, slots: [slot] });
+  };
   for (const slot of GEAR_SLOTS) {
     const gear = build.eq?.[slot];
     if (!gear) continue;
     add(gear.id, "equipment", slot);
     for (const card of gear.cards ?? []) add(card, "card", slot);
   }
-  for (const [slot, artifact] of Object.entries(build.arti ?? {})) {
+  for (const slot of ARTIFACT_SLOTS) {
+    const artifact = build.arti?.[slot];
     if (!artifact) continue;
-    add(artifact.id, "artifact", slot);
+    addArtifact(artifact.id, slot);
     add(artifact.gem, "gem", slot);
   }
   for (const grimoire of build.grim ?? []) add(grimoire, "grimoire", "grimoire");
@@ -78,6 +84,23 @@ export function planFarm(needed: readonly NeededItem[], have: (item: NeededItem)
   const tilesBySlug = new Map<string, SiteWorldTile>();
   for (const tile of world.worldmap.tiles) if (!tilesBySlug.has(tile.our)) tilesBySlug.set(tile.our, tile);
   const mapsByName = new Map(world.maps.map((map) => [map.id, map]));
+  // Artifacts drop by piece and slot, from the monster table rather than the drop table.
+  const artifactDrops = new Map<string, Array<{ monster: string; slug: string; level: number; boss: boolean; chance: number }>>();
+  for (const monster of world.monsters) {
+    const artifact = monster.drops?.artifact;
+    if (!artifact?.id) continue;
+    for (const slot of artifact.slots ?? []) {
+      const key = `${artifact.id}:${slot}`;
+      const list = artifactDrops.get(key) ?? [];
+      list.push({ monster: monster.name, slug: monster.slug, level: monster.level, boss: monster.boss, chance: artifact.chance });
+      artifactDrops.set(key, list);
+    }
+  }
+  const dropsFor = (item: NeededItem) => {
+    if (item.kind !== "artifact") return world.drops[item.itemId] ?? [];
+    const slot = ARTIFACT_SLOTS.indexOf(item.slots[0] as typeof ARTIFACT_SLOTS[number]);
+    return artifactDrops.get(`${item.itemId}:${slot}`) ?? [];
+  };
   const mapRef = (slug: string, name?: string): MapRef => {
     const map: SiteMap | undefined = mapsBySlug.get(slug);
     const tile = tilesBySlug.get(slug);
@@ -95,7 +118,7 @@ export function planFarm(needed: readonly NeededItem[], have: (item: NeededItem)
   for (const item of needed) {
     const count = Math.max(0, have(item));
     const sources: ItemSource[] = [];
-    for (const drop of world.drops[item.itemId] ?? []) {
+    for (const drop of dropsFor(item)) {
       if (!(drop.chance > 0)) continue;
       sources.push({
         kind: "drop",

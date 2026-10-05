@@ -1,0 +1,154 @@
+/* Build Guide: a community build laid over your character. Lime, like the other spiritvalers tool;
+   gold marks a skill to raise, flame one above the build. */
+
+:root { --channel: var(--lime); }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+.app-shell { display: grid; grid-template-rows: 40px minmax(0, 1fr); width: 100%; height: 100%; min-width: 860px; min-height: 560px; background: var(--ink); }
+.guide-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+
+/* ---- the library: your class's builds ---- */
+
+.library { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; background: var(--ink-deep); }
+.library-head { display: grid; gap: 8px; padding: 12px 12px 10px; }
+.class-line { display: flex; align-items: baseline; gap: 8px; }
+.class-line .tag { font-size: 15px; }
+.class-note { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.library-head .seg > button { padding: 5px 8px 4px; font-size: 12px; }
+
+.library-list { display: grid; align-content: start; gap: 2px; min-height: 0; overflow-y: auto; padding: 0 6px 10px 12px; scrollbar-gutter: stable; }
+.library-note { margin: 10px 2px; color: var(--paper-2); font-size: 12px; line-height: 1.45; }
+.library-note.is-error { color: var(--flame); }
+
+.build-row {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px 9px;
+  border: 0;
+  background: var(--stripe);
+  color: var(--paper);
+  text-align: left;
+  transition: background-color .15s var(--ease-out);
+}
+.build-row:nth-child(even) { background: var(--stripe-alt); }
+.build-row:hover, .build-row:nth-child(even):hover { background: color-mix(in srgb, var(--channel) 10%, var(--plate)); }
+.build-row.is-active, .build-row.is-active:nth-child(even) { background: color-mix(in srgb, var(--channel) 18%, var(--plate)); box-shadow: inset 0 -2px 0 var(--channel); }
+.build-row strong { overflow: hidden; font-size: 13px; font-weight: 700; line-height: 1.3; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.build-row span { color: var(--paper-2); font-size: 12px; }
+.build-row-meta { color: var(--paper-3) !important; font-family: var(--font-num); font-size: 13px !important; font-weight: 600; letter-spacing: .03em; }
+.build-row-meta b { color: var(--paper); font-weight: 800; }
+
+/* ---- the chosen build ---- */
+
+.detail { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; align-content: start; gap: 10px; min-width: 0; min-height: 0; padding: 14px 16px 0; }
+.detail > .empty-state { align-self: start; }
+
+.build-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+.build-title { min-width: 0; }
+.build-title h1 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.build-title p { margin: 3px 0 0; color: var(--paper-2); font-family: var(--font-num); font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.build-actions { display: flex; flex-wrap: wrap; gap: 2px; }
+
+.stage-line { display: flex; align-items: center; gap: 10px; }
+.stage-line .custom-select { width: min(420px, 100%); }
+.stage-line .custom-select-toggle { width: 100%; }
+
+.tabs { width: fit-content; max-width: 100%; }
+.tab-panel { min-height: 0; overflow: auto; padding-bottom: 12px; }
+
+/* Skills: the class's own grid, each square its icon, its level and the build's. */
+.skills-panel { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 14px; align-items: start; }
+.skill-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(72px, 1fr)); gap: 2px; }
+.skill-cell {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 4px 7px;
+  background: var(--stripe);
+  text-align: center;
+}
+.skill-icon { display: grid; place-items: center; width: 40px; height: 40px; background: var(--ink-deep); box-shadow: 0 0 0 1px var(--rule); }
+.skill-icon img { width: 36px; height: 36px; object-fit: contain; }
+.skill-levels { color: var(--paper-2); font-family: var(--font-num); font-size: 15px; font-weight: 700; line-height: 1; }
+.skill-levels b { color: var(--paper); font-weight: 800; }
+.skill-name { width: 100%; overflow: hidden; color: var(--paper-2); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.skill-cell.is-none { opacity: .45; }
+.skill-cell.is-done .skill-icon { box-shadow: 0 0 0 2px var(--lime); }
+.skill-cell.is-raise { background: color-mix(in srgb, var(--gold) 12%, var(--plate)); }
+.skill-cell.is-raise .skill-icon { box-shadow: 0 0 0 2px var(--gold); }
+.skill-cell.is-raise .skill-target { color: var(--gold); }
+.skill-cell.is-over { background: color-mix(in srgb, var(--flame) 12%, var(--plate)); }
+.skill-cell.is-over .skill-icon { box-shadow: 0 0 0 2px var(--flame); }
+.skill-cell.is-over .skill-target { color: var(--flame); }
+
+.steps { display: grid; gap: 8px; }
+.steps h2 { margin: 0; justify-self: start; }
+.steps ol { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li { display: grid; grid-template-columns: 20px 26px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 5px 8px 5px 6px; background: var(--stripe); counter-increment: step; }
+.steps li:nth-child(even) { background: var(--stripe-alt); }
+.steps li::before { color: var(--paper-3); content: counter(step); font-family: var(--font-num); font-size: 14px; font-weight: 800; text-align: right; }
+.steps li:first-child { background: color-mix(in srgb, var(--gold) 14%, var(--plate)); }
+.steps li:first-child::before { color: var(--gold); }
+.steps img { width: 26px; height: 26px; object-fit: contain; }
+.step-name { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.step-levels { color: var(--paper-2); font-family: var(--font-num); font-size: 15px; font-weight: 700; }
+.step-levels b { color: var(--gold); font-weight: 800; }
+.steps-done { display: flex; align-items: center; gap: 7px; margin: 4px 0; color: var(--lime); font-size: 13px; font-weight: 700; }
+
+/* Farm: what is missing and where it best drops, then where on the world map. */
+.farm-panel { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.farm-list { display: grid; gap: 2px; }
+.farm-item { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 8px 10px; background: var(--stripe); }
+.farm-item:nth-child(even) { background: var(--stripe-alt); }
+.farm-icon { display: grid; place-items: center; width: 40px; height: 40px; background: var(--ink-deep); box-shadow: 0 0 0 1px var(--rule); }
+.farm-icon img { width: 34px; height: 34px; object-fit: contain; }
+.farm-main { display: grid; gap: 3px; min-width: 0; }
+.farm-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.farm-name strong { font-size: 13px; font-weight: 700; }
+.farm-count { color: var(--gold); font-family: var(--font-num); font-size: 15px; font-weight: 800; }
+.farm-source { margin: 0; color: var(--paper-2); font-size: 12px; line-height: 1.4; }
+.farm-source b { color: var(--gold); font-family: var(--font-num); font-size: 14px; font-weight: 800; }
+.farm-source b.is-boss { color: var(--flame); }
+.farm-source b.is-craft { color: var(--sky); text-transform: uppercase; letter-spacing: .05em; }
+.farm-source.is-unknown { color: var(--paper-3); }
+.farm-maps { color: var(--paper); }
+.farm-owned { margin: 8px 2px 0; color: var(--lime); font-size: 12px; }
+
+.world { display: grid; gap: 8px; padding: 10px 12px 12px; background: var(--plate); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent); }
+.world h2 { margin: 0; justify-self: start; }
+.world-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+  gap: 2px;
+  aspect-ratio: var(--cols) / var(--rows);
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+}
+.world-square {
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--gold) calc(35% + 65% * var(--weight)), transparent);
+  color: var(--ink);
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 800;
+}
+.world-legend { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.world-legend li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 3px 6px; background: var(--stripe); font-size: 12px; }
+.world-legend b { color: var(--gold); font-family: var(--font-num); font-size: 14px; font-weight: 800; text-align: right; }
+.world-legend span { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; }
+
+.attributes .data-table { min-width: 0; max-width: 520px; }
+.attributes td.is-left { color: var(--gold); }
+
+.credit { padding: 8px 0 10px; color: var(--paper-3); font-size: 11px; line-height: 1.5; box-shadow: inset 0 1px 0 var(--rule); }
+
+@media (max-width: 1100px) {
+  .skills-panel, .farm-panel { grid-template-columns: minmax(0, 1fr); }
+  .skill-grid { grid-template-columns: repeat(var(--cols), minmax(60px, 1fr)); }
+}

@@ -135,9 +135,19 @@ export interface SiteCrafting {
   byResult: Record<string, SiteRecipe[]>;
 }
 
+/** A monster from `/wiki-data/monsters.json`; only its artifact drop is read, since artifacts are not in the drop table. */
+export interface SiteMonster {
+  name: string;
+  slug: string;
+  level: number;
+  boss: boolean;
+  drops?: { artifact?: { id: string; chance: number; slots?: number[] } };
+}
+
 /** Everything the farming plan needs, loaded together. */
 export interface SiteWorldData {
   drops: SiteDrops;
+  monsters: SiteMonster[];
   spawns: SiteSpawns;
   maps: SiteMap[];
   worldmap: SiteWorldMap;

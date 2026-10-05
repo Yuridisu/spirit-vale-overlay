@@ -69,6 +69,15 @@ describe("farm plan", () => {
     expect(plan.squares.length).toBeGreaterThan(0);
   });
 
+  test("artifacts are sought per slot, from the monsters that drop that piece in that slot", () => {
+    const plan = planFarm(neededItems(build), () => 0, worldData);
+    const relic = plan.missing.find((item) => item.kind === "artifact" && item.slots[0] === "relic")!;
+    const sources = relic.sources.filter((source) => source.kind === "drop");
+    expect(sources.length).toBeGreaterThan(0);
+    expect(sources.some((source) => source.kind === "drop" && source.monster === "Earth Wisp")).toBe(true);
+    expect(plan.missing.filter((item) => item.kind === "artifact").map((item) => item.slots[0])).toEqual(["rune", "jewel", "scroll", "relic"]);
+  });
+
   test("items the site crafts carry their recipe", () => {
     const plan = planFarm(neededItems(build), () => 0, worldData);
     const armlets = plan.missing.find((item) => item.itemId === "DiscipleArmlets")!;

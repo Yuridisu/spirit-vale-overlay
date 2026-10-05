@@ -4,6 +4,8 @@ import type { CharacterWeight } from "@kar-mi/spirit-vale-tools-character";
 import type { RateSnapshot } from "@kar-mi/spirit-vale-tools-metrics";
 import type { StatType } from "@svoverlay/ui-kit/stat-type-select";
 import type { BossTimerState } from "@svoverlay/contracts/boss-timers";
+import type { OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
+export type { OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
 import type { RequiredStatusCategory } from "./required-statuses.ts";
 
 export type { StatType, RequiredStatusCategory };
@@ -15,10 +17,10 @@ import type { TargetDrop } from "./target-drop.ts";
 export type { TargetDrop, TargetDropStat } from "./target-drop.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons", "lootAlert"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons", "lootAlert", "skillGuide", "skillAligned", "farmGuide", "mapAligned"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
-export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset"] as const;
+export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset", "toggleSkillGuide", "toggleMapGuide"] as const;
 export type KeybindAction = (typeof KEYBIND_ACTIONS)[number];
 
 export const METER_STAT_TYPE_CYCLE: readonly StatType[] = ["damage", "heal", "tanked"];
@@ -263,6 +265,8 @@ export interface OverlayViewState {
   damageTaken: OverlayDamageTakenState;
   itemCounter: OverlayItemCounterState;
   summons: OverlaySummonsState;
+  /** Null unless the player asked the overlay to follow a build. */
+  buildGuide: OverlayBuildGuideState | null;
 }
 
 export interface OverlayLootToastEvent {
@@ -430,6 +434,7 @@ export type OverlayRpc = {
     targetDropFound: OverlayGearPickupEvent;
     lootAlertFound: OverlayGearPickupEvent;
     summonsChanged: OverlaySummonsState;
+    buildGuideChanged: OverlayBuildGuideState | null;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

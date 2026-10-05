@@ -24,6 +24,7 @@ const TOOLS: Array<{ tool: ToolWindow; titleKey: MessageKey; descriptionKey: Mes
   { tool: "character", titleKey: "launcher.tool.character", descriptionKey: "launcher.tool.character.description" },
   { tool: "boss-timers", titleKey: "launcher.tool.bossTimers", descriptionKey: "launcher.tool.bossTimers.description" },
   { tool: "build-export", titleKey: "launcher.tool.buildExport", descriptionKey: "launcher.tool.buildExport.description" },
+  { tool: "build-guide", titleKey: "launcher.tool.buildGuide", descriptionKey: "launcher.tool.buildGuide.description" },
   { tool: "companion", titleKey: "launcher.tool.companion", descriptionKey: "launcher.tool.companion.description" },
 ];
 

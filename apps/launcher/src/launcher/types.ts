@@ -21,7 +21,7 @@ export interface CaptureHealthWarning {
   message: string;
   detectedAt: string;
 }
-export type ToolWindow = "combat" | "overlay" | "rewards" | "character" | "build-export" | "boss-timers" | "companion";
+export type ToolWindow = "combat" | "overlay" | "rewards" | "character" | "build-export" | "build-guide" | "boss-timers" | "companion";
 export type NpcapAvailability = "checking" | "ready" | "missing" | "admin-only" | "error";
 
 export interface CaptureAdapterOption {

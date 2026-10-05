@@ -60,6 +60,7 @@
         "@kar-mi/spirit-vale-tools-sqlite": "workspace:*",
         "@preact/signals": "^2.9.4",
         "@svoverlay/build-export": "workspace:*",
+        "@svoverlay/build-guide": "workspace:*",
         "@svoverlay/combat": "workspace:*",
         "@svoverlay/companion": "workspace:*",
         "@svoverlay/contracts": "workspace:*",
@@ -76,6 +77,18 @@
       "dependencies": {
         "@kar-mi/spirit-vale-tools-character": "workspace:*",
         "@kar-mi/spirit-vale-tools-combat": "workspace:*",
+        "@preact/signals": "^2.9.4",
+        "@svoverlay/contracts": "workspace:*",
+        "@svoverlay/desktop-platform": "workspace:*",
+        "@svoverlay/i18n": "workspace:*",
+        "@svoverlay/ui-kit": "workspace:*",
+        "preact": "^10.29.7",
+      },
+    },
+    "packages/build-guide": {
+      "name": "@svoverlay/build-guide",
+      "dependencies": {
+        "@kar-mi/spirit-vale-tools-character": "workspace:*",
         "@preact/signals": "^2.9.4",
         "@svoverlay/contracts": "workspace:*",
         "@svoverlay/desktop-platform": "workspace:*",
@@ -339,6 +352,8 @@
     "@spiritvale/cli": ["@spiritvale/cli@workspace:tools/packages/cli"],
 
     "@svoverlay/build-export": ["@svoverlay/build-export@workspace:packages/build-export"],
+
+    "@svoverlay/build-guide": ["@svoverlay/build-guide@workspace:packages/build-guide"],
 
     "@svoverlay/combat": ["@svoverlay/combat@workspace:packages/combat"],
 

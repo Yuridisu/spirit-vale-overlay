@@ -72,6 +72,8 @@ describe("overlay settings", () => {
       resetTimer: "Ctrl+Shift+0",
       toggleGearRating: "Ctrl+Shift+G",
       cyclePreset: "Ctrl+Shift+P",
+      toggleSkillGuide: "Ctrl+Shift+K",
+      toggleMapGuide: "Ctrl+Shift+M",
     });
     expect(settings).not.toHaveProperty("personalName");
     expect(settings.elements.dpsChart).toEqual({ enabled: false, opacity: 0.55, x: 780, y: 0, width: 500, height: 200, display: primaryKey });
@@ -280,6 +282,8 @@ describe("overlay settings", () => {
         resetTimer: "Ctrl+Shift+0",
         toggleGearRating: "Ctrl+Shift+G",
         cyclePreset: "Ctrl+Shift+P",
+        toggleSkillGuide: "Ctrl+Shift+K",
+        toggleMapGuide: "Ctrl+Shift+M",
       },
     }, displays);
 
@@ -297,6 +301,8 @@ describe("overlay settings", () => {
       resetTimer: "Ctrl+Shift+0",
       toggleGearRating: "Ctrl+Shift+G",
       cyclePreset: "Ctrl+Shift+P",
+      toggleSkillGuide: "Ctrl+Shift+K",
+      toggleMapGuide: "Ctrl+Shift+M",
     });
   });
 
@@ -317,6 +323,8 @@ describe("overlay settings", () => {
       resetTimer: "Ctrl+Shift+0",
       toggleGearRating: "Ctrl+Shift+G",
       cyclePreset: "Ctrl+Shift+P",
+      toggleSkillGuide: "Ctrl+Shift+K",
+      toggleMapGuide: "Ctrl+Shift+M",
     };
 
     const reset = resetOverlayShortcuts(settings);

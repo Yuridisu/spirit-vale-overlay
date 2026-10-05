@@ -1,5 +1,5 @@
 import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
-import { decodeCharacterRpcPayload, rescaleSubstats, resolveCharacterArchetypeId } from "./decoder.ts";
+import { characterSkill, decodeCharacterRpcPayload, rescaleSubstats, resolveCharacterArchetypeId } from "./decoder.ts";
 import { aggregateGearSubstats, calculateAdvancedGearStats, calculateCharacterStats, calculateWeightLimit, materializeGearStats, materializeSkillStats } from "./formulas.ts";
 import { decodeCharacterRecordSync, decodeCharacterSpawnRecords } from "./record-decoder.ts";
 import type { CharacterIdentity, CharacterInventoryItem, CharacterRecordValues, CharacterSnapshot, CharacterStatBreakdown, CharacterViewState } from "./types.ts";
@@ -88,8 +88,9 @@ export class FishNetCharacterTracker {
         this.records = {};
       }
       this.pendingRecords.clear();
-      if (objectChanged || pending) this.publish();
-      return false;
+      const skillsChanged = this.consumeSkillRpc(packet);
+      if (objectChanged || pending || skillsChanged) this.publish();
+      return skillsChanged;
     }
     if (packet.packetName === "syncType") {
       const identityChanged = this.consumeIdentitySync(packet);
@@ -116,6 +117,45 @@ export class FishNetCharacterTracker {
       this.unsupportedDetail = `Character data isn't recognized: ${errorMessage(error)}. Change maps or channels to request a fresh update.`.slice(0, 240);
     }
     this.publish();
+    return true;
+  }
+
+  /**
+   * The player's own skill choices, as their client sends them: `ApplySkills_S` when they press
+   * Apply in the skill window, `ResetSkills_S` when they reset the tree. The full character update
+   * that carries the allocation only comes on a map or channel change, so without this a point spent
+   * mid-session would not show until then.
+   */
+  private consumeSkillRpc(packet: CapturedFishNetPacket): boolean {
+    if (!this.snapshot) return false;
+    if (packet.rpcName === "ResetSkills_S") {
+      if (this.snapshot.skills.length === 0) return false;
+      this.snapshot = { ...this.snapshot, skills: [], updatedAt: new Date().toISOString() };
+      return true;
+    }
+    if (packet.rpcName !== "ApplySkills_S" || !packet.decodedFields) return false;
+    const applied = new Map<number, { id?: string; level?: number }>();
+    for (const field of packet.decodedFields) {
+      const match = /^skills\[(\d+)\]\.(Id|Level)$/.exec(field.name);
+      if (!match) continue;
+      const entry = applied.get(Number(match[1])) ?? {};
+      if (match[2] === "Id" && typeof field.value === "string") entry.id = field.value;
+      if (match[2] === "Level" && typeof field.value === "number") entry.level = field.value;
+      applied.set(Number(match[1]), entry);
+    }
+    const levels = new Map(this.snapshot.skills.map((skill) => [skill.id, skill.level]));
+    let changed = false;
+    for (const { id, level } of applied.values()) {
+      if (!id || level === undefined || level < 0 || levels.get(id) === level) continue;
+      levels.set(id, level);
+      changed = true;
+    }
+    if (!changed) return false;
+    const skills = [...levels.entries()]
+      .filter(([, level]) => level > 0)
+      .map(([id, level]) => this.snapshot!.skills.find((skill) => skill.id === id && skill.level === level) ?? characterSkill(id, level))
+      .sort((left, right) => left.displayName.localeCompare(right.displayName));
+    this.snapshot = { ...this.snapshot, skills, updatedAt: new Date().toISOString() };
     return true;
   }
 

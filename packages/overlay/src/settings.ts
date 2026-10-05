@@ -78,6 +78,8 @@ const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
   resetTimer: "Ctrl+Shift+0",
   toggleGearRating: "Ctrl+Shift+G",
   cyclePreset: "Ctrl+Shift+P",
+  toggleSkillGuide: "Ctrl+Shift+K",
+  toggleMapGuide: "Ctrl+Shift+M",
 };
 
 const DEFAULT_LOCKED = true;
@@ -115,6 +117,11 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   targetDrop: { enabled: false, opacity: 0, x: 810, y: 170, width: 300, height: 290 },
   lootAlert: { enabled: false, opacity: 0, x: 1120, y: 170, width: 300, height: 290 },
   summons: { enabled: false, opacity: 0.5, x: 1660, y: 200, width: 240, height: 330 },
+  skillGuide: { enabled: false, opacity: 0.6, x: 1420, y: 560, width: 460, height: 300 },
+  // Stretched by the player over the game's own skill window and world map, so their plates are clear.
+  skillAligned: { enabled: false, opacity: 0, x: 520, y: 170, width: 900, height: 640 },
+  farmGuide: { enabled: false, opacity: 0.6, x: 20, y: 560, width: 320, height: 300 },
+  mapAligned: { enabled: false, opacity: 0, x: 470, y: 40, width: 980, height: 900 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -338,6 +345,8 @@ export function normalizeShortcuts(source: Record<string, unknown>): Record<Keyb
     resetTimer: shortcutsSource.resetTimer,
     toggleGearRating: shortcutsSource.toggleGearRating,
     cyclePreset: shortcutsSource.cyclePreset,
+    toggleSkillGuide: shortcutsSource.toggleSkillGuide,
+    toggleMapGuide: shortcutsSource.toggleMapGuide,
   };
   const shortcuts = {} as Record<KeybindAction, string>;
   for (const action of KEYBIND_ACTIONS) {

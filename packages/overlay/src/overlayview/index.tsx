@@ -13,6 +13,7 @@ import { ClockElement } from "./tiles/clock.tsx";
 import { TimerElement } from "./tiles/timer.tsx";
 import { DamageTakenElement, DpsDetailsElement, ItemCounterElement, KillCounterElement, SummonsElement } from "./tiles/details.tsx";
 import { GearRatingElement } from "./tiles/gear-rating.tsx";
+import { FarmGuideElement, MapAlignedElement, SkillAlignedElement, SkillGuideElement } from "./tiles/build-guide.tsx";
 import { BossMeterElement } from "./tiles/boss-meter.tsx";
 import { ArtifactPickupElement, GearPickupElement, LootAlertElement, TargetDropElement } from "./tiles/gear-pickup.tsx";
 import {
@@ -132,6 +133,18 @@ function App() {
       </OverlayElement>
       <OverlayElement id="targetDrop" locked={next.locked}>
         <TargetDropElement />
+      </OverlayElement>
+      <OverlayElement id="skillGuide" locked={next.locked}>
+        <SkillGuideElement />
+      </OverlayElement>
+      <OverlayElement id="skillAligned" locked={next.locked}>
+        <SkillAlignedElement locked={next.locked} />
+      </OverlayElement>
+      <OverlayElement id="farmGuide" locked={next.locked}>
+        <FarmGuideElement />
+      </OverlayElement>
+      <OverlayElement id="mapAligned" locked={next.locked}>
+        <MapAlignedElement locked={next.locked} />
       </OverlayElement>
       <OverlayElement id="artifactPickup" locked={next.locked}>
         <ArtifactPickupElement />

@@ -4,6 +4,16 @@
   "type": "module",
   "description": "Build guide: community builds from spiritvalers.com turned into a skill plan and a farming plan for the current character.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./bun": "./src/bun/window.ts"
+  },
+  "dependencies": {
+    "@kar-mi/spirit-vale-tools-character": "workspace:*",
+    "@preact/signals": "^2.9.4",
+    "@svoverlay/contracts": "workspace:*",
+    "@svoverlay/desktop-platform": "workspace:*",
+    "@svoverlay/i18n": "workspace:*",
+    "@svoverlay/ui-kit": "workspace:*",
+    "preact": "^10.29.7"
   }
 }

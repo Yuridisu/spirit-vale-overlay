@@ -16,6 +16,7 @@ import type {
   OverlayGearRatingState,
   OverlayItemCounterState,
   OverlaySummonsState,
+  OverlayBuildGuideState,
   OverlayKillState,
   OverlayTimerState,
   OverlayLootToastEvent,
@@ -73,6 +74,7 @@ export const gearRatingState = signal<OverlayGearRatingState | undefined>(undefi
 export const damageTakenState = signal<OverlayDamageTakenState | undefined>(undefined);
 export const itemCounter = signal<OverlayItemCounterState | undefined>(undefined);
 export const summonsState = signal<OverlaySummonsState | undefined>(undefined);
+export const buildGuideState = signal<OverlayBuildGuideState | null>(null);
 export const artifactPickups = signal<GearPickupCardState[]>([]);
 export const targetDrops = signal<GearPickupCardState[]>([]);
 export const lootAlerts = signal<GearPickupCardState[]>([]);

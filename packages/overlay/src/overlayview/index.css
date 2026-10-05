@@ -194,7 +194,10 @@
 .overlay-element:is([data-element-id="xpTracker"], [data-element-id="xpChart"], [data-element-id="characterXp"], [data-element-id="jobXp"]) { --channel: var(--sky); }
 .overlay-element:is([data-element-id="gearPickup"]) { --channel: var(--paper); }
 .overlay-element:is([data-element-id="artifactPickup"], [data-element-id="toggles"]) { --channel: var(--violet); }
-.overlay-element:is([data-element-id="summons"]) { --channel: var(--lime); }
+.overlay-element:is([data-element-id="summons"], [data-element-id="skillGuide"], [data-element-id="skillAligned"], [data-element-id="farmGuide"], [data-element-id="mapAligned"]) { --channel: var(--lime); }
+
+/* Elements stretched over the game's own screens draw no plate edge: only their marks show. */
+.overlay-root:not(.editing) .overlay-element:is([data-element-id="gearRating"], [data-element-id="skillAligned"], [data-element-id="mapAligned"]) .overlay-surface { box-shadow: none; }
 
 .overlay-root.editing .overlay-surface {
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent), 0 6px 24px rgba(0, 0, 0, .38);
@@ -1191,6 +1194,67 @@
   text-transform: uppercase;
 }
 
+/* ---- build guide: the build the player follows, from the Build Guide window ---- */
+
+.guide-content { display: flex; flex-direction: column; gap: 6px; }
+.guide-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.guide-head .element-title { margin: 0; }
+.guide-points { color: var(--paper-2); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.guide-points b { color: var(--gold); font-size: 17px; font-weight: 800; letter-spacing: .01em; }
+.guide-waiting { margin: 0; color: var(--paper-3); font-size: 12px; line-height: 1.4; }
+.guide-build { margin: auto 0 0; overflow: hidden; color: var(--paper-3); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The next raise, in gold: the one thing to do now. */
+.guide-next { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px; background: color-mix(in srgb, var(--gold) 20%, transparent); }
+.guide-next img { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--gold); }
+.guide-next-name { flex: 1; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.guide-next-levels { color: var(--paper-2); font-family: var(--font-num); font-size: 16px; font-weight: 700; }
+.guide-next-levels b { color: var(--gold); font-weight: 800; }
+
+.guide-grid { display: grid; flex: 1; grid-template-columns: repeat(var(--cols), 1fr); grid-template-rows: repeat(var(--rows), 1fr); gap: 2px; min-height: 0; }
+.guide-cell { position: relative; display: grid; place-items: center; min-height: 0; background: rgb(var(--ink-rgb) / .5); }
+.guide-cell img { width: 100%; max-width: 28px; height: 100%; max-height: 28px; object-fit: contain; }
+.guide-cell.is-none { opacity: .3; }
+.guide-cell.is-done img { box-shadow: 0 0 0 1px var(--lime); }
+.guide-cell.is-raise { box-shadow: inset 0 0 0 2px var(--gold); }
+.guide-cell.is-over { box-shadow: inset 0 0 0 2px var(--flame); }
+.guide-cell.is-next { background: color-mix(in srgb, var(--gold) 30%, transparent); }
+.guide-cell b { position: absolute; right: 1px; bottom: 0; padding: 0 2px; background: var(--gold); color: var(--ink); font-family: var(--font-num); font-size: 11px; font-weight: 800; line-height: 1.1; text-shadow: none; }
+.guide-cell.is-over b { background: var(--flame); }
+
+.guide-farm { display: grid; gap: 2px; min-height: 0; overflow: hidden; }
+.guide-farm-row { display: grid; grid-template-columns: 26px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 7px; padding: 3px 6px 3px 3px; background: var(--stripe); }
+.guide-farm-row:nth-child(even) { background: rgba(244, 247, 250, .075); }
+.guide-farm-icon { grid-row: 1 / span 2; display: grid; place-items: center; width: 26px; height: 26px; background: rgb(var(--ink-rgb) / .6); }
+.guide-farm-icon img { width: 24px; height: 24px; object-fit: contain; }
+.guide-farm-name { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.guide-farm-name b { color: var(--gold); font-family: var(--font-num); font-weight: 800; }
+.guide-farm-where { overflow: hidden; color: var(--paper-2); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.guide-farm-where b { color: var(--gold); font-family: var(--font-num); font-size: 12px; font-weight: 800; }
+.guide-farm-where b.is-boss { color: var(--flame); }
+.guide-farm-where b.is-craft { color: var(--sky); letter-spacing: .05em; text-transform: uppercase; }
+
+/* Aligned grids, stretched over the game's own skill window or world map: only what to act on is drawn. */
+.aligned-grid { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: repeat(var(--cols), 1fr); grid-template-rows: repeat(var(--rows), 1fr); }
+.aligned-grid.is-editing { background: rgb(var(--ink-rgb) / .25); }
+.aligned-guide-cell { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--channel) 55%, transparent); }
+.aligned-skill { position: relative; margin: 4%; box-shadow: inset 0 0 0 3px var(--gold), 0 0 12px color-mix(in srgb, var(--gold) 70%, transparent); animation: guide-arrive .6s var(--ease-out) 1 both; }
+.aligned-skill.is-over { box-shadow: inset 0 0 0 3px var(--flame), 0 0 12px color-mix(in srgb, var(--flame) 70%, transparent); }
+.aligned-skill.is-next { box-shadow: inset 0 0 0 4px var(--gold), 0 0 22px var(--gold); }
+.aligned-badge { position: absolute; left: 50%; bottom: -2px; padding: 1px 6px 0; background: var(--gold); color: var(--ink); font-family: var(--font-num); font-size: 13px; font-weight: 800; line-height: 1.1; text-shadow: none; transform: translate(-50%, 50%); white-space: nowrap; }
+.aligned-skill.is-over .aligned-badge { background: var(--flame); }
+.aligned-square { display: grid; place-items: center; margin: 6%; background: color-mix(in srgb, var(--gold) 28%, transparent); box-shadow: inset 0 0 0 3px var(--gold); animation: guide-arrive .6s var(--ease-out) 1 both; }
+.aligned-square b { padding: 1px 7px 0; background: var(--gold); color: var(--ink); font-family: var(--font-num); font-size: 15px; font-weight: 800; text-shadow: none; }
+.aligned-hint { position: absolute; left: 50%; top: 50%; max-width: 70%; margin: 0; padding: 8px 12px; background: rgb(var(--ink-rgb) / .9); color: var(--paper); font-size: 13px; line-height: 1.4; text-align: center; transform: translate(-50%, -50%); pointer-events: none; }
+
+/* A highlight flashes once as it appears, then holds. */
+@keyframes guide-arrive {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  50% { opacity: .35; }
+  70%, 100% { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .status-cell.expiring::after,
   .overlay-element.weight-danger::after,
@@ -1201,5 +1265,5 @@
     will-change: auto;
   }
   .timer-finished { animation: none; background: color-mix(in srgb, var(--flame) 60%, transparent); }
-  .gear-pickup-card, .target-drop-banner, .loot-toast-card { animation: none; }
+  .gear-pickup-card, .target-drop-banner, .loot-toast-card, .aligned-skill, .aligned-square { animation: none; }
 }

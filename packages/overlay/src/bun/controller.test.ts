@@ -48,6 +48,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendTargetDrop: () => {},
     sendLootAlert: () => {},
     sendSummons: () => {},
+    sendBuildGuide: () => {},
   };
 }
 

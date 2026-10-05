@@ -42,6 +42,7 @@ import type {
   OverlayBossFightState,
   OverlayDamageTakenState,
   OverlaySummonsState,
+  OverlayBuildGuideState,
   OverlayGearPickupEvent,
   OverlayGearRatingState,
   OverlayKillState,
@@ -113,6 +114,8 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   resetTimer: "reset timer",
   toggleGearRating: "show/hide gear ratings",
   cyclePreset: "switch to the next preset",
+  toggleSkillGuide: "show/hide the build guide over the skill window",
+  toggleMapGuide: "show/hide the build guide over the world map",
 };
 
 export interface OverlayMinimapSourceState {
@@ -155,6 +158,8 @@ export interface OverlayControllerOptions {
   subscribeSummons: (listener: (state: OverlaySummonsState) => void) => () => void;
   /** Every stackable item picked up, which has a name and a count but no rolls. */
   subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
+  /** Calls the listener at once with the build the player follows (or null), then on every change. */
+  subscribeBuildGuide?: (listener: (state: OverlayBuildGuideState | null) => void) => () => void;
   /** Items that just entered the bag and matched one of the Companion's loot rules. */
   subscribeLootAlerts?: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   /** A watched-for drop was just picked up, and the player asked to hear about it: its sound, at 0-100 volume. */
@@ -197,6 +202,7 @@ export interface OverlaySurfaceSink {
   sendTargetDrop(event: OverlayGearPickupEvent): void;
   sendLootAlert(event: OverlayGearPickupEvent): void;
   sendSummons(state: OverlaySummonsState): void;
+  sendBuildGuide(state: OverlayBuildGuideState | null): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -343,6 +349,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendSummons(next));
   });
+  let buildGuide: OverlayBuildGuideState | null = null;
+  const unsubscribeBuildGuide = options.subscribeBuildGuide?.((next) => {
+    buildGuide = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendBuildGuide(next));
+  }) ?? (() => {});
   let gearRating: OverlayGearRatingState = { slots: [] };
   let lastGearRatingJson = "";
   const unsubscribeGearRating = options.subscribeGearRating((next) => {
@@ -475,6 +487,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeStackPickup();
       unsubscribeLootAlerts();
       unsubscribeSummons();
+      unsubscribeBuildGuide();
       unsubscribeKills();
       unsubscribeBossFight();
       unsubscribeGearRating();
@@ -760,6 +773,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       damageTaken,
       itemCounter: itemCounterState(settings.itemCounterItems, inventorySource),
       summons,
+      buildGuide,
     };
   }
 
@@ -1090,8 +1104,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown || shortcutsSuspended) return;
     if (action === "lockOnEscape") {
       if (!settings.locked) updateLocked(true);
-      // Escape leaves the game's equipment screen, so the ratings that sit over it go too.
-      else if (settings.elements.gearRating.enabled) setElementEnabled("gearRating", false);
+      // Escape leaves the game's screens, so what sits over them goes too.
+      else {
+        for (const id of ["gearRating", "skillAligned", "mapAligned"] as const) {
+          if (settings.elements[id].enabled) setElementEnabled(id, false);
+        }
+      }
     } else if (action === "toggleLock") updateLocked(!settings.locked);
     else if (action === "toggleOverlayVisible") setOverlayVisibleManually(!overlayVisible);
     else if (action === "cycleMeterStatType") cycleMeterStatType();
@@ -1114,6 +1132,10 @@ export async function createOverlayController(options: OverlayControllerOptions)
       cycleBossRegion();
     } else if (action === "toggleGearRating") {
       setElementEnabled("gearRating", !settings.elements.gearRating.enabled);
+    } else if (action === "toggleSkillGuide") {
+      setElementEnabled("skillAligned", !settings.elements.skillAligned.enabled);
+    } else if (action === "toggleMapGuide") {
+      setElementEnabled("mapAligned", !settings.elements.mapAligned.enabled);
     } else if (action === "cyclePreset") {
       cyclePreset();
     } else if (action === "toggleTimer") {

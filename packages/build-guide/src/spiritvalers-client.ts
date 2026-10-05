@@ -67,14 +67,15 @@ export class SpiritValersClient {
 
   /** Drops, spawns, maps, the world map and recipes, for the farming plan. */
   async world(): Promise<SiteWorldData> {
-    const [drops, spawns, maps, worldmap, crafting] = await Promise.all([
+    const [drops, monsters, spawns, maps, worldmap, crafting] = await Promise.all([
       this.get<SiteWorldData["drops"]>("drops", "/wiki-data/drops.json", TTL.reference),
+      this.get<SiteWorldData["monsters"]>("monsters", "/wiki-data/monsters.json", TTL.reference),
       this.get<SiteWorldData["spawns"]>("spawns", "/wiki-data/spawns.json", TTL.reference),
       this.get<SiteWorldData["maps"]>("maps", "/wiki-data/maps.json", TTL.reference),
       this.get<SiteWorldData["worldmap"]>("worldmap", "/wiki-data/worldmap.json", TTL.reference),
       this.get<SiteWorldData["crafting"]>("crafting", "/wiki-data/crafting.json", TTL.reference),
     ]);
-    return { drops, spawns, maps, worldmap, crafting };
+    return { drops, monsters, spawns, maps, worldmap, crafting };
   }
 
   /** The build's page on the site, to open in the browser. */

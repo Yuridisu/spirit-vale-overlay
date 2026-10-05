@@ -15,6 +15,7 @@ const VIEW_SOURCES: Record<string, string> = {
   rewardsview: "packages/rewards/src/rewardsview",
   catalogview: "packages/rewards/src/catalogview",
   buildexportview: "packages/build-export/src/buildexportview",
+  buildguideview: "packages/build-guide/src/buildguideview",
   companionview: "packages/companion/src/companionview",
 };
 

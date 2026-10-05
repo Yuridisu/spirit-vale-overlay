@@ -9,8 +9,12 @@ import { streamSessionPath } from "@kar-mi/spirit-vale-tools-logging";
 import { inspectRewardsReplaySummary } from "@kar-mi/spirit-vale-tools-rewards";
 
 import { createBuildExportWindow } from "@svoverlay/build-export";
+import { createBuildGuideService, SpiritValersClient, type BuildGuideService } from "@svoverlay/build-guide";
+import { createBuildGuideWindow } from "@svoverlay/build-guide/bun";
+import { resolveFishNetSkill } from "@kar-mi/spirit-vale-tools-skills";
 import { createRewardsWindow } from "@svoverlay/rewards";
-import { createCompanionService, createCompanionWindow, playBuiltinSound, playWav, STAT_LABEL } from "@svoverlay/companion";
+import { createCompanionService, createCompanionWindow, lookupCatalogItem, playBuiltinSound, playWav, STAT_LABEL } from "@svoverlay/companion";
+import type { CatalogKind } from "@svoverlay/companion";
 import type { PickupNotification } from "@svoverlay/companion";
 import type { OverlayGearPickupEvent } from "@svoverlay/overlay/app-types";
 import type { LauncherRpc, LauncherSettingsRpc, LauncherState, SettingsSectionId, SharedSettingsState, ToolWindow } from "../launcher/types.ts";
@@ -272,6 +276,8 @@ const combatWindow = new WindowSlot((onClosed) => createDpsWindow({
 }));
 /** Items that matched a Companion loot rule, on their way to the overlay's Loot filter alerts. */
 const lootAlertListeners = new Set<(event: OverlayGearPickupEvent) => void>();
+/** The build the player follows in the overlay; created once the Companion it reads bags from exists. */
+let buildGuide: BuildGuideService | undefined;
 const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   logDirectory,
   getCharacterState: () => capture.characterState(),
@@ -290,6 +296,18 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
     return () => lootAlertListeners.delete(listener);
   },
   subscribeSummons: (listener) => capture.subscribeSummons(listener),
+  subscribeBuildGuide: (listener) => {
+    // Sent only when what the overlay draws changes, not on every character update.
+    let last = JSON.stringify(buildGuide?.overlayState() ?? null);
+    listener(buildGuide?.overlayState() ?? null);
+    return buildGuide?.subscribe(() => {
+      const next = buildGuide?.overlayState() ?? null;
+      const json = JSON.stringify(next);
+      if (json === last) return;
+      last = json;
+      listener(next);
+    }) ?? (() => {});
+  },
   onTargetDropSound: (sound, volume) => {
     // A custom sound since deleted from the folder still makes a sound.
     if (!companion.playNamedSound(sound, volume)) playBuiltinSound(DEFAULT_TARGET_DROP_SOUND, volume);
@@ -467,6 +485,47 @@ const bossTimerWindow = new WindowSlot((onClosed) => createBossTimerWindow({
     });
   },
   removeTimer: (id) => { bossTimers.removeTimer(id); },
+  placements,
+  onClosed,
+  onOpenSettings: openSettings,
+}));
+// The guide keeps the chosen build and its plans whether or not its window is open, for the overlay.
+const BUILD_GUIDE_KINDS: Record<string, CatalogKind> = {
+  equipment: "Equipment", card: "Card", gem: "Gem", artifact: "Artifact", grimoire: "Equipment", material: "Material",
+};
+let ownedOutsideGear: { at: number; counts: Map<string, number> } | undefined;
+/** Bag and storage counts by kind and item id, read from the Companion at most every two seconds. */
+const ownedCounts = (): Map<string, number> => {
+  if (!ownedOutsideGear || Date.now() - ownedOutsideGear.at > 2_000) {
+    const counts = new Map<string, number>();
+    const { bag, storage } = companion.state();
+    for (const item of [...bag, ...storage]) {
+      const key = `${item.kind}:${item.itemId}`;
+      counts.set(key, (counts.get(key) ?? 0) + Math.max(1, item.count));
+    }
+    ownedOutsideGear = { at: Date.now(), counts };
+  }
+  return ownedOutsideGear.counts;
+};
+buildGuide = createBuildGuideService({
+  client: new SpiritValersClient({ cacheDir: path.join(path.dirname(storagePaths.characterStatePath), "build-guide") }),
+  settingsPath: path.join(path.dirname(storagePaths.launcherSettingsPath), "build-guide.json"),
+  getCharacter: () => capture.characterState().snapshot,
+  subscribeCharacter: (listener) => capture.subscribeCharacter(() => listener()),
+  ownedElsewhere: (item) => ownedCounts().get(`${item.kind}:${item.itemId}`) ?? 0,
+  itemInfo: (kind, itemId, slot) => {
+    const catalogKind = BUILD_GUIDE_KINDS[kind];
+    const artifactSlot = kind === "artifact" && slot ? `${slot[0]!.toUpperCase()}${slot.slice(1)}` : undefined;
+    const entry = catalogKind ? lookupCatalogItem(catalogKind, itemId, artifactSlot) : undefined;
+    if (!entry) return undefined;
+    return { name: entry.name, ...(entry.icon ? { icon: companion.iconUrl(entry.icon.replace(/^icons\//, "")) } : {}) };
+  },
+  skillSprite: (gameId) => resolveFishNetSkill(gameId)?.spriteId,
+  onWarning: (warning) => { console.warn(`[build-guide] ${warning}`); },
+});
+void buildGuide.start();
+const buildGuideWindow = new WindowSlot((onClosed) => createBuildGuideWindow({
+  service: buildGuide!,
   placements,
   onClosed,
   onOpenSettings: openSettings,
@@ -965,6 +1024,7 @@ async function openTool(tool: ToolWindow): Promise<void> {
   else if (tool === "overlay") await overlayWindow.open();
   else if (tool === "rewards") await rewardsWindow.open();
   else if (tool === "build-export") await buildExportWindow.open();
+  else if (tool === "build-guide") await buildGuideWindow.open();
   else if (tool === "boss-timers") await bossTimerWindow.open();
   else if (tool === "companion") await companionWindow.open();
   else await characterWindow.open();
@@ -1182,7 +1242,8 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   settingsLifecycle = undefined;
   launcherWindow.hide();
   settingsWindow?.close();
-  await Promise.all([combatWindow.retire(), overlayWindow.retire(), rewardsWindow.retire(), characterWindow.retire(), buildExportWindow.retire(), bossTimerWindow.retire(), companionWindow.retire()]);
+  await Promise.all([combatWindow.retire(), overlayWindow.retire(), rewardsWindow.retire(), characterWindow.retire(), buildExportWindow.retire(), buildGuideWindow.retire(), bossTimerWindow.retire(), companionWindow.retire()]);
+  buildGuide?.stop();
   await companion.shutdown().catch(() => {});
   liveDeathLogWindow.close();
   unsubscribeCharacterPersistence();

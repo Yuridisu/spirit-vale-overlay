@@ -39,6 +39,21 @@ describe("FishNetCharacterTracker", () => {
     expect(tracker.currentArchetypeId()).toBe(12);
   });
 
+  test("applies the skills the player applies in the skill window, and a reset", () => {
+    const tracker = new FishNetCharacterTracker();
+    tracker.consume(characterPacket("CharacterCallback_T"));
+    const levels = () => Object.fromEntries((tracker.state().snapshot?.skills ?? []).map((skill) => [skill.id, skill.level]));
+    expect(tracker.consume(skillRpc("ApplySkills_S", [["Icebolt", 1], ["IceShard", 3]]))).toBe(true);
+    expect(levels()).toMatchObject({ Icebolt: 1, IceShard: 3 });
+    expect(tracker.state().snapshot?.skills.find((skill) => skill.id === "IceShard")?.displayName).toBe("Ice Shard");
+    // The same levels again change nothing.
+    expect(tracker.consume(skillRpc("ApplySkills_S", [["IceShard", 3]]))).toBe(false);
+    expect(tracker.consume(skillRpc("ApplySkills_S", [["IceShard", 5]]))).toBe(true);
+    expect(levels()).toMatchObject({ Icebolt: 1, IceShard: 5 });
+    expect(tracker.consume(skillRpc("ResetSkills_S", []))).toBe(true);
+    expect(tracker.state().snapshot?.skills).toEqual([]);
+  });
+
   test("rejects packets without a character RPC name", () => {
     const tracker = new FishNetCharacterTracker();
 
@@ -476,6 +491,20 @@ function syncPacket(objectId: number, networkBehaviourType: string, payloadHex: 
     payload: Buffer.from(payloadHex, "hex"),
     connectionId: "test-connection",
   } as CapturedFishNetPacket;
+}
+
+function skillRpc(rpcName: string, skills: Array<[string, number]>): CapturedFishNetPacket {
+  return {
+    ...pinPacket(4242),
+    rpcName,
+    decodedFields: [
+      { name: "skills.length", codec: "packedInt32", value: skills.length },
+      ...skills.flatMap(([id, level], index) => [
+        { name: `skills[${index}].Id`, codec: "stringUtf8Packed" as const, value: id },
+        { name: `skills[${index}].Level`, codec: "packedInt32" as const, value: level },
+      ]),
+    ],
+  };
 }
 
 function pinPacket(objectId: number): CapturedFishNetPacket {

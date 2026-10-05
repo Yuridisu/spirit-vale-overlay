@@ -4,5 +4,7 @@ export { createCompanionService } from "./bun/service.ts";
 export type { CompanionCaptureStatus, CompanionService, CompanionServiceOptions } from "./bun/service.ts";
 export { playBuiltinSound, playWav } from "./bun/sound-player.ts";
 export { STAT_LABEL } from "./shared/stat-labels.ts";
+export { lookupCatalogItem } from "./shared/item-lookup.ts";
+export type { CatalogKind } from "./shared/item-catalog.ts";
 export type { PickupNotification } from "./shared/pickup-overlay.ts";
 export type { LootLine } from "./shared/contracts.ts";
