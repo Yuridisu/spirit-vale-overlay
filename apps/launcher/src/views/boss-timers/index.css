@@ -1,44 +1,80 @@
-html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-.app-shell { width: 100%; height: 100%; min-width: 620px; min-height: 420px; border: 1px solid var(--outline-variant); background: var(--surface); }
-.content { height: calc(100% - 42px); padding: 18px; overflow: auto; }
-.empty-state { display: grid; place-content: center; min-height: 300px; text-align: center; }
-.muted { margin: 0; color: var(--on-surface-variant); font-size: 13px; }
-.hint { margin: 8px 0 0; color: var(--on-surface-variant); font-size: 12px; }
-.card { padding: 18px; margin-bottom: 14px; border: 1px solid var(--outline-variant); border-radius: var(--shape-md); background: var(--surface-container-low); }
-h2 { margin: 0; font-size: 15px; }
+/* Boss Timers: the respawn board. Flame is this tool's channel; a boss in its window turns gold,
+   an overdue one flame, as on the overlay. */
 
-.section-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.filters { display: flex; gap: 8px; align-items: center; margin-left: auto; }
-.search { width: 260px; }
+:root { --channel: var(--flame); }
+
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+.app-shell { width: 100%; height: 100%; min-width: 620px; min-height: 420px; background: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.content { display: grid; align-content: start; gap: 10px; height: calc(100% - 40px); padding: 14px 16px; overflow: auto; }
+.empty-state { display: grid; place-content: center; min-height: 300px; text-align: center; }
+.empty-state strong { font-family: var(--font-num); font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.muted { margin: 0; color: var(--paper-2); font-size: 13px; }
+.hint { margin: 8px 0 0; color: var(--paper-3); font-size: 12px; }
+
+.card {
+  padding: 12px 12px 14px;
+  background: var(--plate);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+h2 {
+  display: inline-flex;
+  margin: 0;
+  padding: 3px 12px 2px 7px;
+  background: var(--channel);
+  color: var(--ink);
+  font-family: var(--font-num);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.section-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.filters { display: flex; flex: 1 1 auto; justify-content: flex-end; gap: 6px; align-items: center; margin-left: auto; }
+.search { flex: 1 1 280px; min-width: 200px; }
 .region-filter { width: 170px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.timer-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+/* The board: striped rows, the countdown as the number that matters. */
+.timer-table { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .timer-table th {
-  padding: 0 10px 8px;
-  color: var(--on-surface-variant);
-  font-size: 10px;
+  padding: 0 10px 4px;
+  color: var(--paper-3);
+  font-family: var(--font-num);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .07em;
   text-align: left;
   text-transform: uppercase;
 }
-.timer-table td { padding: 9px 10px; border-top: 1px solid var(--outline-variant); vertical-align: top; }
+.timer-table td { padding: 7px 10px; background: var(--stripe); vertical-align: middle; }
+.timer-row:nth-child(even) td { background: var(--stripe-alt); }
 .timer-boss { font-weight: 700; }
-.own-kill { margin-left: 6px; color: rgb(126, 217, 126); font-weight: 700; }
-.timer-where, .timer-status { display: table-cell; }
-.timer-place { display: block; white-space: nowrap; }
-.timer-instance { display: block; margin-top: 2px; color: var(--on-surface-variant); font-size: 10px; }
-.timer-killer { color: var(--on-surface-variant); overflow-wrap: anywhere; }
-.timer-countdown { display: block; white-space: nowrap; }
-.timer-clock { display: block; margin-top: 2px; color: var(--on-surface-variant); font-size: 10px; white-space: nowrap; }
+.own-kill { display: inline-flex; margin-left: 6px; color: var(--lime); font-size: 13px; vertical-align: -.1em; }
+.timer-place { display: block; font-family: var(--font-num); font-size: 15px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+.timer-instance { display: block; margin-top: 1px; color: var(--paper-3); font-size: 11px; }
+.timer-killer { max-width: 0; width: 18%; overflow: hidden; color: var(--paper-2); text-overflow: ellipsis; white-space: nowrap; }
+.timer-countdown { display: block; font-family: var(--font-num); font-size: 17px; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+.timer-bar { position: relative; display: block; width: 100%; max-width: 160px; height: 3px; margin: 4px 0 3px; overflow: hidden; background: var(--rule); }
+.timer-bar::before { position: absolute; inset: 0; background: var(--paper-2); content: ""; transform: scaleX(var(--time-left, 0)); transform-origin: left center; }
+.timer-row.boss-window .timer-bar::before { background: var(--gold); }
+.timer-clock { display: block; margin-top: 1px; color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 600; letter-spacing: .03em; white-space: nowrap; }
 .timer-actions { text-align: right; }
 
-.timer-row.boss-window .timer-countdown { color: rgb(255, 213, 74); font-weight: 700; }
-.timer-row.boss-expired .timer-countdown { color: rgb(255, 138, 138); font-weight: 700; }
+.timer-row.boss-window td { background: color-mix(in srgb, var(--gold) 12%, var(--plate)); box-shadow: inset 0 -2px 0 var(--gold); }
+.timer-row.boss-window :is(.timer-clock, .timer-instance, .timer-killer) { color: color-mix(in srgb, var(--gold) 35%, var(--paper)); }
+.timer-row.boss-window .timer-countdown { color: var(--gold); }
+.timer-row.boss-expired td { background: color-mix(in srgb, var(--flame) 12%, var(--plate)); box-shadow: inset 0 -2px 0 var(--flame); }
+.timer-row.boss-expired :is(.timer-clock, .timer-instance, .timer-killer) { color: color-mix(in srgb, var(--flame) 35%, var(--paper)); }
+.timer-row.boss-expired .timer-countdown { color: var(--flame); }
 
-.entry-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 14px; }
-.field { display: grid; gap: 5px; flex: 0 0 auto; width: 140px; }
-.field > span { color: var(--on-surface-variant); font-size: 11px; }
+/* Logging a death by hand. The labels are wrappers here, not input wells. */
+.entry-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 12px; }
+.entry-grid .field { display: grid; gap: 5px; flex: 0 0 auto; width: 140px; padding: 0; background: none; box-shadow: none; }
+.entry-grid .field > span { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .entry-boss { flex: 1 1 220px; width: auto; }
 .entry-grid .btn { min-height: 34px; margin-left: auto; }

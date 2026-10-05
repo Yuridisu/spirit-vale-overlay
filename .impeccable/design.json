@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-05T16:26:07.184Z",
+  "generatedAt": "2026-10-05T19:08:49.610928Z",
   "title": "Design System: Spirit Vale Overlay",
   "extensions": {
     "colorMeta": {
@@ -53,7 +53,7 @@
       },
       "paper-3": {
         "role": "neutral",
-        "displayName": "Paper 3 (52% paper)",
+        "displayName": "Paper 3, overlay (52% paper)",
         "canonical": "rgba(244, 247, 250, .52)",
         "tonalRamp": [
           "#090b0d",
@@ -83,7 +83,7 @@
       },
       "stripe": {
         "role": "neutral",
-        "displayName": "Stripe (4.5% paper)",
+        "displayName": "Stripe, overlay (4.5% paper)",
         "canonical": "rgba(244, 247, 250, .045)",
         "tonalRamp": [
           "#090b0d",
@@ -98,7 +98,7 @@
       },
       "stripe-alt": {
         "role": "neutral",
-        "displayName": "Stripe Alt (7.5% paper)",
+        "displayName": "Stripe Alt, overlay (7.5% paper, inline value)",
         "canonical": "rgba(244, 247, 250, .075)",
         "tonalRamp": [
           "#090b0d",
@@ -318,6 +318,201 @@
           "#b4c0fd",
           "#eaeefe"
         ]
+      },
+      "ink-deep": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "#080c10",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#3a4148",
+          "#575f66",
+          "#767e86",
+          "#979fa8",
+          "#bdc5ce",
+          "#e7f0f9"
+        ]
+      },
+      "plate": {
+        "role": "neutral",
+        "displayName": "Plate",
+        "canonical": "#121a22",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#3a4148",
+          "#575f66",
+          "#767e86",
+          "#979fa8",
+          "#bdc5ce",
+          "#e7f0f9"
+        ]
+      },
+      "plate-raised": {
+        "role": "neutral",
+        "displayName": "Plate Raised",
+        "canonical": "#19232d",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#3a4148",
+          "#575f66",
+          "#767e86",
+          "#979fa8",
+          "#bdc5ce",
+          "#e7f0f9"
+        ]
+      },
+      "plate-high": {
+        "role": "neutral",
+        "displayName": "Plate High",
+        "canonical": "#212c37",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#3a4148",
+          "#575f66",
+          "#767e86",
+          "#979fa8",
+          "#bdc5ce",
+          "#e7f0f9"
+        ]
+      },
+      "window-paper-3": {
+        "role": "neutral",
+        "displayName": "Paper 3, windows (55% paper)",
+        "canonical": "rgba(244, 247, 250, .55)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Rule Strong (30% paper)",
+        "canonical": "rgba(244, 247, 250, .3)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "window-stripe": {
+        "role": "neutral",
+        "displayName": "Stripe, windows (3.5% paper)",
+        "canonical": "rgba(244, 247, 250, .035)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "window-stripe-alt": {
+        "role": "neutral",
+        "displayName": "Stripe Alt, windows (7% paper)",
+        "canonical": "rgba(244, 247, 250, .07)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "rarity-common": {
+        "role": "tertiary",
+        "displayName": "Rarity Common",
+        "canonical": "#f2f2f2",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "rarity-rare": {
+        "role": "tertiary",
+        "displayName": "Rarity Rare",
+        "canonical": "#2ecc71",
+        "tonalRamp": [
+          "#001407",
+          "#003318",
+          "#00552b",
+          "#007a3f",
+          "#16a055",
+          "#2ecc71",
+          "#7fe6a6",
+          "#d9f9e5"
+        ]
+      },
+      "rarity-epic": {
+        "role": "tertiary",
+        "displayName": "Rarity Epic",
+        "canonical": "#a35bff",
+        "tonalRamp": [
+          "#12002e",
+          "#2e0566",
+          "#4d10a3",
+          "#6b2bd6",
+          "#8a45f2",
+          "#a35bff",
+          "#c89cff",
+          "#efe3ff"
+        ]
+      },
+      "warning-text": {
+        "role": "secondary",
+        "displayName": "Warning Text",
+        "canonical": "#ffe9b8",
+        "tonalRamp": [
+          "#140800",
+          "#322000",
+          "#553a00",
+          "#7a5600",
+          "#a1740e",
+          "#ca9417",
+          "#f6b83a",
+          "#ffeccc"
+        ]
+      },
+      "error-text": {
+        "role": "secondary",
+        "displayName": "Error Text",
+        "canonical": "#ffd9cf",
+        "tonalRamp": [
+          "#230000",
+          "#480700",
+          "#771400",
+          "#aa2300",
+          "#dd380d",
+          "#fe6747",
+          "#fdad9a",
+          "#fee9e4"
+        ]
       }
     },
     "typographyMeta": {
@@ -348,6 +543,42 @@
       "label": {
         "displayName": "Label",
         "purpose": "Units, captions, empty and waiting states; uppercase at .04-.08em."
+      },
+      "window-display": {
+        "displayName": "Window Display",
+        "purpose": "Stat tile numbers in the windows (26px)."
+      },
+      "window-heading": {
+        "displayName": "Window Heading",
+        "purpose": "Window and dialog headings (22px), launcher tile, timer panel and Settings section names (20px); name headings use Atkinson 800 at 20-26px instead."
+      },
+      "window-total": {
+        "displayName": "Window Total",
+        "purpose": "Summary totals over tables (22px; 18px in boss fight detail and Rewards totals), item counters, attributes."
+      },
+      "window-tag": {
+        "displayName": "Window Tag",
+        "purpose": "Section heads drawn as channel tags inside windows (14px)."
+      },
+      "window-row": {
+        "displayName": "Window Row",
+        "purpose": "Table cells and row values (15px, 600-700); Boss Timers countdown 17px."
+      },
+      "window-control": {
+        "displayName": "Window Control",
+        "purpose": "Buttons and segmented chips (13px uppercase, .06em)."
+      },
+      "window-name": {
+        "displayName": "Window Name",
+        "purpose": "Name cells and row headers in window tables (Atkinson 700, 13px)."
+      },
+      "window-body": {
+        "displayName": "Window Body",
+        "purpose": "Window root text 13px; help, banners and descriptions 12px."
+      },
+      "window-label": {
+        "displayName": "Window Label",
+        "purpose": "Column heads, field labels, tile captions, chart axes (12px, .07em, uppercase)."
       }
     },
     "shadows": [
@@ -385,6 +616,36 @@
         "name": "text-halo",
         "value": "0 0 2px rgb(12 18 24 / .95), 0 1px 3px rgb(12 18 24 / .85)",
         "purpose": "text-shadow on paper text over plates; removed on solid fills."
+      },
+      {
+        "name": "channel-lip",
+        "value": "inset 0 2px 0 var(--channel)",
+        "purpose": "Top edge of floating parts, launcher tiles and banners (rule-strong, gold or flame by kind)."
+      },
+      {
+        "name": "channel-underline",
+        "value": "inset 0 -2px 0 var(--channel)",
+        "purpose": "Titlebar strip, active toggles, selected rows and options, focused wells."
+      },
+      {
+        "name": "field-focus",
+        "value": "inset 0 0 0 1px var(--channel), inset 0 -2px 0 var(--channel)",
+        "purpose": "Focused input wells; resting wells use inset 0 0 0 1px var(--rule)."
+      },
+      {
+        "name": "window-lift",
+        "value": "inset 0 2px 0 var(--channel), 0 12px 32px rgb(12 18 24 / .7)",
+        "purpose": "Dialogs over a window."
+      },
+      {
+        "name": "menu-lift",
+        "value": "inset 0 2px 0 var(--channel), 0 10px 28px rgb(12 18 24 / .7)",
+        "purpose": "Menus, multi-selects, custom select panels."
+      },
+      {
+        "name": "tooltip-lift",
+        "value": "inset 0 2px 0 var(--channel), 0 8px 22px rgb(12 18 24 / .6)",
+        "purpose": "Chart tooltips."
       }
     ],
     "motion": [
@@ -412,20 +673,49 @@
         "name": "minimap-track",
         "value": "left/top .1s linear",
         "purpose": "Minimap dots and markers."
+      },
+      {
+        "name": "window-state",
+        "value": "background-color, color .15s cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Window button, chip and icon-button hover and press; launcher tiles .18s."
       }
     ],
     "shapes": {
       "plateCut": "10px top-right 45-degree corner cut",
       "stripCut": "6px on thin strips (health, mana, XP, weight, clock, timer)",
       "tagSlant": "5-8px trailing slant on tags, banners, timer modes and the lock pill",
-      "iconGrid": "16px grid, 2px square-capped mitred stroke, currentColor"
+      "iconGrid": "16px grid, 2px square-capped mitred stroke, currentColor",
+      "dialogCut": "14px top-right cut on dialogs",
+      "controls": "16px square checkbox wells, diamond radios, 10x18px range bar thumb on a 4px track, 9px status squares, square scrollbars",
+      "windowIcons": "packages/ui-kit/icons.tsx, same 2px stroke grid; select chevron and checkbox tick drawn in it"
     },
     "layout": {
       "editGrid": "10px minor, 50px major (teal at .26)",
       "plateMin": "160 x 100px; thin strips 24-40px tall",
-      "responsive": "No viewport breakpoints; plates respond to their own size via container queries (cqw, cqh)."
+      "responsive": "No viewport breakpoints; plates respond to their own size via container queries (cqw, cqh).",
+      "windowChrome": "40px titlebar; content pads 14px 16px (Settings 14px 18px beside a 160px rundown)",
+      "windowMin": "Each window declares a minimum size, 560x420 (Settings) to 820x560 (Build Export)",
+      "windowGroups": "Joined parts at 2px; separate plates 8-12px apart; launcher board five columns at 8px, tiles min 92px"
     },
-    "migration": "Only the in-game overlay (packages/overlay) is built in this world. The tool windows still use the Material 3 dark-green theme in packages/ui-kit/theme.css and are planned to move into this world next."
+    "channels": {
+      "launcher": "teal",
+      "combat": "teal",
+      "analysisDetail": "teal",
+      "sessionPicker": "teal",
+      "rewards": "gold",
+      "catalog": "gold",
+      "character": "sky",
+      "bossTimers": "flame",
+      "deathLog": "flame",
+      "buildExport": "lime",
+      "companion": "violet",
+      "settings": "paper",
+      "launcherTiles": "each tile takes its tool's channel"
+    },
+    "boundaries": [
+      "packages/companion/src/renderer/index.css is Buh's Vale Companion (third-party, credited): only its :root base colours and UI face are mapped onto the palette; its layout and components (including its eyebrow and kicker labels) are not part of this system.",
+      "The overlay links theme.css, so its inspector's checkboxes and ranges take the theme's square controls; the overlay's own tokens (paper-3 .52, stripe .045, inline stripe-alt .075) are unchanged."
+    ]
   },
   "components": [
     {
@@ -507,22 +797,100 @@
       "description": "Boss timer region tabs; active takes the channel fill, an underline marks a boss in window or overdue.",
       "html": "<div class=\"ds-tabs\"><span class=\"ds-tab is-active\">NA</span><span class=\"ds-tab is-window\">SA</span><span class=\"ds-tab is-expired\">EU</span></div>",
       "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-tabs{display:flex;gap:2px;} .ds-tab{padding:2px 9px 1px;background:rgba(244,247,250,.1);color:var(--paper-2);font-family:var(--font-num);font-size:13px;font-weight:800;letter-spacing:.08em;} .ds-tab.is-active{background:var(--gold);color:var(--ink);} .ds-tab.is-window{color:var(--gold);box-shadow:inset 0 -2px 0 var(--gold);} .ds-tab.is-expired{color:var(--flame);box-shadow:inset 0 -2px 0 var(--flame);}"
+    },
+    {
+      "name": "Window Titlebar",
+      "kind": "nav",
+      "refersTo": "window-titlebar",
+      "description": "The broadcast's top strip: deep ink, 2px channel underline, brand name and channel tag, drawn icon buttons.",
+      "html": "<div class=\"ds-titlebar\"><span class=\"ds-brand\">Boss timers <span class=\"ds-brand-tag\">6 of 11 up</span></span><span class=\"ds-controls\"><button class=\"ds-icon\" aria-label=\"Minimize\"><svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M3 12h10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"square\"/></svg></button><button class=\"ds-icon ds-close\" aria-label=\"Close\"><svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M4 4 12 12M12 4 4 12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"square\"/></svg></button></span></div>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--flame);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-titlebar{display:flex;align-items:center;gap:12px;width:420px;height:40px;padding-left:12px;background:var(--ink-deep);box-shadow:inset 0 -2px 0 var(--channel);} .ds-brand{display:flex;align-items:center;gap:8px;color:var(--paper);font-family:var(--font-num);font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;} .ds-brand-tag{padding:3px 12px 2px 7px;background:var(--channel);color:var(--ink);font-size:13px;letter-spacing:.08em;line-height:1.1;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);} .ds-controls{display:flex;align-self:stretch;margin-left:auto;padding-bottom:2px;} .ds-icon{display:inline-grid;place-items:center;min-width:40px;padding:0 10px;border:0;background:transparent;color:var(--paper-2);cursor:pointer;transition:background-color .15s var(--ease-out),color .15s var(--ease-out);} .ds-icon:hover{background:var(--stripe-alt);color:var(--paper);} .ds-close:hover{background:var(--flame);color:var(--ink);} .ds-icon:focus-visible{outline:2px solid var(--channel);outline-offset:2px;}"
+    },
+    {
+      "name": "Window Primary Button",
+      "kind": "button",
+      "refersTo": "window-button-primary",
+      "description": "Solid channel fill, ink letters, slanted trailing end; one per group.",
+      "html": "<button class=\"ds-btn ds-btn-primary\" type=\"button\">Update now</button>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--gold);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:1px 14px 0;border:0;background:var(--stripe-alt);color:var(--paper);font-family:var(--font-num);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background-color .15s var(--ease-out),color .15s var(--ease-out);} .ds-btn:hover{background:var(--rule);} .ds-btn:active{background:var(--rule-strong);} .ds-btn:focus-visible{outline:2px solid var(--channel);outline-offset:2px;} .ds-btn-primary{background:var(--channel);color:var(--ink);font-weight:800;padding-right:18px;clip-path:polygon(0 0,100% 0,calc(100% - 7px) 100%,0 100%);} .ds-btn-primary:hover{background:color-mix(in srgb,var(--paper) 18%,var(--channel));} .ds-btn-primary:active{background:color-mix(in srgb,var(--ink) 14%,var(--channel));} .ds-btn-ghost{background:transparent;color:var(--paper-2);} .ds-btn-ghost:hover{background:var(--stripe-alt);color:var(--paper);}"
+    },
+    {
+      "name": "Window Button and Ghost",
+      "kind": "button",
+      "refersTo": "window-button",
+      "description": "Square stripe-alt buttons in condensed uppercase; ghost drops the fill.",
+      "html": "<button class=\"ds-btn\" type=\"button\">View download</button> <button class=\"ds-btn ds-btn-ghost\" type=\"button\">Skip version</button>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:1px 14px 0;border:0;background:var(--stripe-alt);color:var(--paper);font-family:var(--font-num);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background-color .15s var(--ease-out),color .15s var(--ease-out);} .ds-btn:hover{background:var(--rule);} .ds-btn:active{background:var(--rule-strong);} .ds-btn:focus-visible{outline:2px solid var(--channel);outline-offset:2px;} .ds-btn-primary{background:var(--channel);color:var(--ink);font-weight:800;padding-right:18px;clip-path:polygon(0 0,100% 0,calc(100% - 7px) 100%,0 100%);} .ds-btn-primary:hover{background:color-mix(in srgb,var(--paper) 18%,var(--channel));} .ds-btn-primary:active{background:color-mix(in srgb,var(--ink) 14%,var(--channel));} .ds-btn-ghost{background:transparent;color:var(--paper-2);} .ds-btn-ghost:hover{background:var(--stripe-alt);color:var(--paper);}"
+    },
+    {
+      "name": "Segmented Chips",
+      "kind": "chip",
+      "refersTo": "seg-chip-active",
+      "description": "Joined square chips; the active one is a solid channel fill.",
+      "html": "<div class=\"ds-seg\"><button class=\"is-active\">Live</button><button>Past log</button><button>Boss fight analysis</button></div>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-seg{display:flex;gap:2px;width:420px;} .ds-seg>button{flex:1 0 auto;padding:6px 14px 5px;border:0;background:var(--stripe-alt);color:var(--paper-2);font-family:var(--font-num);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background-color .15s var(--ease-out),color .15s var(--ease-out);} .ds-seg>button:hover{background:var(--rule);color:var(--paper);} .ds-seg>button.is-active{background:var(--channel);color:var(--ink);} .ds-seg>button:focus-visible{outline:2px solid var(--channel);outline-offset:2px;}"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "data-table-row",
+      "description": "Striped bands on a plate: deep-ink sticky header, Atkinson name cells, Barlow numerals right-aligned.",
+      "html": "<div class=\"ds-scroll\"><table class=\"ds-table\"><thead><tr><th>IGN</th><th>DPS</th><th>Crt %</th></tr></thead><tbody><tr><th>Senju Yuri</th><td>504,8 mil</td><td>42%</td></tr><tr><th>Yuridisu</th><td>401,1 mil</td><td>27%</td></tr><tr><th>Kabooms</th><td>390,2 mil</td><td>18%</td></tr></tbody></table></div>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-scroll{width:420px;background:var(--plate);} .ds-table{width:100%;border-collapse:separate;border-spacing:0;color:var(--paper);font-variant-numeric:tabular-nums;} .ds-table th,.ds-table td{padding:6px 10px;text-align:right;white-space:nowrap;} .ds-table td{font-family:var(--font-num);font-size:15px;font-weight:600;} .ds-table thead th{background:var(--ink-deep);color:var(--paper-3);font-family:var(--font-num);font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;box-shadow:inset 0 -1px 0 var(--rule);} .ds-table th:first-child{text-align:left;} .ds-table tbody th{font-family:var(--font-ui);font-size:13px;font-weight:700;text-align:left;} .ds-table tbody tr{background:var(--stripe);} .ds-table tbody tr:nth-child(even){background:var(--stripe-alt);} .ds-table tbody tr:hover{background:color-mix(in srgb,var(--channel) 10%,var(--plate));}"
+    },
+    {
+      "name": "Input Well",
+      "kind": "input",
+      "refersTo": "input-well",
+      "description": "Square deep-ink well with an inset rule ring; focus turns the ring channel and adds a 2px underline.",
+      "html": "<label class=\"ds-label\">Search<input class=\"ds-input\" placeholder=\"Search boss, region, channel or killer\"></label>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-label{display:grid;gap:5px;width:320px;color:var(--paper-3);font-family:var(--font-num);font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;} .ds-input{width:100%;padding:7px 10px;border:0;background:var(--ink-deep);color:var(--paper);font-family:var(--font-ui);font-size:13px;letter-spacing:0;text-transform:none;outline:0;box-shadow:inset 0 0 0 1px var(--rule);} .ds-input::placeholder{color:var(--paper-3);} .ds-input:hover{box-shadow:inset 0 0 0 1px var(--rule-strong);} .ds-input:focus{box-shadow:inset 0 0 0 1px var(--channel),inset 0 -2px 0 var(--channel);}"
+    },
+    {
+      "name": "Banner",
+      "kind": "card",
+      "refersTo": "banner",
+      "description": "A tinted band with a 2px top lip by kind: info in the channel, warning gold, error flame.",
+      "html": "<div class=\"ds-banner is-warn\"><span class=\"ds-dot\"></span><span><strong>Central capture</strong> Decoded game data has paused.</span></div>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-banner{display:flex;align-items:center;gap:12px;width:420px;padding:9px 12px;background:var(--plate);color:var(--paper-2);font-family:var(--font-ui);font-size:12px;line-height:1.45;box-shadow:inset 0 2px 0 var(--rule-strong);} .ds-banner.is-warn{background:color-mix(in srgb,var(--gold) 16%,var(--plate));color:#ffe9b8;box-shadow:inset 0 2px 0 var(--gold);} .ds-dot{flex:none;width:9px;height:9px;background:var(--gold);} .ds-banner strong{display:block;color:var(--paper);font-family:var(--font-num);font-size:15px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;}"
+    },
+    {
+      "name": "Launcher Tool Tile",
+      "kind": "card",
+      "refersTo": "tool-tile",
+      "description": "One plate per tool in its own channel: 2px lip, corner cut, name turns channel on hover.",
+      "html": "<button class=\"ds-tile\" style=\"--channel:#ffc145\"><strong>Rewards</strong><span>Mob rewards and catalog</span></button>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-tile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:180px;min-height:92px;padding:14px 12px 12px;border:0;background:var(--plate);text-align:left;cursor:pointer;box-shadow:inset 0 2px 0 var(--channel);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);transition:background-color .18s var(--ease-out);} .ds-tile strong{color:var(--paper);font-family:var(--font-num);font-size:20px;font-weight:800;letter-spacing:.04em;line-height:1;text-transform:uppercase;transition:color .18s var(--ease-out);} .ds-tile span{color:var(--paper-2);font-family:var(--font-ui);font-size:12px;line-height:1.4;} .ds-tile:hover{background:color-mix(in srgb,var(--channel) 16%,var(--plate));} .ds-tile:hover strong{color:var(--channel);} .ds-tile:focus-visible{outline:2px solid var(--channel);outline-offset:2px;}"
+    },
+    {
+      "name": "Boss Timer Row",
+      "kind": "custom",
+      "refersTo": "data-table-row",
+      "description": "Countdown over a 3px bar of the wait or window left; in window the row turns gold.",
+      "html": "<div class=\"ds-timer is-window\"><span class=\"ds-boss\">Demon Lord</span><span class=\"ds-status\"><span class=\"ds-count\">spawnable · 10:56 left</span><span class=\"ds-bar\" style=\"--left:.35\"></span><span class=\"ds-clock\">by 16:13</span></span></div>",
+      "css": ":host{--ink:#0c1218;--ink-deep:#080c10;--plate:#121a22;--plate-raised:#19232d;--plate-high:#212c37;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.55);--rule:rgba(244,247,250,.14);--rule-strong:rgba(244,247,250,.3);--stripe:rgba(244,247,250,.035);--stripe-alt:rgba(244,247,250,.07);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--channel:var(--teal);--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-timer{display:flex;align-items:center;justify-content:space-between;width:420px;padding:7px 10px;background:var(--stripe-alt);color:var(--paper);} .ds-timer.is-window{background:color-mix(in srgb,var(--gold) 12%,var(--plate));box-shadow:inset 0 -2px 0 var(--gold);} .ds-boss{font-family:var(--font-ui);font-size:13px;font-weight:700;} .ds-status{display:grid;width:180px;} .ds-count{font-family:var(--font-num);font-size:17px;font-weight:800;letter-spacing:.02em;} .is-window .ds-count{color:var(--gold);} .ds-bar{position:relative;display:block;width:100%;max-width:160px;height:3px;margin:4px 0 3px;overflow:hidden;background:var(--rule);} .ds-bar::before{position:absolute;inset:0;background:var(--paper-2);content:'';transform:scaleX(var(--left));transform-origin:left center;} .is-window .ds-bar::before{background:var(--gold);} .ds-clock{color:color-mix(in srgb,var(--gold) 35%,var(--paper));font-family:var(--font-num);font-size:12px;font-weight:600;}"
     }
   ],
   "narrative": {
     "northStar": "The Championship Broadcast Package",
-    "overview": "Every surface is a stream graphic: a scorebug, a stat bug, a standings table, a lower-third. Each is cut from a solid ink plate with one 45-degree corner clipped away, named by a small solid tag in the colour of the channel it speaks on, and filled with heavy condensed numerals over legible names. A viewer reads it the way they read a match: tag, number, order, then back to the action. The world deliberately refuses the dark, rounded, translucent meter-panel stack that DPS addons ship.\n\nDensity is high and flat. Plates carry no rounded corners, no gradients of tone, no glass. Data sits in alternating striped bands; meters are flat fills with a bright leading cap; time is drawn as length. Colour is a channel, never a decoration: teal is the broadcast's own voice, flame is threat, gold is loot and value, and five team colours say only who.\n\nThe in-game overlay (`packages/overlay`) is the first and only surface built in this world. The tool windows (launcher, Settings, Rewards, Combat, Boss Timers, Character, Build Export, Companion) still use the previous Material 3 dark-green theme in `packages/ui-kit/theme.css` and have not been migrated; they are planned to move into this world next. Until they do, this file describes the overlay's shipped system and the rules the windows should adopt, not the windows' current look.",
+    "overview": "Every surface is a stream graphic: a scorebug, a stat bug, a standings table, a lower-third. Each is cut from a solid ink plate with one 45-degree corner clipped away, named by a small solid tag in the colour of the channel it speaks on, and filled with heavy condensed numerals over legible names. A viewer reads it the way they read a match: tag, number, order, then back to the action. The world deliberately refuses the dark, rounded, translucent meter-panel stack that DPS addons ship.\n\nDensity is high and flat. Plates carry no rounded corners, no gradients of tone, no glass. Data sits in alternating striped bands; meters are flat fills with a bright leading cap; time is drawn as length. Colour is a channel, never a decoration: teal is the broadcast's own voice, flame is threat, gold is loot and value, and five team colours say only who.\n\nThe world has two surfaces. The in-game overlay (`packages/overlay`) is the on-air package: translucent ink plates over the game scene, sized and placed by the player. The tool windows (launcher, Settings, Combat with its analysis detail, death log and session picker, Rewards with its catalog, Character, Boss Timers, Build Export, and the Companion window's chrome) are the studio desk behind it: the same plates, tags, stripes and faces, set opaque on a stepped ink desk from the shared window theme (`packages/ui-kit/theme.css`), with a larger type ramp for reading at a desk. Each window speaks on one tool channel, set on `:root`. The Companion window's inner pages are Buh's Vale Companion, a credited third-party app; only its base colours and interface face are mapped onto this palette, and its layout and components are not part of this system.",
     "keyCharacteristics": [
-      "Square ink plates, one corner cut, alpha set by the player's per-element opacity.",
+      "Square ink plates, one corner cut; on the overlay, alpha set by the player's per-element opacity; in the windows, opaque steps of the desk.",
       "Titles as solid channel-colour tags with a slanted trailing end.",
       "Barlow Condensed for every number and label; Atkinson Hyperlegible Next for names and sentences.",
       "Striped rows, flat fills with a bright cap, ten-segment gauges.",
+      "One channel per tool window, carried by the titlebar underline, tags, plate lips, active chips, focus and charts.",
       "Motion only on arrival: a lower-third wipe or a two-beat flash, then stillness."
     ],
     "rules": [
       {
         "name": "The Channel Rule",
         "body": "Every plate speaks on exactly one channel, set once per element (`--channel`), and its tag, top edge, chart line, time bars and active tab all take that colour. Never mix two channels' tags on one plate.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Tool-One-Channel Rule",
+        "body": "Each window sets its tool's channel on `:root` (launcher, Combat, analysis detail and session picker teal; Rewards and catalog gold; Character sky; Boss Timers and death log flame; Build Export lime; Companion violet; Settings paper), and each launcher tile takes the channel of the tool it opens. A window's titlebar underline, brand tag, primary button, active chips, focus outline, selection and charts all follow it; state colours (flame error, gold warning, lime ok) stay fixed.",
         "section": "colors"
       },
       {
@@ -542,12 +910,17 @@
       },
       {
         "name": "The Halo Rule",
-        "body": "Paper text on a plate carries a tight two-layer ink halo (`0 0 2px` at .95, `0 1px 3px` at .85) so it survives any game scene at any plate opacity.",
+        "body": "Paper text on an overlay plate carries a tight two-layer ink halo (`0 0 2px` at .95, `0 1px 3px` at .85) so it survives any game scene at any plate opacity. Window text sits on opaque ink and goes without, except over a share fill (the Combat meter rows keep a lighter halo).",
         "section": "typography"
       },
       {
         "name": "The Flat Plate Rule",
-        "body": "A plate at rest has no outer shadow; lift is reserved for cards that arrive over others and for edit mode.",
+        "body": "A plate at rest has no outer shadow; lift is reserved for cards that arrive over others, for edit mode, and for dialogs and menus that float over a window.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Lip-Not-Border Rule",
+        "body": "Edges are drawn as inset lips, rings and underlines in the channel or rule colour, never as outer borders; the window outline itself is an inset 1px rule.",
         "section": "elevation"
       }
     ],
@@ -557,15 +930,19 @@
       "**Do** set every number in Barlow Condensed, tabular; set every name in Atkinson Hyperlegible Next.",
       "**Do** draw time and share as length: fills, time bars and veils, not percentages alone.",
       "**Do** keep the two-layer ink halo on paper text over plates, and drop it on solid colour fills.",
-      "**Do** animate only on arrival: one lower-third wipe or a two-beat flash that then holds; honour `prefers-reduced-motion` by showing the end state."
+      "**Do** animate only on arrival: one lower-third wipe or a two-beat flash that then holds; honour `prefers-reduced-motion` by showing the end state.",
+      "**Do** set a new window's tool channel once on `:root` and build it from the shared theme's tokens and components; no raw hex outside `packages/ui-kit/theme.css`.",
+      "**Do** use the window ramp (20-22px headings, 18-22px totals, 15px row values, 12px labels) in windows and the overlay ramp on the overlay.",
+      "**Do** draw window icons from `packages/ui-kit/icons.tsx`: 2px square-capped strokes on the 16px grid in the text colour."
     ],
     "donts": [
       "**Don't** round corners; the minimap radar is the only circle.",
-      "**Don't** use smooth tonal gradients or glass blur on plates; repeating gradients are for stripes, segments and hazard bands only.",
+      "**Don't** use smooth tonal gradients or glass blur on plates; repeating gradients are for stripes, segments, empty states and hazard bands only.",
       "**Don't** loop any animation during play; nothing keeps blinking during a fight.",
       "**Don't** use a team colour to mean anything but who, or a channel colour to fill a player's row.",
       "**Don't** use text glyphs or emoji as icons; draw them as 2px square-capped strokes on the 16px grid, or use the game's own rasters.",
-      "**Don't** add hard offset shadows; lift is soft and ambient, and only for floating cards and edit mode."
+      "**Don't** add hard offset shadows; lift is soft and ambient, and only for floating cards, edit mode, and dialogs and menus.",
+      "**Don't** take the Companion pages' layout, eyebrows or components as a pattern for our windows; they are Buh's."
     ]
   }
 }

@@ -3,6 +3,7 @@ import type { MessageKey } from "@svoverlay/i18n/messages";
 import type { Translator } from "@svoverlay/i18n/translate";
 import type { SettingsSection, SettingsSectionContext } from "../settings-section.ts";
 import type { SettingsKind } from "../../../desktop/manage-settings.ts";
+import { CloseIcon } from "@svoverlay/ui-kit/icons";
 
 const SETTINGS_KIND_LABEL_KEYS: ReadonlyArray<{ kind: SettingsKind; key: MessageKey }> = [
   { kind: "launcher", key: "settingsKind.launcher" },
@@ -77,7 +78,7 @@ function ResetAllSettings({ onReset, t }: { onReset: () => void; t: Translator }
       }} onKeyDown={(event) => {
         if (event.key === "Escape") cancel();
       }}>
-        <div class="modal-head"><div><h2 id="reset-title">{t("settings.manage.reset.title")}</h2><p>{t("settings.manage.reset.body")}</p></div><button class="modal-close" type="button" aria-label={t("settings.manage.reset.cancel")} onClick={cancel}>×</button></div>
+        <div class="modal-head"><div><h2 id="reset-title">{t("settings.manage.reset.title")}</h2><p>{t("settings.manage.reset.body")}</p></div><button class="modal-close" type="button" aria-label={t("settings.manage.reset.cancel")} onClick={cancel}><CloseIcon /></button></div>
         <div class="modal-actions"><button ref={cancelButtonRef} class="btn" type="button" onClick={cancel}>{t("settings.manage.reset.cancel")}</button><button class="btn reset-button" type="submit">{t("settings.manage.reset.confirm")}</button></div>
       </form>
     </div> : null}

@@ -10,6 +10,8 @@
     "./ensure-window-size": "./ensure-window-size.ts",
     "./disable-web-chrome": "./disable-web-chrome.ts",
     "./title-bar": "./title-bar.tsx",
+    "./icons": "./icons.tsx",
+    "./team-color": "./team-color.ts",
     "./settings-button": "./settings-button.tsx",
     "./status-dot": "./status-dot.tsx",
     "./enemy-filter": "./enemy-filter.tsx",

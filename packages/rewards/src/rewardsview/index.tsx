@@ -28,6 +28,7 @@ import type { MessageKey } from "@svoverlay/i18n/messages";
 import type { RewardsAppRpc, RewardsAppState, RewardsAppView, RewardsUiDrop } from "../app-types.ts";
 import { sortRewardKills, sortRewardSummaries } from "../table-sort.ts";
 import type { KillSortKey, SummarySortKey } from "../table-sort.ts";
+import { DisclosureIcon, PinIcon } from "@svoverlay/ui-kit/icons";
 
 const STATUS_TONE: Record<RewardsAppState["status"], StatusTone> = {
   waiting: "is-warn",
@@ -128,7 +129,7 @@ function App() {
             title={t("rewards.pinned.title")}
             onClick={() => void desktopView.rpc?.request.setPinned({ pinned: !next.pinned })}
           >
-            {next.pinned ? "◆" : "◇"}
+            <PinIcon pinned={next.pinned} />
           </button>
           </>
         }
@@ -487,7 +488,7 @@ function RewardRow({ rowKey, name, values, drops, trailingValues = [], expanded,
     <tr>
       <th scope="row" title={name}>{name}</th>
       {values.map((value, index) => <td key={index}>{value}</td>)}
-      <td>{drops.length === 0 ? "—" : <button class="table-detail-button" type="button" aria-expanded={isExpanded} aria-controls={detailId} onClick={() => onToggle(rowKey)}>{isExpanded ? "▾" : "▸"} {drops.length}</button>}</td>
+      <td>{drops.length === 0 ? "—" : <button class="table-detail-button" type="button" aria-expanded={isExpanded} aria-controls={detailId} onClick={() => onToggle(rowKey)}><DisclosureIcon open={isExpanded} /> {drops.length}</button>}</td>
       {trailingValues.map((value, index) => <td key={`trailing-${index}`} title={value}>{value}</td>)}
     </tr>
     {isExpanded && drops.length > 0 && <tr id={detailId} class="table-detail-row"><td colSpan={values.length + trailingValues.length + 2}><div class="table-detail-chips">{drops.map((drop, index) => <span class="chip" key={`${drop.itemId}-${index}`}>{formatDrop(drop)}</span>)}</div></td></tr>}

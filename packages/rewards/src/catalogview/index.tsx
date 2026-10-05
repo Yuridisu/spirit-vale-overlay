@@ -14,6 +14,7 @@ import type { RewardsCatalogRpc, RewardsCatalogState } from "../app-types.ts";
 import { sortRewardCatalog } from "../table-sort.ts";
 import type { CatalogSortKey } from "../table-sort.ts";
 import { formatChance, formatInteger, safeDomId } from "@svoverlay/ui-kit/format";
+import { DisclosureIcon, SearchIcon } from "@svoverlay/ui-kit/icons";
 
 const state = signal<RewardsCatalogState | undefined>(undefined);
 
@@ -79,7 +80,7 @@ function App() {
           <span class="pill">{t("catalog.count", { count: next.catalogCount })}</span>
         </div>
         <label class="field catalog-search">
-          <span aria-hidden="true">⌕</span>
+          <span aria-hidden="true"><SearchIcon /></span>
           <input
             ref={queryRef}
             type="search"
@@ -113,12 +114,12 @@ function App() {
                   return <Fragment key={mob.id}>
                     <tr>
                       <th scope="row" title={mob.displayName}>{mob.displayName}</th>
-                      <td title={mob.id}>{mob.id}</td>
+                      <td class="is-name" title={mob.id}>{mob.id}</td>
                       <td>{formatInteger(mob.level)}</td>
                       <td>{t(mob.boss ? "catalog.boss.yes" : "catalog.boss.no")}</td>
                       <td>{formatInteger(mob.baseExperience)}</td>
                       <td>{formatInteger(mob.baseCoins)}</td>
-                      <td>{mob.drops.length === 0 ? "—" : <button class="table-detail-button" type="button" aria-expanded={isExpanded} aria-controls={detailId} onClick={() => toggleExpanded(rowKey)}>{isExpanded ? "▾" : "▸"} {mob.drops.length}</button>}</td>
+                      <td>{mob.drops.length === 0 ? "—" : <button class="table-detail-button" type="button" aria-expanded={isExpanded} aria-controls={detailId} onClick={() => toggleExpanded(rowKey)}><DisclosureIcon open={isExpanded} /> {mob.drops.length}</button>}</td>
                     </tr>
                     {isExpanded && mob.drops.length > 0 && <tr id={detailId} class="table-detail-row"><td colSpan={7}><div class="table-detail-chips">{mob.drops.map((drop, index) => <span class="chip" key={`${drop.itemId}-${index}`}>{`${drop.itemName} ×${drop.count}${drop.chance === undefined ? "" : ` · ${formatChance(drop.chance)}`}`}</span>)}</div></td></tr>}
                   </Fragment>;

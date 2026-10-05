@@ -3,6 +3,7 @@ import type { RequiredStatusCategory } from "@svoverlay/overlay/app-types";
 import { REQUIRED_STATUS_CATEGORIES, requiredStatusOptions } from "@svoverlay/overlay/required-statuses";
 import type { MessageKey } from "@svoverlay/i18n/messages";
 import type { SettingsSection, SettingsSectionContext } from "../settings-section.ts";
+import { CloseIcon } from "@svoverlay/ui-kit/icons";
 
 const REQUIRED_STATUS_LABEL_KEYS: Record<RequiredStatusCategory, MessageKey> = {
   buffs: "settings.status.category.buffs",
@@ -50,7 +51,7 @@ export function buildStatusSettingsSection({ state, actions, t }: SettingsSectio
             <li class="status-chip" key={option.value}>
               <img src={option.iconSrc} alt="" aria-hidden="true" />
               <span>{option.label}</span>
-              <button type="button" class="status-chip-remove" aria-label={t("settings.status.stopWarning", { name: option.label })} onClick={() => setArmed([...armed].filter((statusId) => statusId !== option.value))}>×</button>
+              <button type="button" class="status-chip-remove" aria-label={t("settings.status.stopWarning", { name: option.label })} onClick={() => setArmed([...armed].filter((statusId) => statusId !== option.value))}><CloseIcon /></button>
             </li>)}</ul>}
         </div>;
       })}<p class="settings-hint">{t("settings.status.hint.outline")}</p></div><p class="settings-hint">{t("settings.status.hint.tilesEnabled")}</p></>,

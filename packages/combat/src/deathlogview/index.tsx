@@ -10,6 +10,7 @@ import { formatCompact, formatDuration, formatInteger, normalizeSearchText } fro
 import { repairRendererPayload } from "@svoverlay/ui-kit/renderer-text";
 
 import type { CombatDeathLogRpc, CombatDeathLogState } from "../app-types.ts";
+import { SearchIcon } from "@svoverlay/ui-kit/icons";
 
 const state = signal<CombatDeathLogState | undefined>(undefined);
 type DeathLogTab = "summary" | "list";
@@ -57,7 +58,7 @@ function App() {
           <div class="section-head">
             <div><h2>{t("deathLog.deaths")}</h2><p>{t("deathLog.mostRecent")}</p></div>
             <label class="field" for="death-victim-query">
-              <span aria-hidden="true">⌕</span>
+              <span aria-hidden="true"><SearchIcon /></span>
               <input
                 id="death-victim-query"
                 type="search"
@@ -85,12 +86,12 @@ function App() {
           </nav>
           <section id="summary-panel" role="tabpanel" hidden={tab !== "summary"}>
             <div class="table-scroll"><table class="data-table death-table" aria-label={t("deathLog.summary.label")}><thead><tr><th>{t("deathLog.column.attacker")}</th><th>{t("deathLog.column.source")}</th><th>{t("deathLog.column.damage")}</th><th>{t("deathLog.column.hits")}</th><th>{t("deathLog.column.crits")}</th></tr></thead>
-              <tbody>{summary.map((row) => <tr key={row.key}><th scope="row">{row.attackerLabel}</th><td>{row.sourceLabel}</td><td>{formatCompact(row.damage)}</td><td>{formatInteger(row.hits)}</td><td>{formatInteger(row.criticalHits)}</td></tr>)}</tbody>
+              <tbody>{summary.map((row) => <tr key={row.key}><th scope="row">{row.attackerLabel}</th><td class="is-name">{row.sourceLabel}</td><td>{formatCompact(row.damage)}</td><td>{formatInteger(row.hits)}</td><td>{formatInteger(row.criticalHits)}</td></tr>)}</tbody>
             </table></div>
           </section>
           <section id="list-panel" role="tabpanel" hidden={tab !== "list"}>
             <div class="table-scroll"><table class="data-table death-table" aria-label={t("deathLog.list.label")}><thead><tr><th>{t("deathLog.column.beforeDeath")}</th><th>{t("deathLog.column.source")}</th><th>{t("deathLog.column.attacker")}</th><th>{t("deathLog.column.damage")}</th><th>{t("deathLog.column.hit")}</th></tr></thead>
-              <tbody>{selected.hits.map((hit) => <tr key={hit.id}><td>{hit.beforeDeathMs === 0 ? t("deathLog.atDeath") : t("deathLog.before", { time: formatDuration(hit.beforeDeathMs) })}</td><th scope="row">{hit.sourceLabel}</th><td>{attackerLabels.get(hit.attackerActorId) ?? hit.attackerLabel}</td><td>{formatInteger(hit.damage)}</td><td>{hit.critical ? t("deathLog.critical") : t("deathLog.normal")}</td></tr>)}</tbody>
+              <tbody>{selected.hits.map((hit) => <tr key={hit.id}><td>{hit.beforeDeathMs === 0 ? t("deathLog.atDeath") : t("deathLog.before", { time: formatDuration(hit.beforeDeathMs) })}</td><th scope="row">{hit.sourceLabel}</th><td class="is-name">{attackerLabels.get(hit.attackerActorId) ?? hit.attackerLabel}</td><td>{formatInteger(hit.damage)}</td><td>{hit.critical ? t("deathLog.critical") : t("deathLog.normal")}</td></tr>)}</tbody>
             </table></div>
             {selected.hits.length === 0 && <p class="empty-state">{t("deathLog.list.empty")}</p>}
           </section>

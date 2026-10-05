@@ -11,6 +11,7 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import type { MessageKey } from "@svoverlay/i18n/messages";
 import { TIMER_MODES, formatTimer, timerDisplayMs, timerFinished, type TimerMode } from "@svoverlay/overlay/timer";
 import type { LauncherRpc, LauncherState, ToolWindow } from "../../launcher/types.ts";
+import { CloseIcon, MinimizeIcon, SettingsIcon } from "@svoverlay/ui-kit/icons";
 
 const DEFAULT_WIDTH = 960;
 const DEFAULT_HEIGHT = 430;
@@ -67,9 +68,9 @@ function App() {
           <span class="brand-tag">{t("launcher.brandTag")}</span>
         </div>
         <div class="window-controls">
-          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}>⚙</button>
-          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} title={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}>−</button>
-          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} title={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}>×</button>
+          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}><SettingsIcon /></button>
+          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} title={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}><MinimizeIcon /></button>
+          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} title={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}><CloseIcon /></button>
         </div>
       </header>
 
@@ -92,6 +93,7 @@ function App() {
             <button
               key={tool}
               class="tool-button"
+              data-tool={tool}
               type="button"
               onClick={() => void desktopView.rpc?.request.openTool({ tool })}
             >
@@ -101,6 +103,7 @@ function App() {
           ))}
           <button
             class="tool-button"
+            data-tool="settings"
             type="button"
             onClick={() => void desktopView.rpc?.request.openSettings({ section: "manage" })}
           >
@@ -240,7 +243,7 @@ function UpdateNotification({ update }: { update: NonNullable<LauncherState["upd
         )}
         <button class="update-button" type="button" disabled={busy} onClick={() => void desktopView.rpc?.request.openUpdateRelease({})}>{t("launcher.update.view")}</button>
         <button class="update-skip-button" type="button" disabled={busy} onClick={() => void desktopView.rpc?.request.skipUpdateVersion({})}>{t("launcher.update.skip")}</button>
-        <button class="update-dismiss-button" type="button" disabled={busy} aria-label={t("launcher.update.dismissAria")} title={t("launcher.update.dismiss")} onClick={() => void desktopView.rpc?.request.dismissUpdateNotification({})}>×</button>
+        <button class="update-dismiss-button" type="button" disabled={busy} aria-label={t("launcher.update.dismissAria")} title={t("launcher.update.dismiss")} onClick={() => void desktopView.rpc?.request.dismissUpdateNotification({})}><CloseIcon /></button>
       </div>
     </div>
   );

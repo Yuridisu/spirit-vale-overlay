@@ -21,6 +21,7 @@ import type { CharacterRpc } from "../../character/rpc.ts";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { Translator } from "@svoverlay/i18n/translate";
 import { formatItemEffects } from "./item-effects.ts";
+import { CloseIcon, MinimizeIcon, SettingsIcon } from "@svoverlay/ui-kit/icons";
 
 const ATTRIBUTE_NAMES = ["STR", "VIT", "AGI", "DEX", "INT", "LUK"] as const;
 type Tab = "basic" | "gear" | "advanced" | "skills";
@@ -62,9 +63,9 @@ function App() {
           <span class="brand-tag">{t(next?.status === "live" ? "character.status.live" : next?.status === "cached" ? "character.status.cached" : "character.status.waiting")}</span>
         </div>
         <div class="window-controls">
-          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}>⚙</button>
-          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}>−</button>
-          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}>×</button>
+          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}><SettingsIcon /></button>
+          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}><MinimizeIcon /></button>
+          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}><CloseIcon /></button>
         </div>
       </header>
       <div class="content">
@@ -78,7 +79,6 @@ function App() {
           <div>
             <section class="hero card">
               <div>
-                <p class="eyebrow">{t("character.eyebrow")}</p>
                 <h1>{character.title ? `${character.name} · ${character.title}` : character.name}</h1>
                 <p class="muted">{character.archetypes.length ? character.archetypes.join(" / ") : t("character.archetype.novice")}</p>
               </div>

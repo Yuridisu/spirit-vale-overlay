@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "preact/hooks";
 import { normalizeSearchText } from "./format";
 import { useDismissable } from "./use-dismissable.ts";
+import { SearchIcon } from "./icons.tsx";
 
 export interface CheckboxMultiSelectOption<T extends string | number> {
   value: T;
@@ -56,7 +57,7 @@ export function CheckboxMultiSelect<T extends string | number>(
       </button>
       {open && <div class="multi-select-panel">
         <label class="field multi-select-search" for={queryId}>
-          <span aria-hidden="true">⌕</span>
+          <span aria-hidden="true"><SearchIcon /></span>
           <input
             id={queryId}
             type="search"

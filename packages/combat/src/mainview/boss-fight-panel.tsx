@@ -3,6 +3,7 @@ import type { BossFightPlayer, BossFightReport } from "@svoverlay/contracts/boss
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatDps, formatDuration, formatInteger, formatPercent } from "@svoverlay/ui-kit/format";
 import { CombatClassCell } from "../combat-class.tsx";
+import { teamColor } from "@svoverlay/ui-kit/team-color";
 
 const startedFormat = new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -171,7 +172,7 @@ function PlayerRows(
     <>
       <tr
         class={`meter-table-row live-player-row${expanded ? " is-expanded" : ""}`}
-        style={`--row-fill:${Math.max(0, Math.min(100, share * 100))}%`}
+        style={`--row-fill:${Math.max(0, Math.min(100, share * 100))}%;--row-color:${teamColor(player.name)}`}
         tabIndex={0}
         aria-expanded={expanded}
         onClick={onToggle}

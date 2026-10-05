@@ -1,4 +1,5 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
+import { SettingsIcon } from "./icons.tsx";
 
 export interface SettingsButtonProps {
   onClick(): void;
@@ -14,7 +15,7 @@ export function SettingsButton({ onClick }: SettingsButtonProps) {
       title={t("settingsButton.label")}
       onClick={onClick}
     >
-      ⚙
+      <SettingsIcon />
     </button>
   );
 }

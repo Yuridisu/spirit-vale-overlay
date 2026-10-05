@@ -3,6 +3,7 @@ import type { ComponentChildren } from "preact";
 import { useRef, useState } from "preact/hooks";
 import { initWindowChrome } from "./window-chrome.ts";
 import type { WindowChrome, WindowFrame } from "./window-chrome.ts";
+import { CloseIcon, MaximizeIcon, MinimizeIcon, RestoreIcon } from "./icons.tsx";
 
 export interface TitleBarProps {
   appTag: string;
@@ -44,7 +45,7 @@ export function TitleBar(props: TitleBarProps) {
       </div>
       <div class="window-controls">
         {props.extraControls}
-        <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} title={t("titleBar.minimize")} onClick={props.onMinimize}>−</button>
+        <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} title={t("titleBar.minimize")} onClick={props.onMinimize}><MinimizeIcon /></button>
         {props.toggleMaximize && (
           <button
             class="icon-button"
@@ -53,10 +54,10 @@ export function TitleBar(props: TitleBarProps) {
             title={maximizeLabel}
             onClick={() => void chromeRef.current?.toggleMaximize()}
           >
-            {maximized ? "❐" : "▢"}
+            {maximized ? <RestoreIcon /> : <MaximizeIcon />}
           </button>
         )}
-        <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} title={t("titleBar.close")} onClick={props.onClose}>×</button>
+        <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} title={t("titleBar.close")} onClick={props.onClose}><CloseIcon /></button>
       </div>
     </header>
   );

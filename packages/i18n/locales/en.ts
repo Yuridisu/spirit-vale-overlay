@@ -858,7 +858,6 @@ export const en = {
   "character.statusDetail.cached": "{detail} · updated {when}",
   "character.empty.heading": "Waiting for your character",
   "character.empty.hint": "Open or switch to a character in Spirit Vale while capture is active.",
-  "character.eyebrow": "Current character",
   "character.archetype.novice": "Novice",
   "character.progression.level": "Level",
   "character.progression.job": "Job",

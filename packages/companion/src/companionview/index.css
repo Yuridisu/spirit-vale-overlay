@@ -1,5 +1,9 @@
+/* The Companion window: Vale Companion's pages in a frame. Violet is this tool's channel. */
+
+:root { --channel: var(--violet); }
+
 *, *::before, *::after { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-.app-shell { display: grid; grid-template-rows: 40px minmax(0, 1fr); width: 100%; height: 100%; background: var(--surface); }
-.companion-frame { width: 100%; height: 100%; border: 0; background: #0d110f; }
-.companion-loading { display: grid; place-items: center; color: var(--on-surface-variant); font-size: 13px; }
+.app-shell { display: grid; grid-template-rows: 40px minmax(0, 1fr); width: 100%; height: 100%; background: var(--ink); }
+.companion-frame { width: 100%; height: 100%; border: 0; background: var(--ink); }
+.companion-loading { display: grid; place-items: center; color: var(--paper-3); font-family: var(--font-num); font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }

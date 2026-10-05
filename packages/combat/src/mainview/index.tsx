@@ -27,6 +27,7 @@ import {
   DPS_WINDOW_MINIMUM_HEIGHT,
   DPS_WINDOW_MINIMUM_WIDTH,
 } from "../window-size.ts";
+import { teamColor } from "@svoverlay/ui-kit/team-color";
 
 const STATUS_TONE: Record<DpsAppState["status"], StatusTone> = {
   waiting: "is-warn",
@@ -201,7 +202,7 @@ function App() {
                   <tr
                     key={actor.actorIds[0]}
                     class="meter-table-row live-player-row"
-                    style={`--row-fill:${Math.max(0, Math.min(100, actor.contribution * 100))}%`}
+                    style={`--row-fill:${Math.max(0, Math.min(100, actor.contribution * 100))}%;--row-color:${teamColor(actor.displayName)}`}
                     title={t("combat.party.rowHint")}
                     tabIndex={0}
                     onDblClick={activate}

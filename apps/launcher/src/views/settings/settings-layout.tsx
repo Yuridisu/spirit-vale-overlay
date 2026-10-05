@@ -3,6 +3,7 @@ import type { Translator } from "@svoverlay/i18n/translate";
 import { useEffect, useState } from "preact/hooks";
 import { filterSettingsSections, normalizeSettingsSearch } from "./settings-search.ts";
 import type { SectionId, SettingsSection } from "./settings-section.ts";
+import { SearchIcon } from "@svoverlay/ui-kit/icons";
 
 /** `token` changes per request so re-requesting the section already shown still navigates. */
 export interface SectionRequest {
@@ -58,7 +59,7 @@ export function SettingsLayout({ sections, t, requestedSection }: SettingsLayout
     <div class="settings-main">
       <div class="settings-toolbar">
         <label class="settings-search">
-          <span aria-hidden="true">⌕</span>
+          <span aria-hidden="true"><SearchIcon /></span>
           <input class="input" type="search" value={searchQuery} onInput={(event) => setSearchQuery(event.currentTarget.value)} placeholder={t("settings.search.placeholder")} aria-label={t("settings.search.label")} />
         </label>
       </div>

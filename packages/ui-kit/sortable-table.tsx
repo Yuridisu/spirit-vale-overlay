@@ -1,4 +1,5 @@
 import type { ComponentChildren } from "preact";
+import { SortIcon } from "./icons.tsx";
 
 export type SortDirection = "ascending" | "descending";
 
@@ -69,7 +70,7 @@ export function SortableHeader<K extends string>({
       >
         <span>{children}</span>
         <span class={active ? "sort-indicator active" : "sort-indicator"} aria-hidden="true">
-          {active ? (sort.direction === "descending" ? "▼" : "▲") : "↕"}
+          <SortIcon direction={active ? sort.direction : undefined} />
         </span>
       </button>
     </th>

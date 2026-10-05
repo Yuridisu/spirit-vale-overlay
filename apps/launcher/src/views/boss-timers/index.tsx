@@ -28,6 +28,7 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import type { Translator } from "@svoverlay/i18n/translate";
 
 import type { BossTimerRpc, BossTimerWindowState } from "../../boss-timers/rpc.ts";
+import { CheckIcon, CloseIcon, MinimizeIcon, SettingsIcon } from "@svoverlay/ui-kit/icons";
 
 const MAX_MANUAL_DEATH_MINUTES_AGO = 89;
 const DEFAULT_WIDTH = 860;
@@ -86,9 +87,9 @@ function App() {
           </span>
         </div>
         <div class="window-controls">
-          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}>⚙</button>
-          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}>−</button>
-          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}>×</button>
+          <button class="icon-button" type="button" aria-label={t("settingsButton.label")} title={t("settingsButton.label")} onClick={() => void desktopView.rpc?.request.openSettings({})}><SettingsIcon /></button>
+          <button class="icon-button" type="button" aria-label={t("titleBar.minimize")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "minimize" })}><MinimizeIcon /></button>
+          <button class="icon-button close-button" type="button" aria-label={t("titleBar.close")} onClick={() => void desktopView.rpc?.request.windowAction({ action: "close" })}><CloseIcon /></button>
         </div>
       </header>
       <div class="content">
@@ -179,7 +180,7 @@ function TimerRow(
     <tr class={`timer-row boss-${phase}`}>
       <td class="timer-boss">
         {timer.bossName}
-        {own && <span class="own-kill" title={t("bossTimers.ownKill.title")} aria-label={t("bossTimers.ownKill.aria")}>✓</span>}
+        {own && <span class="own-kill" title={t("bossTimers.ownKill.title")} aria-label={t("bossTimers.ownKill.aria")}><CheckIcon /></span>}
       </td>
       <td class="timer-where">
         <span class="timer-place">{t("bossTimers.place", { region: regionLabel(t, bossTimerRegion(timer)), channel: timer.channel ?? "?" })}</span>
@@ -189,6 +190,7 @@ function TimerRow(
       <td class="timer-killer">{timer.killedBy ?? "—"}</td>
       <td class="timer-status">
         <span class="timer-countdown">{statusText(t, timer, phase, nowMs)}</span>
+        {phase !== "expired" && <span class="timer-bar" aria-hidden="true" style={`--time-left:${timeLeft(timer, phase, nowMs)}`} />}
         <span class="timer-clock">{clockText(t, timer, phase)}</span>
       </td>
       <td class="timer-actions">
@@ -254,7 +256,7 @@ function LogGravestone({ state: next }: { state: BossTimerWindowState }) {
             <input class="input" type="number" min="0" max={MAX_MANUAL_DEATH_MINUTES_AGO} value={minutesAgoText} onInput={(event) => setMinutesAgoText(event.currentTarget.value)} />
           </label>
           <button
-            class="btn primary"
+            class="btn btn-primary"
             type="button"
             disabled={!valid}
             onClick={() => {
@@ -292,6 +294,13 @@ function searchTextOf(timer: BossTimer): string {
 
 function regionLabel(t: Translator, region: string): string {
   return bossRegionLabel(region, t("bossTimers.region.unknown"));
+}
+
+/** The wait or the window still to run, as a share of its whole length. */
+function timeLeft(timer: BossTimer, phase: BossTimerPhase, nowMs: number): number {
+  const [from, to] = phase === "waiting" ? [timer.diedAtMs, bossEligibleAtMs(timer)] : [bossEligibleAtMs(timer), bossDueAtMs(timer)];
+  if (to <= from) return 0;
+  return Math.max(0, Math.min(1, (to - nowMs) / (to - from)));
 }
 
 function statusText(t: Translator, timer: BossTimer, phase: BossTimerPhase, nowMs: number): string {
