@@ -35,12 +35,14 @@ describe("build guide service", () => {
   test("lists the character's class, follows the chosen build and remembers it", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "guide-service-"));
     let character = weaver({ Heal: 5 });
+    const owned = new Map<string, number>();
     const characterListeners = new Set<() => void>();
     const service = createBuildGuideService({
       client: fixtureClient(path.join(dir, "cache")),
       settingsPath: path.join(dir, "build-guide.json"),
       getCharacter: () => character,
       subscribeCharacter: (listener) => { characterListeners.add(listener); return () => characterListeners.delete(listener); },
+      ownedElsewhere: (item) => owned.get(`${item.kind}:${item.itemId}`) ?? 0,
     });
     await service.start();
     expect(service.state()).toMatchObject({ className: "Weaver", classPicked: false, library: [{ id: BUILD_ID, likes: 579 }] });
@@ -58,6 +60,13 @@ describe("build guide service", () => {
     character = weaver({ Heal: 5, WeaverMastery: 10 });
     for (const listener of characterListeners) listener();
     expect(service.overlayState()!.skills.pointsLeft).toBe(before - 10);
+
+    // Cards taken from storage count as soon as the bag says so.
+    const sting = () => service.state().selected!.missing.some((item) => item.itemId === "Sting");
+    expect(sting()).toBe(true);
+    owned.set("card:Sting", 1);
+    service.ownedChanged();
+    expect(sting()).toBe(false);
 
     await Bun.sleep(50);
     const saved = normalizeBuildGuideSettings(JSON.parse(await readFile(path.join(dir, "build-guide.json"), "utf8")));

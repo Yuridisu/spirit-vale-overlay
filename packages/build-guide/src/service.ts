@@ -65,6 +65,8 @@ export interface BuildGuideService {
   selectBuild(id: string): Promise<void>;
   setStage(stage: number): void;
   setGuiding(guiding: boolean): void;
+  /** The bag or storage changed: what the character owns is read again. */
+  ownedChanged(): void;
   refresh(): Promise<void>;
   siteUrl(): string | undefined;
 }
@@ -362,6 +364,11 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
     setGuiding(guiding) {
       settings = { ...settings, guiding };
       save();
+      emit();
+    },
+    ownedChanged() {
+      if (!build) return;
+      recompute();
       emit();
     },
     async refresh() {

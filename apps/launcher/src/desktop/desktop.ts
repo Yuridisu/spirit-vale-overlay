@@ -493,20 +493,30 @@ const bossTimerWindow = new WindowSlot((onClosed) => createBossTimerWindow({
 const BUILD_GUIDE_KINDS: Record<string, CatalogKind> = {
   equipment: "Equipment", card: "Card", gem: "Gem", artifact: "Artifact", grimoire: "Equipment", material: "Material",
 };
-let ownedOutsideGear: { at: number; counts: Map<string, number> } | undefined;
-/** Bag and storage counts by kind and item id, read from the Companion at most every two seconds. */
-const ownedCounts = (): Map<string, number> => {
-  if (!ownedOutsideGear || Date.now() - ownedOutsideGear.at > 2_000) {
-    const counts = new Map<string, number>();
-    const { bag, storage } = companion.state();
-    for (const item of [...bag, ...storage]) {
-      const key = `${item.kind}:${item.itemId}`;
-      counts.set(key, (counts.get(key) ?? 0) + Math.max(1, item.count));
-    }
-    ownedOutsideGear = { at: Date.now(), counts };
+/** Bag and storage counts by kind and item id, as the Companion last read them. */
+const readOwnedCounts = (): Map<string, number> => {
+  const counts = new Map<string, number>();
+  const { bag, storage } = companion.state();
+  for (const item of [...bag, ...storage]) {
+    const key = `${item.kind}:${item.itemId}`;
+    counts.set(key, (counts.get(key) ?? 0) + Math.max(1, item.count));
   }
-  return ownedOutsideGear.counts;
+  return counts;
 };
+let ownedOutsideGear = { counts: new Map<string, number>(), fingerprint: "" };
+const ownedCounts = (): Map<string, number> => ownedOutsideGear.counts;
+/** Re-reads the bag and storage, and re-plans the build when anything in them changed. */
+const watchOwnedItems = (): void => {
+  const counts = readOwnedCounts();
+  const fingerprint = [...counts].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, count]) => `${key}=${count}`).join("|");
+  if (fingerprint === ownedOutsideGear.fingerprint) return;
+  ownedOutsideGear = { counts, fingerprint };
+  buildGuide?.ownedChanged();
+};
+watchOwnedItems();
+// The Companion has no change event for the bag; it is read on every inventory change and every few seconds.
+capture.subscribeInventory(() => watchOwnedItems());
+const ownedItemsTimer = setInterval(watchOwnedItems, 3_000);
 buildGuide = createBuildGuideService({
   client: new SpiritValersClient({ cacheDir: path.join(path.dirname(storagePaths.characterStatePath), "build-guide") }),
   settingsPath: path.join(path.dirname(storagePaths.launcherSettingsPath), "build-guide.json"),
@@ -1243,6 +1253,7 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   launcherWindow.hide();
   settingsWindow?.close();
   await Promise.all([combatWindow.retire(), overlayWindow.retire(), rewardsWindow.retire(), characterWindow.retire(), buildExportWindow.retire(), buildGuideWindow.retire(), bossTimerWindow.retire(), companionWindow.retire()]);
+  clearInterval(ownedItemsTimer);
   buildGuide?.stop();
   await companion.shutdown().catch(() => {});
   liveDeathLogWindow.close();
