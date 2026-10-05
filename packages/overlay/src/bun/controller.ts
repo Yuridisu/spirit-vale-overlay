@@ -155,6 +155,8 @@ export interface OverlayControllerOptions {
   subscribeSummons: (listener: (state: OverlaySummonsState) => void) => () => void;
   /** Every stackable item picked up, which has a name and a count but no rolls. */
   subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
+  /** Items that just entered the bag and matched one of the Companion's loot rules. */
+  subscribeLootAlerts?: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   /** A watched-for drop was just picked up, and the player asked to hear about it: its sound, at 0-100 volume. */
   onTargetDropSound?: (sound: string, volume: number) => void;
   /** Calls the listener at once with the bag as it is known, then on every change. */
@@ -193,6 +195,7 @@ export interface OverlaySurfaceSink {
   sendDamageTaken(state: OverlayDamageTakenState): void;
   sendItemCounter(state: OverlayItemCounterState): void;
   sendTargetDrop(event: OverlayGearPickupEvent): void;
+  sendLootAlert(event: OverlayGearPickupEvent): void;
   sendSummons(state: OverlaySummonsState): void;
 }
 
@@ -366,6 +369,13 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     announceTargetDrop({ itemId: event.displayName, displayName: event.displayName, refine: 0, stats: [], count: event.count }, "item");
   });
+  const unsubscribeLootAlerts = options.subscribeLootAlerts?.((event) => {
+    if (shuttingDown) return;
+    const element = settings.elements.lootAlert;
+    if (!element.enabled) return;
+    const surface = surfaces.get(element.display);
+    if (surface) publishSafely(() => surface.sendLootAlert(event));
+  }) ?? (() => {});
   const unsubscribeArtifactPickup = options.subscribeArtifactPickup((event) => {
     if (shuttingDown) return;
     announceTargetDrop(event, "artifact");
@@ -463,6 +473,7 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeGearPickup();
       unsubscribeArtifactPickup();
       unsubscribeStackPickup();
+      unsubscribeLootAlerts();
       unsubscribeSummons();
       unsubscribeKills();
       unsubscribeBossFight();

@@ -10,7 +10,9 @@ import { inspectRewardsReplaySummary } from "@kar-mi/spirit-vale-tools-rewards";
 
 import { createBuildExportWindow } from "@svoverlay/build-export";
 import { createRewardsWindow } from "@svoverlay/rewards";
-import { createCompanionService, createCompanionWindow, playBuiltinSound, playWav } from "@svoverlay/companion";
+import { createCompanionService, createCompanionWindow, playBuiltinSound, playWav, STAT_LABEL } from "@svoverlay/companion";
+import type { PickupNotification } from "@svoverlay/companion";
+import type { OverlayGearPickupEvent } from "@svoverlay/overlay/app-types";
 import type { LauncherRpc, LauncherSettingsRpc, LauncherState, SettingsSectionId, SharedSettingsState, ToolWindow } from "../launcher/types.ts";
 import { loadLauncherSettings, saveLauncherSettings, type LauncherSettings } from "../launcher/settings.ts";
 import type { LocalizedText, MessageKey } from "@svoverlay/i18n/messages";
@@ -268,6 +270,8 @@ const combatWindow = new WindowSlot((onClosed) => createDpsWindow({
   subscribeBossFights: (listener) => capture.subscribeBossFightReports(listener),
   onClearBossFights: () => capture.clearBossFights(),
 }));
+/** Items that matched a Companion loot rule, on their way to the overlay's Loot filter alerts. */
+const lootAlertListeners = new Set<(event: OverlayGearPickupEvent) => void>();
 const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   logDirectory,
   getCharacterState: () => capture.characterState(),
@@ -281,6 +285,10 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
   subscribeInventory: (listener) => capture.subscribeInventory(listener),
   subscribeStackPickup: (listener) => capture.subscribeStackPickup(listener),
+  subscribeLootAlerts: (listener) => {
+    lootAlertListeners.add(listener);
+    return () => lootAlertListeners.delete(listener);
+  },
   subscribeSummons: (listener) => capture.subscribeSummons(listener),
   onTargetDropSound: (sound, volume) => {
     // A custom sound since deleted from the folder still makes a sound.
@@ -328,6 +336,11 @@ const companion = await createCompanionService({
   rendererDirectory: process.env.SPIRIT_VALE_COMPANION_RENDERER ?? path.resolve(import.meta.dir, "../companion"),
   version: appVersion,
   playSound: playWav,
+  onPickup: (pickup) => {
+    if (lootAlertListeners.size === 0) return;
+    const event = describeLootAlert(pickup, (icon) => companion.iconUrl(icon));
+    for (const listener of lootAlertListeners) listener(event);
+  },
 });
 const companionWindow = new WindowSlot((onClosed) => createCompanionWindow({
   service: companion,
@@ -1200,4 +1213,23 @@ async function shutdown(reason: string): Promise<void> {
   } finally {
     await quitImmediately();
   }
+}
+
+/** A Companion loot-rule match as the overlay's pickup card shows it: the item, its rolls, and the rule's tag and colour. */
+function describeLootAlert(pickup: PickupNotification, iconUrl: (icon: string) => string): OverlayGearPickupEvent {
+  return {
+    itemId: pickup.name,
+    displayName: pickup.name,
+    refine: pickup.refine,
+    stats: pickup.lines.map((line) => ({
+      label: (STAT_LABEL as Record<string, string | undefined>)[line.stat] ?? line.stat.replace(/([a-z])([A-Z])/g, "$1 $2"),
+      roll: Math.round(line.rollPct),
+      ...(line.printed === null ? {} : { value: line.printed }),
+      ...(line.isChaos ? { qualifier: "chaos" } : {}),
+    })),
+    // Stacks have no rolls; their count is what the card shows instead.
+    ...(pickup.lines.length === 0 ? { count: pickup.quantity } : {}),
+    ...(pickup.icon === null ? {} : { iconUrl: iconUrl(pickup.icon) }),
+    rule: { tag: pickup.tag ?? "", color: pickup.color },
+  };
 }

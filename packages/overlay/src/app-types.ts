@@ -15,7 +15,7 @@ import type { TargetDrop } from "./target-drop.ts";
 export type { TargetDrop, TargetDropStat } from "./target-drop.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons", "lootAlert"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
 export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset"] as const;
@@ -291,6 +291,10 @@ export interface OverlayGearPickupEvent {
   stats: OverlayGearPickupStat[];
   /** How many were picked up, for a stackable item, which has no rolls to show. */
   count?: number;
+  /** The item's picture, where one is known. */
+  iconUrl?: string;
+  /** The Companion loot rule the item matched: its tag and colour, which the card wears. */
+  rule?: { tag: string; color: string };
 }
 
 export interface OverlayMinimapLootDrop {
@@ -424,6 +428,7 @@ export type OverlayRpc = {
     damageTakenChanged: OverlayDamageTakenState;
     itemCounterChanged: OverlayItemCounterState;
     targetDropFound: OverlayGearPickupEvent;
+    lootAlertFound: OverlayGearPickupEvent;
     summonsChanged: OverlaySummonsState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;

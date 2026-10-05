@@ -75,6 +75,7 @@ export const itemCounter = signal<OverlayItemCounterState | undefined>(undefined
 export const summonsState = signal<OverlaySummonsState | undefined>(undefined);
 export const artifactPickups = signal<GearPickupCardState[]>([]);
 export const targetDrops = signal<GearPickupCardState[]>([]);
+export const lootAlerts = signal<GearPickupCardState[]>([]);
 export const gridEnabled = signal(false);
 export const selectedElementId = signal<OverlayElementId | undefined>(undefined);
 export const panelPosition = signal<{ x: number; y: number } | undefined>(undefined);
@@ -192,6 +193,7 @@ function createPickupQueue(cards: Signal<GearPickupCardState[]>): (event: Overla
 export const pushGearPickup = createPickupQueue(gearPickups);
 export const pushArtifactPickup = createPickupQueue(artifactPickups);
 export const pushTargetDrop = createPickupQueue(targetDrops);
+export const pushLootAlert = createPickupQueue(lootAlerts);
 
 export function pushLootToast(event: OverlayLootToastEvent): void {
   const id = `${Date.now()}-${lootToastSequence++}`;

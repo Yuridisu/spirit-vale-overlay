@@ -14,7 +14,7 @@ import { TimerElement } from "./tiles/timer.tsx";
 import { DamageTakenElement, DpsDetailsElement, ItemCounterElement, KillCounterElement, SummonsElement } from "./tiles/details.tsx";
 import { GearRatingElement } from "./tiles/gear-rating.tsx";
 import { BossMeterElement } from "./tiles/boss-meter.tsx";
-import { ArtifactPickupElement, GearPickupElement, TargetDropElement } from "./tiles/gear-pickup.tsx";
+import { ArtifactPickupElement, GearPickupElement, LootAlertElement, TargetDropElement } from "./tiles/gear-pickup.tsx";
 import {
   CharacterResourceElement,
   GoldTrackerElement,
@@ -126,6 +126,9 @@ function App() {
       </OverlayElement>
       <OverlayElement id="gearPickup" locked={next.locked}>
         <GearPickupElement />
+      </OverlayElement>
+      <OverlayElement id="lootAlert" locked={next.locked}>
+        <LootAlertElement />
       </OverlayElement>
       <OverlayElement id="targetDrop" locked={next.locked}>
         <TargetDropElement />

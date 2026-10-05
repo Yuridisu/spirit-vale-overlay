@@ -7,6 +7,7 @@ import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
 
 import type { DesktopSettingsUpdate, DesktopState, LootItemView, ProfileCommand } from "../shared/contracts.ts";
 import { createDiagnosticLogger, formatError } from "../shared/diagnostics.ts";
+import type { PickupNotification } from "../shared/pickup-overlay.ts";
 import { LootSession } from "../core/loot-session.ts";
 import { GoldSession } from "../core/gold-session.ts";
 import { parseLootFilter } from "../core/filter/loot-dsl.ts";
@@ -41,6 +42,8 @@ export interface CompanionServiceOptions {
   version: string;
   /** Plays a WAV at 0-100 volume. Returns whether it could be played. */
   playSound?: (wav: Uint8Array, volume: number) => boolean;
+  /** An item that just entered the bag matched a loot rule, for the overlay to show. */
+  onPickup?: (pickup: PickupNotification) => void;
 }
 
 export type CompanionService = Awaited<ReturnType<typeof createCompanionService>>;
@@ -121,6 +124,11 @@ export async function createCompanionService(options: CompanionServiceOptions) {
   }
 
   const session = new LootSession({
+    onPickup: (pickup) => {
+      try { options.onPickup?.(pickup); } catch (error) {
+        diagnostics.warn("A loot alert could not be shown", { error: formatError(error) });
+      }
+    },
     soundsEnabled: () => persisted.soundsEnabled && persisted.soundVolume > 0,
     onSound: (sound) => {
       try {
@@ -585,6 +593,8 @@ export async function createCompanionService(options: CompanionServiceOptions) {
     origin: `http://127.0.0.1:${port}`,
     soundNames,
     playNamedSound,
+    /** Where an item icon named in a pickup can be loaded from, by any window on this machine. */
+    iconUrl: (name: string) => `http://127.0.0.1:${port}/v1/icons/${encodeURIComponent(name)}`,
     consumePacket,
     connectionOpened,
     connectionClosed,

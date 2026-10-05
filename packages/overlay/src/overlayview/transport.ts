@@ -21,6 +21,7 @@ import {
   minimapState,
   pushArtifactPickup,
   pushTargetDrop,
+  pushLootAlert,
   pushGearPickup,
   bossFightState,
   damageTakenState,
@@ -56,6 +57,7 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     bossFightChanged: (next) => { bossFightState.value = next === undefined ? undefined : repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
     targetDropFound: (next) => { pushTargetDrop(repairRendererPayload(next)); },
+    lootAlertFound: (next) => { pushLootAlert(repairRendererPayload(next)); },
   } },
 });
 

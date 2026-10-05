@@ -456,6 +456,7 @@ export const en = {
   "overlay.dpsDetails.heading": "Damage by skill",
   "overlay.dpsDetails.tooltip": "{hits} hits · {crit}% crit",
   "overlay.element.targetDrop": "Target drops",
+  "overlay.element.lootAlert": "Loot filter alerts",
   "overlay.targetDrop.banner": "Target drop!",
   "overlay.targetDrop.count": "x{count}",
   "overlay.element.gearPickup": "Gear pickups",
