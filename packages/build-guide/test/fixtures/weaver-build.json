@@ -1,0 +1,450 @@
+{
+ "name": "⚜️ WEAVER 101 ⚜️ NEW BUILD CHECK IT OUT",
+ "author": "bosslan",
+ "data": {
+  "name": "⚜️ WEAVER 101 ⚜️ NEW BUILD CHECK IT OUT",
+  "cls": "Weaver",
+  "base": "Rogue",
+  "lv": 150,
+  "job": 70,
+  "attr": {
+   "STR": 1,
+   "VIT": 79,
+   "AGI": 99,
+   "DEX": 2,
+   "INT": 99,
+   "LUK": 1
+  },
+  "skills": {
+   "venom-coating": 5,
+   "dual-wield-mastery": 5,
+   "cloaking": 5,
+   "lightning-reflexes": 5,
+   "haste": 5,
+   "thunderbolt": 5,
+   "weaver-mastery": 10,
+   "endure": 5,
+   "fortify": 5,
+   "natural-resistance": 5,
+   "benediction": 5,
+   "inner-focus": 5,
+   "steady-hands": 10,
+   "divine-grace": 5,
+   "ice-shard": 5,
+   "heal": 5,
+   "shadow-step": 5,
+   "thunder-storm": 5,
+   "banishment-field": 5,
+   "dissonance-well": 5,
+   "cure": 5,
+   "suppression-field": 5
+  },
+  "eq": {
+   "head": {
+    "id": "Drooping Flora",
+    "refine": 10,
+    "cards": [
+     "Alien Big Blink"
+    ]
+   },
+   "mainhand": {
+    "id": "EchoStaff",
+    "refine": 10,
+    "cards": [
+     "Dragon Ice"
+    ]
+   },
+   "offhand": {
+    "id": "Plasma Sword Yellow",
+    "refine": 0,
+    "cards": [
+     "Goblin Warchief",
+     "Goblin Warchief"
+    ]
+   },
+   "back": {
+    "id": "Crystal Wings",
+    "refine": 10,
+    "cards": [
+     "Sting"
+    ]
+   },
+   "acc1": {
+    "id": "Weaver Gauntlets",
+    "refine": 10,
+    "cards": [
+     "Vampire Bat",
+     "Shadow",
+     "Shadow"
+    ]
+   },
+   "eyewear": {
+    "id": "EchoFace_Magic_",
+    "refine": 0,
+    "cards": [
+     "Eyeball Monster",
+     "Mega Ice Golem"
+    ]
+   },
+   "acc2": {
+    "id": "DiscipleArmlets",
+    "refine": 8,
+    "cards": [
+     "Vampire Bat",
+     "Vampire Bat",
+     "Vampire Bat"
+    ]
+   },
+   "legs": {
+    "id": "EchoLegs_Matk",
+    "refine": 10,
+    "cards": [
+     "Mole Rat"
+    ]
+   },
+   "feet": {
+    "id": "EchoFeet_Matk",
+    "refine": 10,
+    "cards": [
+     "Goblin Giant"
+    ]
+   },
+   "chest": {
+    "id": "EchoChest_Matk",
+    "refine": 10,
+    "cards": [
+     "Treant Tree Evergreen"
+    ]
+   }
+  },
+  "arti": {
+   "rune": {
+    "id": "Magic",
+    "refine": 10,
+    "gem": "IceShard Gem",
+    "gemRefine": 10
+   },
+   "jewel": {
+    "id": "Mage",
+    "refine": 10,
+    "gem": "Meteor Gem",
+    "gemRefine": 10
+   },
+   "scroll": {
+    "id": "Magic",
+    "refine": 10,
+    "gem": "Water Gem",
+    "gemRefine": 10
+   },
+   "relic": {
+    "id": "Magic",
+    "refine": 10,
+    "gem": "Icebolt Gem",
+    "gemRefine": 10
+   }
+  },
+  "grim": [
+   "Mage_2",
+   "Rogue_5",
+   "Acolyte_2"
+  ],
+  "author": "bosslan",
+  "stages": [
+   {
+    "name": "NEW- ICE SHARD+METEOR",
+    "cls": "Weaver",
+    "base": "Rogue",
+    "lv": 150,
+    "job": 70,
+    "attr": {
+     "STR": 1,
+     "VIT": 79,
+     "AGI": 99,
+     "DEX": 2,
+     "INT": 99,
+     "LUK": 1
+    },
+    "skills": {
+     "venom-coating": 5,
+     "dual-wield-mastery": 5,
+     "cloaking": 5,
+     "lightning-reflexes": 5,
+     "haste": 5,
+     "thunderbolt": 5,
+     "weaver-mastery": 10,
+     "endure": 5,
+     "fortify": 5,
+     "natural-resistance": 5,
+     "benediction": 5,
+     "inner-focus": 5,
+     "steady-hands": 10,
+     "divine-grace": 5,
+     "ice-shard": 5,
+     "heal": 5,
+     "shadow-step": 5,
+     "thunder-storm": 5,
+     "banishment-field": 5,
+     "dissonance-well": 5,
+     "cure": 5,
+     "suppression-field": 5
+    },
+    "eq": {
+     "head": {
+      "id": "Drooping Flora",
+      "refine": 10,
+      "cards": [
+       "Alien Big Blink"
+      ]
+     },
+     "mainhand": {
+      "id": "EchoStaff",
+      "refine": 10,
+      "cards": [
+       "Dragon Ice"
+      ]
+     },
+     "offhand": {
+      "id": "Plasma Sword Yellow",
+      "refine": 0,
+      "cards": [
+       "Goblin Warchief",
+       "Goblin Warchief"
+      ]
+     },
+     "back": {
+      "id": "Crystal Wings",
+      "refine": 10,
+      "cards": [
+       "Sting"
+      ]
+     },
+     "acc1": {
+      "id": "Weaver Gauntlets",
+      "refine": 10,
+      "cards": [
+       "Vampire Bat",
+       "Shadow",
+       "Shadow"
+      ]
+     },
+     "eyewear": {
+      "id": "EchoFace_Magic_",
+      "refine": 0,
+      "cards": [
+       "Eyeball Monster",
+       "Mega Ice Golem"
+      ]
+     },
+     "acc2": {
+      "id": "DiscipleArmlets",
+      "refine": 8,
+      "cards": [
+       "Vampire Bat",
+       "Vampire Bat",
+       "Vampire Bat"
+      ]
+     },
+     "legs": {
+      "id": "EchoLegs_Matk",
+      "refine": 10,
+      "cards": [
+       "Mole Rat"
+      ]
+     },
+     "feet": {
+      "id": "EchoFeet_Matk",
+      "refine": 10,
+      "cards": [
+       "Goblin Giant"
+      ]
+     },
+     "chest": {
+      "id": "EchoChest_Matk",
+      "refine": 10,
+      "cards": [
+       "Treant Tree Evergreen"
+      ]
+     }
+    },
+    "arti": {
+     "rune": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "IceShard Gem",
+      "gemRefine": 10
+     },
+     "jewel": {
+      "id": "Mage",
+      "refine": 10,
+      "gem": "Meteor Gem",
+      "gemRefine": 10
+     },
+     "scroll": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "Water Gem",
+      "gemRefine": 10
+     },
+     "relic": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "Icebolt Gem",
+      "gemRefine": 10
+     }
+    },
+    "grim": [
+     "Mage_2",
+     "Rogue_5",
+     "Acolyte_2"
+    ]
+   },
+   {
+    "name": "NEW- DUSKMIRE BUILD",
+    "cls": "Weaver",
+    "base": "Rogue",
+    "lv": 150,
+    "job": 70,
+    "attr": {
+     "STR": 1,
+     "VIT": 79,
+     "AGI": 99,
+     "DEX": 2,
+     "INT": 99,
+     "LUK": 1
+    },
+    "skills": {
+     "venom-coating": 5,
+     "dual-wield-mastery": 5,
+     "cloaking": 5,
+     "lightning-reflexes": 5,
+     "haste": 5,
+     "thunderbolt": 5,
+     "weaver-mastery": 10,
+     "endure": 5,
+     "fortify": 5,
+     "natural-resistance": 5,
+     "benediction": 5,
+     "inner-focus": 5,
+     "steady-hands": 10,
+     "divine-grace": 5,
+     "ice-shard": 5,
+     "heal": 5,
+     "shadow-step": 5,
+     "thunder-storm": 5,
+     "banishment-field": 5,
+     "dissonance-well": 5,
+     "cure": 5,
+     "suppression-field": 5
+    },
+    "eq": {
+     "head": {
+      "id": "Drooping Flora",
+      "refine": 10,
+      "cards": [
+       "Alien Big Blink"
+      ]
+     },
+     "mainhand": {
+      "id": "EchoStaff",
+      "refine": 10,
+      "cards": [
+       "Dragon Ice"
+      ]
+     },
+     "offhand": {
+      "id": "Frostfang",
+      "refine": 10,
+      "cards": [
+       "Wisp Blue",
+       "Wisp Blue",
+       "Wisp Blue"
+      ]
+     },
+     "back": {
+      "id": "Crystal Wings",
+      "refine": 10,
+      "cards": [
+       "Sting"
+      ]
+     },
+     "acc1": {
+      "id": "Weaver Gauntlets",
+      "refine": 10,
+      "cards": [
+       "Vampire Bat",
+       "Shadow",
+       "Shadow"
+      ]
+     },
+     "eyewear": {
+      "id": "EchoFace_Magic_",
+      "refine": 0,
+      "cards": [
+       "Eyeball Monster",
+       "Mega Ice Golem"
+      ]
+     },
+     "acc2": {
+      "id": "Azure Prism",
+      "refine": 10,
+      "cards": [
+       "Vampire Bat"
+      ]
+     },
+     "legs": {
+      "id": "PlasmaLegs",
+      "refine": 10,
+      "cards": [
+       "Mole Rat"
+      ]
+     },
+     "feet": {
+      "id": "PlasmaFeet",
+      "refine": 10,
+      "cards": [
+       "Goblin Giant"
+      ]
+     },
+     "chest": {
+      "id": "PlasmaChest",
+      "refine": 10,
+      "cards": [
+       "Treant Tree Evergreen"
+      ]
+     }
+    },
+    "arti": {
+     "rune": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "IceShard Gem",
+      "gemRefine": 10
+     },
+     "jewel": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "Leech Gem",
+      "gemRefine": 10
+     },
+     "scroll": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "Water Gem",
+      "gemRefine": 10
+     },
+     "relic": {
+      "id": "Magic",
+      "refine": 10,
+      "gem": "Heal Gem",
+      "gemRefine": 10
+     }
+    },
+    "grim": [
+     "Mage_2",
+     "Rogue_5",
+     "Acolyte_2"
+    ]
+   }
+  ]
+ }
+}

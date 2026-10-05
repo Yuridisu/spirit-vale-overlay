@@ -1,0 +1,708 @@
+{
+ "slug": "weaver",
+ "gameId": "Weaver",
+ "displayName": "Weaver",
+ "type": "advanced",
+ "maxJobLevel": 70,
+ "advancedClasses": [],
+ "gridLayout": {
+  "0": [
+   "Heal",
+   "Icebolt",
+   "Firebolt",
+   "WeaverMastery",
+   "SpearThrust",
+   "StrafingVolley",
+   "VenomStrike"
+  ],
+  "1": [
+   "Haste",
+   "IceShard",
+   "Fireball",
+   "Bash",
+   "SpearStab",
+   "ArrowShower",
+   "VenomCoating"
+  ],
+  "2": [
+   "Cure",
+   "Earthbolt",
+   "Thunderbolt",
+   "Endure",
+   "SpearSlice",
+   "BladeDance",
+   "ShadowStep"
+  ],
+  "3": [
+   "HolyLight",
+   "EarthSpikes",
+   "ThunderStorm",
+   "Fortify",
+   "Stomp",
+   "Marked",
+   "Cloaking"
+  ],
+  "4": [
+   "SoulStrike",
+   "FieldSilence",
+   "FieldCurse",
+   "ResistanceMastery",
+   "AxeVortex",
+   "SteadyHands",
+   "LightningReflexes"
+  ],
+  "5": [
+   "Blessing",
+   "FieldHealing",
+   "FieldDamage",
+   "Grace",
+   "Whirlwind",
+   "Agility",
+   "DualWieldMastery"
+  ]
+ },
+ "skills": [
+  {
+   "position": {
+    "row": 1,
+    "col": 1
+   },
+   "id": "heal",
+   "gameId": "Heal",
+   "name": "Heal",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 2
+   },
+   "id": "icebolt",
+   "gameId": "Icebolt",
+   "name": "Icebolt",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 3
+   },
+   "id": "firebolt",
+   "gameId": "Firebolt",
+   "name": "Firebolt",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 4
+   },
+   "id": "weaver-mastery",
+   "gameId": "WeaverMastery",
+   "name": "Weaver Mastery",
+   "maxLevel": 10,
+   "isPassive": true,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 5
+   },
+   "id": "piercing-flurry",
+   "gameId": "SpearThrust",
+   "name": "Piercing Flurry",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 6
+   },
+   "id": "strafing-volley",
+   "gameId": "StrafingVolley",
+   "name": "Strafing Volley",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "steady-hands",
+     "name": "Steady Hands",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 1,
+    "col": 7
+   },
+   "id": "venom-strike",
+   "gameId": "VenomStrike",
+   "name": "Venom Strike",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 1
+   },
+   "id": "haste",
+   "gameId": "Haste",
+   "name": "Haste",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 2
+   },
+   "id": "ice-shard",
+   "gameId": "IceShard",
+   "name": "Ice Shard",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "icebolt",
+     "name": "Icebolt",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 3
+   },
+   "id": "fireball",
+   "gameId": "Fireball",
+   "name": "Fireball",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "firebolt",
+     "name": "Firebolt",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 4
+   },
+   "id": "bash",
+   "gameId": "Bash",
+   "name": "Bash",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 5
+   },
+   "id": "impale",
+   "gameId": "SpearStab",
+   "name": "Impale",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "piercing-flurry",
+     "name": "Piercing Flurry",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 6
+   },
+   "id": "arrow-shower",
+   "gameId": "ArrowShower",
+   "name": "Arrow Shower",
+   "maxLevel": 10,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "steady-hands",
+     "name": "Steady Hands",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 2,
+    "col": 7
+   },
+   "id": "venom-coating",
+   "gameId": "VenomCoating",
+   "name": "Venom Coating",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "venom-strike",
+     "name": "Venom Strike",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 1
+   },
+   "id": "cure",
+   "gameId": "Cure",
+   "name": "Cure",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 2
+   },
+   "id": "earthbolt",
+   "gameId": "Earthbolt",
+   "name": "Earthbolt",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 3
+   },
+   "id": "thunderbolt",
+   "gameId": "Thunderbolt",
+   "name": "Thunderbolt",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 4
+   },
+   "id": "endure",
+   "gameId": "Endure",
+   "name": "Endure",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "taunt",
+     "name": "Taunt",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 5
+   },
+   "id": "air-cutter",
+   "gameId": "SpearSlice",
+   "name": "Air Cutter",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "impale",
+     "name": "Impale",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 6
+   },
+   "id": "blade-dance",
+   "gameId": "BladeDance",
+   "name": "Blade Dance",
+   "maxLevel": 10,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "cloaking",
+     "name": "Cloaking",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 3,
+    "col": 7
+   },
+   "id": "shadow-step",
+   "gameId": "ShadowStep",
+   "name": "Shadow Step",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 1
+   },
+   "id": "holy-light",
+   "gameId": "HolyLight",
+   "name": "Holy Light",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 2
+   },
+   "id": "earth-spikes",
+   "gameId": "EarthSpikes",
+   "name": "Earth Spikes",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "earthbolt",
+     "name": "Earthbolt",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 3
+   },
+   "id": "thunder-storm",
+   "gameId": "ThunderStorm",
+   "name": "Thunder Storm",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "thunderbolt",
+     "name": "Thunderbolt",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 4
+   },
+   "id": "fortify",
+   "gameId": "Fortify",
+   "name": "Fortify",
+   "maxLevel": 5,
+   "isPassive": true,
+   "requirements": [
+    {
+     "id": "shield-mastery",
+     "name": "Shield Mastery",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 5
+   },
+   "id": "stomp",
+   "gameId": "Stomp",
+   "name": "Stomp",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "twin-cleave",
+     "name": "Twin Cleave",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 6
+   },
+   "id": "mark-target",
+   "gameId": "Marked",
+   "name": "Mark Target",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "strafing-volley",
+     "name": "Strafing Volley",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 4,
+    "col": 7
+   },
+   "id": "cloaking",
+   "gameId": "Cloaking",
+   "name": "Cloaking",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "shadow-step",
+     "name": "Shadow Step",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 1
+   },
+   "id": "soul-strike",
+   "gameId": "SoulStrike",
+   "name": "Soul Strike",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 2
+   },
+   "id": "suppression-field",
+   "gameId": "FieldSilence",
+   "name": "Suppression Field",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "soul-strike",
+     "name": "Soul Strike",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 3
+   },
+   "id": "banishment-field",
+   "gameId": "FieldCurse",
+   "name": "Banishment Field",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "soul-strike",
+     "name": "Soul Strike",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 4
+   },
+   "id": "natural-resistance",
+   "gameId": "ResistanceMastery",
+   "name": "Natural Resistance",
+   "maxLevel": 5,
+   "isPassive": true,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 5
+   },
+   "id": "vortex-slash",
+   "gameId": "AxeVortex",
+   "name": "Vortex Slash",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "twin-cleave",
+     "name": "Twin Cleave",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 6
+   },
+   "id": "steady-hands",
+   "gameId": "SteadyHands",
+   "name": "Steady Hands",
+   "maxLevel": 10,
+   "isPassive": true,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 5,
+    "col": 7
+   },
+   "id": "lightning-reflexes",
+   "gameId": "LightningReflexes",
+   "name": "Lightning Reflexes",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "smoke-screen",
+     "name": "Smoke Screen",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 1
+   },
+   "id": "benediction",
+   "gameId": "Blessing",
+   "name": "Benediction",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 2
+   },
+   "id": "resonance-well",
+   "gameId": "FieldHealing",
+   "name": "Resonance Well",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "suppression-field",
+     "name": "Suppression Field",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 3
+   },
+   "id": "dissonance-well",
+   "gameId": "FieldDamage",
+   "name": "Dissonance Well",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "banishment-field",
+     "name": "Banishment Field",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 4
+   },
+   "id": "divine-grace",
+   "gameId": "Grace",
+   "name": "Divine Grace",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": []
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 5
+   },
+   "id": "whirlwind",
+   "gameId": "Whirlwind",
+   "name": "Whirlwind",
+   "maxLevel": 10,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "vortex-slash",
+     "name": "Vortex Slash",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 6
+   },
+   "id": "inner-focus",
+   "gameId": "Agility",
+   "name": "Inner Focus",
+   "maxLevel": 5,
+   "isPassive": false,
+   "requirements": [
+    {
+     "id": "precise-aim",
+     "name": "Precise Aim",
+     "level": 1
+    }
+   ]
+  },
+  {
+   "position": {
+    "row": 6,
+    "col": 7
+   },
+   "id": "dual-wield-mastery",
+   "gameId": "DualWieldMastery",
+   "name": "Dual Wield Mastery",
+   "maxLevel": 5,
+   "isPassive": true,
+   "requirements": []
+  }
+ ]
+}

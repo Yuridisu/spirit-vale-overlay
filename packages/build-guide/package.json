@@ -1,0 +1,9 @@
+{
+  "name": "@svoverlay/build-guide",
+  "private": true,
+  "type": "module",
+  "description": "Build guide: community builds from spiritvalers.com turned into a skill plan and a farming plan for the current character.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
