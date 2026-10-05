@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { neededItems, planFarm, planSkills, SpiritValersClient } from "../src/index.ts";
+import { neededItems, planFarm, planSkillTabs, planSkills, skillTabs, SpiritValersClient } from "../src/index.ts";
 import type { SiteBuildData, SiteClass, SiteWorldData } from "../src/index.ts";
 import weaverClass from "./fixtures/weaver-class.json";
 import weaverBuild from "./fixtures/weaver-build.json";
@@ -20,6 +20,22 @@ describe("skill plan", () => {
     expect([plan.rows, plan.cols]).toEqual([6, 7]);
     const at = (row: number, col: number) => plan.cells.find((cell) => cell.row === row && cell.col === col)?.name;
     expect([at(0, 0), at(0, 3), at(0, 6), at(5, 6)]).toEqual(["Heal", "Weaver Mastery", "Venom Strike", "Dual Wield Mastery"]);
+  });
+
+  test("always uses the game's seven by six grid, even for a class that fills fewer rows", () => {
+    const short: SiteClass = { ...siteClass, gridLayout: Object.fromEntries(Object.entries(siteClass.gridLayout).slice(0, 5)) };
+    const plan = planSkills(short, {}, {});
+    expect([plan.rows, plan.cols]).toEqual([6, 7]);
+  });
+
+  test("an advanced class gets its base class's tab first, and points go there first", () => {
+    const rogue: SiteClass = { ...siteClass, gameId: "Rogue", slug: "rogue", displayName: "Rogue", advancedClasses: ["Shinobi"] };
+    const shinobi: SiteClass = { ...siteClass, gameId: "Shinobi", slug: "shinobi", displayName: "Shinobi", advancedClasses: [] };
+    const classes = { Rogue: rogue, Shinobi: shinobi, Weaver: siteClass };
+    expect(skillTabs(classes, shinobi).map((tree) => tree.displayName)).toEqual(["Rogue", "Shinobi"]);
+    expect(skillTabs(classes, siteClass).map((tree) => tree.displayName)).toEqual(["Weaver"]);
+    const tabs = planSkillTabs(classes, shinobi, {}, { heal: 5 });
+    expect(tabs.map((tree) => [tree.className, tree.tab])).toEqual([["Rogue", 0], ["Shinobi", 1]]);
   });
 
   test("raises a skill's requirements first, even when the build lists them lower", () => {

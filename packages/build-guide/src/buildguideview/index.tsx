@@ -168,11 +168,38 @@ function cellState(cell: BuildGuideSkillCell): "done" | "raise" | "over" | "none
   return cell.target > 0 ? "done" : "none";
 }
 
+function emptySquares(tree: { rows: number; cols: number; cells: BuildGuideSkillCell[] }): Array<[number, number]> {
+  const taken = new Set(tree.cells.map((cell) => `${cell.row}:${cell.col}`));
+  const squares: Array<[number, number]> = [];
+  for (let row = 0; row < tree.rows; row += 1) {
+    for (let col = 0; col < tree.cols; col += 1) if (!taken.has(`${row}:${col}`)) squares.push([row, col]);
+  }
+  return squares;
+}
+
 function SkillsPanel({ t, selected }: { t: Translator; selected: BuildGuideSelected }) {
   const { skills } = selected;
+  // Opens on the tab the next raise is on, as the game would need to be.
+  const [picked, setPicked] = useState<number | undefined>(undefined);
+  const tab = Math.min(picked ?? skills.next[0]?.tab ?? skills.trees.length - 1, skills.trees.length - 1);
+  const tree = skills.trees[tab];
+  if (!tree) return null;
   return <div class="skills-panel">
-    <div class="skill-grid" style={`--cols:${skills.cols}`} role="grid" aria-label={t("buildGuide.skills.grid")}>
-      {skills.cells.map((cell) => {
+    <div class="skill-tree">
+      {skills.trees.length > 1 && (
+        <div class="seg tree-tabs" role="tablist" aria-label={t("buildGuide.skills.tabs")}>
+          {skills.trees.map((candidate, index) => (
+            <button key={candidate.className} type="button" role="tab" aria-selected={index === tab} class={index === tab ? "active" : undefined}
+              onClick={() => setPicked(index)}>
+              {candidate.className}{candidate.pointsLeft > 0 && <b class="tree-points">{candidate.pointsLeft}</b>}
+            </button>
+          ))}
+        </div>
+      )}
+    <div class="skill-grid" style={`--cols:${tree.cols};--rows:${tree.rows}`} role="grid" aria-label={t("buildGuide.skills.grid")}>
+      {/* The squares the game leaves empty, so every skill sits where the game puts it. */}
+      {emptySquares(tree).map(([row, col]) => <span key={`empty-${row}-${col}`} class="skill-cell is-empty" aria-hidden="true" style={`grid-row:${row + 1};grid-column:${col + 1}`} />)}
+      {tree.cells.map((cell) => {
         const status = cellState(cell);
         return <div key={cell.gameId} class={`skill-cell is-${status}`} style={`grid-row:${cell.row + 1};grid-column:${cell.col + 1}`}
           title={`${cell.name}: ${cell.current} → ${cell.target} / ${cell.maxLevel}${cell.required ? ` · ${t("buildGuide.skills.required")}` : ""}`}>
@@ -182,6 +209,7 @@ function SkillsPanel({ t, selected }: { t: Translator; selected: BuildGuideSelec
         </div>;
       })}
     </div>
+    </div>
     <section class="steps" aria-label={t("buildGuide.skills.order")}>
       <h2 class="tag">{t("buildGuide.skills.order")}</h2>
       {skills.next.length === 0
@@ -189,7 +217,7 @@ function SkillsPanel({ t, selected }: { t: Translator; selected: BuildGuideSelec
         : <ol>{skills.next.map((step) => (
           <li key={`${step.gameId}-${step.to}`}>
             {skillIcon(step.sprite) && <img src={skillIcon(step.sprite)} alt="" />}
-            <span class="step-name">{step.name}</span>
+            <span class="step-name">{step.name}{skills.trees.length > 1 && <small> · {skills.trees[step.tab]?.className}</small>}</span>
             <span class="step-levels">{step.from} → <b>{step.to}</b></span>
           </li>
         ))}</ol>}

@@ -1,11 +1,17 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
-import type { BuildGuideSkillCell } from "@svoverlay/contracts/build-guide";
+import type { BuildGuideSkillCell, OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
 import { buildGuideState } from "../store.ts";
 
 const skillIcon = (sprite: string | undefined) => (sprite ? `views://assets/status-icons/${sprite}.webp` : undefined);
 const percent = (value: number) => `${value >= 1 ? Math.round(value * 10) / 10 : Math.round(value * 100) / 100}%`;
 
 type CellState = "done" | "raise" | "over" | "none";
+
+/** The skill window tab to show: the one the next raise is on, or the class's own when all is done. */
+function currentTree(guide: OverlayBuildGuideState) {
+  const { trees, next } = guide.skills;
+  return trees[next[0]?.tab ?? trees.length - 1] ?? trees[0];
+}
 function cellState(cell: BuildGuideSkillCell): CellState {
   if (cell.current > cell.target) return "over";
   if (cell.target > cell.current) return "raise";
@@ -29,10 +35,13 @@ export function SkillGuideElement() {
   if (!guide) return <NoBuild title={t("overlay.buildGuide.skills")} />;
   const { skills } = guide;
   const next = skills.next[0];
+  const tree = currentTree(guide);
+  if (!tree) return <NoBuild title={t("overlay.buildGuide.skills")} />;
   return (
     <div class="element-content guide-content">
       <div class="guide-head">
         <h2 class="element-title">{t("overlay.buildGuide.skills")}</h2>
+        {skills.trees.length > 1 && <span class="guide-tab">{tree.className}</span>}
         <span class="guide-points"><b>{skills.pointsLeft}</b>{t("overlay.buildGuide.points")}</span>
       </div>
       {next
@@ -44,8 +53,11 @@ export function SkillGuideElement() {
           </div>
         )
         : <p class="guide-waiting">{t("overlay.buildGuide.skillsDone")}</p>}
-      <div class="guide-grid" style={`--cols:${skills.cols};--rows:${skills.rows}`}>
-        {skills.cells.map((cell) => {
+      <div class="guide-grid" style={`--cols:${tree.cols};--rows:${tree.rows}`}>
+        {Array.from({ length: tree.rows * tree.cols }, (_, index) => (
+          <span key={`empty-${index}`} class="guide-slot" style={`grid-row:${Math.floor(index / tree.cols) + 1};grid-column:${index % tree.cols + 1}`} />
+        ))}
+        {tree.cells.map((cell) => {
           const state = cellState(cell);
           return (
             <span key={cell.gameId} class={`guide-cell is-${state}${next?.gameId === cell.gameId ? " is-next" : ""}`}
@@ -68,13 +80,19 @@ export function SkillGuideElement() {
 export function SkillAlignedElement({ locked }: { locked: boolean }) {
   const t = useTranslator();
   const guide = buildGuideState.value;
-  const rows = guide?.skills.rows ?? 6;
-  const cols = guide?.skills.cols ?? 7;
+  const tree = guide ? currentTree(guide) : undefined;
+  const rows = tree?.rows ?? 6;
+  const cols = tree?.cols ?? 7;
   const next = guide?.skills.next[0];
   return (
     <div class={`aligned-grid${locked ? "" : " is-editing"}`} style={`--cols:${cols};--rows:${rows}`}>
-      {!locked && Array.from({ length: rows * cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" />)}
-      {guide?.skills.cells.map((cell) => {
+      {!locked && Array.from({ length: rows * cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" style={`grid-row:${Math.floor(index / cols) + 1};grid-column:${index % cols + 1}`} />)}
+      {/* While lining up, each square names its skill, to match the game's window. */}
+      {!locked && tree?.cells.map((cell) => (
+        <span key={`name-${cell.gameId}`} class="aligned-label" style={`grid-row:${cell.row + 1};grid-column:${cell.col + 1}`}>{cell.name}</span>
+      ))}
+      {guide && (guide.skills.trees.length > 1) && <span class="aligned-tab">{t("overlay.buildGuide.openTab", { tab: tree?.className ?? "" })}</span>}
+      {tree?.cells.map((cell) => {
         const state = cellState(cell);
         if (state !== "raise" && state !== "over") return null;
         return (
@@ -129,7 +147,10 @@ export function MapAlignedElement({ locked }: { locked: boolean }) {
   const grid = guide?.farm.grid ?? { rows: 10, cols: 11 };
   return (
     <div class={`aligned-grid is-map${locked ? "" : " is-editing"}`} style={`--cols:${grid.cols};--rows:${grid.rows}`}>
-      {!locked && Array.from({ length: grid.rows * grid.cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" />)}
+      {!locked && Array.from({ length: grid.rows * grid.cols }, (_, index) => <span key={`guide-${index}`} class="aligned-guide-cell" style={`grid-row:${Math.floor(index / grid.cols) + 1};grid-column:${index % grid.cols + 1}`} />)}
+      {!locked && guide?.farm.tiles.map((tile) => (
+        <span key={`name-${tile.row}-${tile.col}`} class="aligned-label" style={`grid-row:${tile.row};grid-column:${tile.col}`}>{tile.name}</span>
+      ))}
       {guide?.farm.squares.map((square) => (
         <span key={`${square.row}-${square.col}`} class="aligned-square" style={`grid-row:${square.row};grid-column:${square.col}`}
           title={`${square.name} · Lv ${square.minLevel}-${square.maxLevel}`}>

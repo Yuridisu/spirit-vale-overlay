@@ -4,7 +4,7 @@ import type { CharacterSnapshot } from "@kar-mi/spirit-vale-tools-character";
 
 import type { BuildGuideItemView, BuildGuideSelected, BuildGuideSourceView, BuildGuideState } from "./app-types.ts";
 import { neededItems, planFarm, type FarmItem, type FarmPlan, type MapRef, type NeededItem, type NeededKind } from "./farm-plan.ts";
-import { planSkills, type SkillPlan } from "./skill-plan.ts";
+import { planSkillTabs, type SkillTreePlan } from "./skill-plan.ts";
 import type { SiteBuildData, SiteBuildParts, SiteBuildRow, SiteClass, SiteWorldData } from "./site-types.ts";
 import { SPIRITVALERS_ORIGIN, type BuildSort, type SpiritValersClient } from "./spiritvalers-client.ts";
 
@@ -84,7 +84,7 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
   let build: { id: string; name: string; author: string; data: SiteBuildData } | undefined;
   let buildLoading = false;
   let buildError: string | undefined;
-  let plans: { skills?: SkillPlan; farm?: FarmPlan; parts?: SiteBuildParts } = {};
+  let plans: { skills?: SkillTreePlan[]; farm?: FarmPlan; parts?: SiteBuildParts } = {};
   const listeners = new Set<() => void>();
   let unsubscribeCharacter: (() => void) | undefined;
   let stopped = false;
@@ -125,7 +125,7 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
     const character = options.getCharacter();
     const current: Record<string, number> = {};
     for (const skill of character?.skills ?? []) current[skill.id] = Math.max(current[skill.id] ?? 0, skill.level);
-    const skills = planSkills(siteClass, current, parts.skills ?? {});
+    const skills = planSkillTabs(classes, siteClass, current, parts.skills ?? {});
     const farm = world ? planFarm(neededItems(parts), (item) => ownedCount(item, character), world) : undefined;
     plans = { skills, farm, parts };
   };
@@ -162,15 +162,19 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
     .filter((square) => square.map.tile)
     .map((square) => ({ name: square.map.name, row: square.map.tile!.row, col: square.map.tile!.col, minLevel: square.map.minLevel, maxLevel: square.map.maxLevel, items: square.items.length }));
 
-  const skillsView = (skills: SkillPlan, count: number) => ({
-    rows: skills.rows,
-    cols: skills.cols,
-    pointsLeft: skills.pointsLeft,
-    cells: skills.cells.map((cell) => ({
-      row: cell.row, col: cell.col, gameId: cell.gameId, name: cell.name, current: cell.current, target: cell.target,
-      maxLevel: cell.maxLevel, required: cell.required, ...withSprite(cell.gameId),
+  const skillsView = (trees: SkillTreePlan[], count?: number) => ({
+    trees: trees.map((tree) => ({
+      className: tree.className,
+      rows: tree.rows,
+      cols: tree.cols,
+      pointsLeft: tree.pointsLeft,
+      cells: tree.cells.map((cell) => ({
+        row: cell.row, col: cell.col, gameId: cell.gameId, name: cell.name, current: cell.current, target: cell.target,
+        maxLevel: cell.maxLevel, required: cell.required, ...withSprite(cell.gameId),
+      })),
     })),
-    next: skills.steps.slice(0, count).map((step) => ({ ...step, ...withSprite(step.gameId) })),
+    pointsLeft: trees.reduce((total, tree) => total + tree.pointsLeft, 0),
+    next: trees.flatMap((tree) => tree.steps.map((step) => ({ ...step, tab: tree.tab, ...withSprite(step.gameId) }))).slice(0, count),
   });
   const withSprite = (gameId: string) => {
     const sprite = options.skillSprite?.(gameId);
@@ -194,7 +198,7 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
       ...(parts.lv ? { level: parts.lv } : {}),
       ...(parts.job ? { jobLevel: parts.job } : {}),
       attributes,
-      skills: skillsView(plans.skills, plans.skills.steps.length),
+      skills: skillsView(plans.skills),
       missing: plans.farm?.missing.map(itemView) ?? [],
       owned: plans.farm?.owned.map(itemView) ?? [],
       squares: plans.farm ? squares(plans.farm) : [],
@@ -319,11 +323,12 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
         buildName: build.name,
         author: build.author,
         ...(build.data.stages?.[settings.stage]?.name ? { stageName: build.data.stages[settings.stage]!.name! } : {}),
-        className: plans.skills.className,
+        className: plans.skills.at(-1)?.className ?? className(),
         skills: skillsView(plans.skills, NEXT_STEPS),
         farm: {
           items,
           squares: plans.farm ? squares(plans.farm) : [],
+          tiles: tiles.map((tile) => ({ name: tile.name, row: tile.row, col: tile.col })),
           grid: { rows: Math.max(1, ...tiles.map((tile) => tile.row)), cols: Math.max(1, ...tiles.map((tile) => tile.col)) },
         },
       };

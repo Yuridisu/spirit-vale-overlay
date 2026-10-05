@@ -21,12 +21,22 @@ export interface BuildGuideSkillStep {
   sprite?: string;
   from: number;
   to: number;
+  /** Which tab of the skill window the skill is on. */
+  tab: number;
 }
 
-export interface BuildGuideSkills {
+/** One tab of the game's skill window, on its fixed grid. */
+export interface BuildGuideSkillTree {
+  className: string;
   rows: number;
   cols: number;
   cells: BuildGuideSkillCell[];
+  pointsLeft: number;
+}
+
+export interface BuildGuideSkills {
+  /** The skill window's tabs, left to right: a base class's tree, then the advanced class's. */
+  trees: BuildGuideSkillTree[];
   pointsLeft: number;
   /** The next few raises, in order. */
   next: BuildGuideSkillStep[];
@@ -67,6 +77,8 @@ export interface BuildGuideSquare {
 export interface BuildGuideFarm {
   items: BuildGuideFarmItem[];
   squares: BuildGuideSquare[];
+  /** Every square of the world map with its name, to line the grid up with the game's map. */
+  tiles: Array<{ name: string; row: number; col: number }>;
   /** The world map's grid, one-based: rows 1..rows, cols 1..cols. */
   grid: { rows: number; cols: number };
 }

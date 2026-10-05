@@ -1,5 +1,8 @@
 import type { SiteClass, SiteSkill } from "./site-types.ts";
 
+/** The game's skill window is always this grid, whatever squares a class fills. */
+export const SKILL_GRID = { rows: 6, cols: 7 } as const;
+
 /** One square of the class's skill grid, where the game draws it. */
 export interface SkillCell {
   /** Zero-based, as the game lays the grid out. */
@@ -36,6 +39,33 @@ export interface SkillPlan {
   overspent: SkillCell[];
   /** The order to spend the points in: requirements first, then the grid from the top left. */
   steps: SkillStep[];
+}
+
+/** One tab of the game's skill window: the base class's tree, then the advanced class's. */
+export interface SkillTreePlan extends SkillPlan {
+  /** Where this tree is in the window's tabs, from the left. */
+  tab: number;
+}
+
+/**
+ * The tabs the game shows for a class: an advanced class has its base class's tree first (Rogue,
+ * then Shinobi); a class no other class leads to has only its own.
+ */
+export function skillTabs(classes: Readonly<Record<string, SiteClass>>, siteClass: SiteClass): SiteClass[] {
+  const names = [siteClass.gameId, siteClass.slug, siteClass.displayName].map((name) => name.toLowerCase());
+  const base = Object.values(classes).find((candidate) => candidate !== siteClass
+    && candidate.advancedClasses.some((name) => names.includes(name.toLowerCase())));
+  return base ? [base, siteClass] : [siteClass];
+}
+
+/** Plans every tab of the class, in tab order; points are spent in the base class's tree first. */
+export function planSkillTabs(
+  classes: Readonly<Record<string, SiteClass>>,
+  siteClass: SiteClass,
+  current: Readonly<Record<string, number>>,
+  target: Readonly<Record<string, number>>,
+): SkillTreePlan[] {
+  return skillTabs(classes, siteClass).map((tree, tab) => ({ ...planSkills(tree, current, target), tab }));
 }
 
 /**
@@ -114,8 +144,8 @@ export function planSkills(siteClass: SiteClass, current: Readonly<Record<string
 
   return {
     className: siteClass.displayName,
-    rows: rowKeys.length,
-    cols,
+    rows: Math.max(SKILL_GRID.rows, rowKeys.length),
+    cols: Math.max(SKILL_GRID.cols, cols),
     cells,
     pointsLeft: steps.reduce((total, step) => total + step.to - step.from, 0),
     overspent: cells.filter((cell) => cell.current > cell.target),

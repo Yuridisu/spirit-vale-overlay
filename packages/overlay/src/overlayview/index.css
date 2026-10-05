@@ -183,7 +183,7 @@
   height: 100%;
   overflow: hidden;
   background: rgb(var(--ink-rgb) / var(--element-background-alpha, .76));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--channel) calc(72% * var(--element-background-alpha, .76)), transparent);
   clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
   contain: layout style paint;
 }
@@ -1215,6 +1215,7 @@
 .guide-cell { position: relative; display: grid; place-items: center; min-height: 0; background: rgb(var(--ink-rgb) / .5); }
 .guide-cell img { width: 100%; max-width: 28px; height: 100%; max-height: 28px; object-fit: contain; }
 .guide-cell.is-none { opacity: .3; }
+.guide-slot { box-shadow: inset 0 0 0 1px var(--rule); }
 .guide-cell.is-done img { box-shadow: 0 0 0 1px var(--lime); }
 .guide-cell.is-raise { box-shadow: inset 0 0 0 2px var(--gold); }
 .guide-cell.is-over { box-shadow: inset 0 0 0 2px var(--flame); }
@@ -1246,6 +1247,12 @@
 .aligned-square { display: grid; place-items: center; margin: 6%; background: color-mix(in srgb, var(--gold) 28%, transparent); box-shadow: inset 0 0 0 3px var(--gold); animation: guide-arrive .6s var(--ease-out) 1 both; }
 .aligned-square b { padding: 1px 7px 0; background: var(--gold); color: var(--ink); font-family: var(--font-num); font-size: 15px; font-weight: 800; text-shadow: none; }
 .aligned-hint { position: absolute; left: 50%; top: 50%; max-width: 70%; margin: 0; padding: 8px 12px; background: rgb(var(--ink-rgb) / .9); color: var(--paper); font-size: 13px; line-height: 1.4; text-align: center; transform: translate(-50%, -50%); pointer-events: none; }
+
+.guide-tab { margin-right: auto; padding: 1px 7px 0; background: var(--paper); color: var(--ink); font-family: var(--font-num); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-shadow: none; text-transform: uppercase; }
+/* While lining a grid up, every square names what the game shows there. */
+.aligned-label { display: grid; place-items: end center; padding: 0 2px 4%; overflow: hidden; color: var(--paper); font-size: 11px; font-weight: 700; line-height: 1.15; text-align: center; pointer-events: none; }
+.aligned-grid.is-map .aligned-label { place-items: center; font-size: 12px; }
+.aligned-tab { position: absolute; top: 0; left: 0; z-index: 1; padding: 3px 12px 2px 7px; background: var(--gold); color: var(--ink); font-family: var(--font-num); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-shadow: none; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%); white-space: nowrap; }
 
 /* A highlight flashes once as it appears, then holds. */
 @keyframes guide-arrive {

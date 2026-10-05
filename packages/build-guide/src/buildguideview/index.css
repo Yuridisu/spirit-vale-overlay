@@ -60,7 +60,12 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 
 /* Skills: the class's own grid, each square its icon, its level and the build's. */
 .skills-panel { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 14px; align-items: start; }
-.skill-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(72px, 1fr)); gap: 2px; }
+.skill-tree { display: grid; gap: 8px; }
+.tree-tabs { width: fit-content; }
+.tree-points { margin-left: 7px; padding: 0 5px; background: var(--gold); color: var(--ink); font-weight: 800; }
+.skill-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(72px, 1fr)); grid-template-rows: repeat(var(--rows), auto); gap: 2px; }
+.skill-grid::before { grid-row: 1 / -1; grid-column: 1 / -1; content: ""; }
+.step-name small { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .skill-cell {
   display: grid;
   justify-items: center;
@@ -75,6 +80,7 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 .skill-levels b { color: var(--paper); font-weight: 800; }
 .skill-name { width: 100%; overflow: hidden; color: var(--paper-2); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .skill-cell.is-none { opacity: .45; }
+.skill-cell.is-empty { min-height: 88px; background: transparent; box-shadow: inset 0 0 0 1px var(--rule); background-image: repeating-linear-gradient(135deg, var(--stripe) 0 6px, transparent 6px 12px); }
 .skill-cell.is-done .skill-icon { box-shadow: 0 0 0 2px var(--lime); }
 .skill-cell.is-raise { background: color-mix(in srgb, var(--gold) 12%, var(--plate)); }
 .skill-cell.is-raise .skill-icon { box-shadow: 0 0 0 2px var(--gold); }

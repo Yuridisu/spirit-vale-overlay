@@ -48,7 +48,7 @@ describe("build guide service", () => {
 
     await service.selectBuild(BUILD_ID);
     const selected = service.state().selected!;
-    expect(selected.skills.cells.find((cell) => cell.gameId === "Heal")).toMatchObject({ current: 5, target: 5 });
+    expect(selected.skills.trees[0]!.cells.find((cell) => cell.gameId === "Heal")).toMatchObject({ current: 5, target: 5 });
     expect(selected.missing.length).toBeGreaterThan(0);
     // Chosen, but the overlay follows it only once asked to.
     expect(service.overlayState()).toBeNull();
