@@ -4,6 +4,7 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayLootToastEvent, OverlayMinimapLootDrop } from "../../app-types.ts";
 import { rarityColor, rarityLabelKey } from "../../rarity.ts";
 import { lootToasts, minimapState } from "../store.ts";
+import { GravestoneIcon } from "../icons.tsx";
 
 const DEFAULT_RADAR_WORLD_RADIUS = 215;
 const RADAR_RING_COUNT = 3;
@@ -82,7 +83,7 @@ export function MinimapElement() {
               class={`minimap-gravestone${gravestone.distant ? " is-distant" : ""}`}
               style={{ left: `calc(50% + ${gravestone.fx * 50}%)`, top: `calc(50% + ${gravestone.fy * 50}%)` }}
               title={t("overlay.minimap.gravestone", { boss: gravestone.bossName })}
-            >✝</span>
+            ><GravestoneIcon /></span>
           ))}
         </>
       ) : <span class="minimap-empty">{t("overlay.minimap.waiting")}</span>}

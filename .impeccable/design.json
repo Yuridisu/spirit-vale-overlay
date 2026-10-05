@@ -1,0 +1,571 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-05T16:26:07.184Z",
+  "title": "Design System: Spirit Vale Overlay",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Plate Ink",
+        "canonical": "#0c1218",
+        "oklch": "oklch(17.9% 0.016 248.7)",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#3a4148",
+          "#575f66",
+          "#767e86",
+          "#979fa8",
+          "#bdc5ce",
+          "#e7f0f9"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f4f7fa",
+        "oklch": "oklch(97.5% 0.005 247.9)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Paper 2 (74% paper)",
+        "canonical": "rgba(244, 247, 250, .74)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "paper-3": {
+        "role": "neutral",
+        "displayName": "Paper 3 (52% paper)",
+        "canonical": "rgba(244, 247, 250, .52)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule (14% paper)",
+        "canonical": "rgba(244, 247, 250, .14)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "stripe": {
+        "role": "neutral",
+        "displayName": "Stripe (4.5% paper)",
+        "canonical": "rgba(244, 247, 250, .045)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "stripe-alt": {
+        "role": "neutral",
+        "displayName": "Stripe Alt (7.5% paper)",
+        "canonical": "rgba(244, 247, 250, .075)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222426",
+          "#3e4042",
+          "#5b5e60",
+          "#7b7e80",
+          "#9c9fa1",
+          "#c1c4c7",
+          "#eceff2"
+        ]
+      },
+      "broadcast-teal": {
+        "role": "primary",
+        "displayName": "Broadcast Teal",
+        "canonical": "#00c2a8",
+        "oklch": "oklch(72.9% 0.134 178.5)",
+        "tonalRamp": [
+          "#00100b",
+          "#002c24",
+          "#004b40",
+          "#006d5e",
+          "#15917e",
+          "#1fb79f",
+          "#44e0c5",
+          "#bdfeef"
+        ]
+      },
+      "threat-flame": {
+        "role": "secondary",
+        "displayName": "Threat Flame",
+        "canonical": "#ff5a36",
+        "oklch": "oklch(68.4% 0.207 33.9)",
+        "tonalRamp": [
+          "#230000",
+          "#480700",
+          "#771400",
+          "#aa2300",
+          "#dd380d",
+          "#fe6747",
+          "#fdad9a",
+          "#fee9e4"
+        ]
+      },
+      "loot-gold": {
+        "role": "secondary",
+        "displayName": "Loot Gold",
+        "canonical": "#ffc145",
+        "oklch": "oklch(84.7% 0.152 80.9)",
+        "tonalRamp": [
+          "#140800",
+          "#322000",
+          "#553a00",
+          "#7a5600",
+          "#a1740e",
+          "#ca9417",
+          "#f6b83a",
+          "#ffeccc"
+        ]
+      },
+      "xp-sky": {
+        "role": "tertiary",
+        "displayName": "XP Sky",
+        "canonical": "#4fd1ff",
+        "oklch": "oklch(80.8% 0.129 225.5)",
+        "tonalRamp": [
+          "#000e17",
+          "#002937",
+          "#00475c",
+          "#146782",
+          "#108aae",
+          "#1aaedb",
+          "#62d4fe",
+          "#d9f3ff"
+        ]
+      },
+      "summon-lime": {
+        "role": "tertiary",
+        "displayName": "Summon Lime",
+        "canonical": "#8bd450",
+        "oklch": "oklch(79.5% 0.180 133.5)",
+        "tonalRamp": [
+          "#021000",
+          "#132b00",
+          "#284a06",
+          "#3e6c0e",
+          "#529106",
+          "#6eb52c",
+          "#93dc59",
+          "#d1ffb3"
+        ]
+      },
+      "artifact-violet": {
+        "role": "tertiary",
+        "displayName": "Artifact Violet",
+        "canonical": "#9b6cff",
+        "oklch": "oklch(65.0% 0.209 294.6)",
+        "tonalRamp": [
+          "#10002c",
+          "#2c035e",
+          "#4c0e98",
+          "#6b33c4",
+          "#8958ea",
+          "#a687f8",
+          "#c8b8fe",
+          "#efebff"
+        ]
+      },
+      "hp-red": {
+        "role": "tertiary",
+        "displayName": "HP Red",
+        "canonical": "#e5484d",
+        "oklch": "oklch(62.6% 0.193 23.0)",
+        "tonalRamp": [
+          "#210001",
+          "#4c0008",
+          "#7c0014",
+          "#b10122",
+          "#d83b43",
+          "#f96968",
+          "#feaba6",
+          "#fee9e7"
+        ]
+      },
+      "mp-blue": {
+        "role": "tertiary",
+        "displayName": "MP Blue",
+        "canonical": "#2f6fe0",
+        "oklch": "oklch(56.4% 0.185 260.8)",
+        "tonalRamp": [
+          "#000039",
+          "#001c5d",
+          "#013790",
+          "#1454c3",
+          "#3777e9",
+          "#649cff",
+          "#a4c5fd",
+          "#e6effe"
+        ]
+      },
+      "team-1": {
+        "role": "tertiary",
+        "displayName": "Signal Blue (team 1)",
+        "canonical": "#3d8bff",
+        "oklch": "oklch(64.8% 0.189 258.5)",
+        "tonalRamp": [
+          "#00003a",
+          "#002055",
+          "#043b85",
+          "#0b58bd",
+          "#2a78eb",
+          "#639ef9",
+          "#a1c6fe",
+          "#e5efff"
+        ]
+      },
+      "team-2": {
+        "role": "tertiary",
+        "displayName": "Hot Pink (team 2)",
+        "canonical": "#ff4f8b",
+        "oklch": "oklch(68.8% 0.215 4.1)",
+        "tonalRamp": [
+          "#210008",
+          "#48021e",
+          "#760937",
+          "#a91451",
+          "#db286e",
+          "#fd5d90",
+          "#fca8bc",
+          "#fee8ec"
+        ]
+      },
+      "team-3": {
+        "role": "tertiary",
+        "displayName": "Orchid (team 3)",
+        "canonical": "#e04ef0",
+        "oklch": "oklch(68.4% 0.254 323.6)",
+        "tonalRamp": [
+          "#1a001f",
+          "#3d0144",
+          "#670870",
+          "#9312a0",
+          "#c027d0",
+          "#e654f6",
+          "#f4a0fd",
+          "#fde6fe"
+        ]
+      },
+      "team-4": {
+        "role": "tertiary",
+        "displayName": "Tan (team 4)",
+        "canonical": "#c49a6c",
+        "oklch": "oklch(71.5% 0.079 68.5)",
+        "tonalRamp": [
+          "#180600",
+          "#361e00",
+          "#5b3602",
+          "#7b5527",
+          "#9c7447",
+          "#bf9668",
+          "#e7bb8c",
+          "#feebd6"
+        ]
+      },
+      "team-5": {
+        "role": "tertiary",
+        "displayName": "Indigo (team 5)",
+        "canonical": "#5a5cf2",
+        "oklch": "oklch(56.3% 0.219 276.2)",
+        "tonalRamp": [
+          "#070035",
+          "#1a036d",
+          "#300faf",
+          "#4640d5",
+          "#6165fb",
+          "#8593fe",
+          "#b4c0fd",
+          "#eaeefe"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Boss meter total and personal DPS number; the personal number scales clamp(16px, 8.5cqw, 34px), clock and timer digits fill their tile via container units."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Secondary scorebug numbers, gear stat values, pickup count and refine level (19-22px)."
+      },
+      "title": {
+        "displayName": "Title Tag",
+        "purpose": "The solid channel tag naming each element; lower-third banners step up to 15px at .12em."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Row values: DPS, damage, timers, resource numbers (15-16px); 600 weight for the de-emphasised half of a pair."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Help text and stat labels (11-12px), max 34rem."
+      },
+      "name": {
+        "displayName": "Name",
+        "purpose": "Player, skill, item and boss names on one ellipsised line (12-15px)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Units, captions, empty and waiting states; uppercase at .04-.08em."
+      }
+    },
+    "shadows": [
+      {
+        "name": "channel-edge",
+        "value": "inset 0 1px 0 color-mix(in srgb, var(--channel) 55%, transparent)",
+        "purpose": "Top lip of every plate in its channel colour."
+      },
+      {
+        "name": "lower-third-lift",
+        "value": "0 4px 14px rgba(0, 0, 0, .45)",
+        "purpose": "Pickup and drop cards floating over other plates."
+      },
+      {
+        "name": "toast-lift",
+        "value": "0 3px 10px rgba(0, 0, 0, .4)",
+        "purpose": "Loot toasts."
+      },
+      {
+        "name": "edit-lift",
+        "value": "0 6px 24px rgba(0, 0, 0, .38)",
+        "purpose": "Plates while the overlay is unlocked for editing."
+      },
+      {
+        "name": "inspector",
+        "value": "inset 0 2px 0 var(--teal), 0 10px 28px rgba(0, 0, 0, .45)",
+        "purpose": "The floating edit-mode inspector."
+      },
+      {
+        "name": "alarm-frame",
+        "value": "inset 0 0 0 3px var(--flame)",
+        "purpose": "A plate in a warning state; gold for caution."
+      },
+      {
+        "name": "text-halo",
+        "value": "0 0 2px rgb(12 18 24 / .95), 0 1px 3px rgb(12 18 24 / .85)",
+        "purpose": "text-shadow on paper text over plates; removed on solid fills."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Arrivals: lower-third wipes and alert flashes."
+      },
+      {
+        "name": "lower-third-in",
+        "value": "clip-path inset(0 100% 0 0) to inset(0 0 0 0), .26-.32s ease-out, once",
+        "purpose": "New pickup, drop and toast cards wipe in from their tag outward."
+      },
+      {
+        "name": "warning-flash",
+        "value": "opacity 0 / 1 / .2 / 1 then hold, 1.2s ease-out, once",
+        "purpose": "Alerts flash twice on arrival, then hold; never loop."
+      },
+      {
+        "name": "fill-linear",
+        "value": "transform 120ms linear",
+        "purpose": "Resource and shield fill changes."
+      },
+      {
+        "name": "minimap-track",
+        "value": "left/top .1s linear",
+        "purpose": "Minimap dots and markers."
+      }
+    ],
+    "shapes": {
+      "plateCut": "10px top-right 45-degree corner cut",
+      "stripCut": "6px on thin strips (health, mana, XP, weight, clock, timer)",
+      "tagSlant": "5-8px trailing slant on tags, banners, timer modes and the lock pill",
+      "iconGrid": "16px grid, 2px square-capped mitred stroke, currentColor"
+    },
+    "layout": {
+      "editGrid": "10px minor, 50px major (teal at .26)",
+      "plateMin": "160 x 100px; thin strips 24-40px tall",
+      "responsive": "No viewport breakpoints; plates respond to their own size via container queries (cqw, cqh)."
+    },
+    "migration": "Only the in-game overlay (packages/overlay) is built in this world. The tool windows still use the Material 3 dark-green theme in packages/ui-kit/theme.css and are planned to move into this world next."
+  },
+  "components": [
+    {
+      "name": "Plate with Title Tag",
+      "kind": "card",
+      "refersTo": "plate",
+      "description": "The ink plate every element is drawn on: square, top-right corner cut, teal channel edge, named by a solid channel tag.",
+      "html": "<div class=\"ds-plate\"><span class=\"ds-tag\">Encounter DPS</span><p class=\"ds-plate-body\">Content sits 10px under the tag.</p></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-plate{position:relative;width:280px;padding:12px 12px 10px;background:rgb(12 18 24 / .76);color:var(--paper);font-family:var(--font-ui);font-size:12px;font-variant-numeric:tabular-nums;text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--teal) 55%,transparent);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);} .ds-tag{display:inline-block;padding:3px 12px 2px 7px;background:var(--teal);color:var(--ink);font-family:var(--font-num);font-size:13px;font-weight:800;line-height:1.1;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);} .ds-tag{margin:0 0 10px;} .ds-plate-body{margin:0;color:var(--paper-2);}"
+    },
+    {
+      "name": "Threat Title Tag",
+      "kind": "chip",
+      "refersTo": "title-tag-threat",
+      "description": "The same tag on the flame channel: bosses, deaths, damage taken, kills, debuffs.",
+      "html": "<span class=\"ds-tag-flame\">Damage taken</span> <span class=\"ds-tag-gold\">Items</span>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-tag-flame{display:inline-block;padding:3px 12px 2px 7px;background:var(--flame);color:var(--ink);font-family:var(--font-num);font-size:13px;font-weight:800;line-height:1.1;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);} .ds-tag-gold{display:inline-block;padding:3px 12px 2px 7px;background:var(--gold);color:var(--ink);font-family:var(--font-num);font-size:13px;font-weight:800;line-height:1.1;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);} "
+    },
+    {
+      "name": "Scorebug",
+      "kind": "custom",
+      "refersTo": "title-tag",
+      "description": "Tag and display number on one baseline, with headline numbers and condensed labels underneath.",
+      "html": "<div class=\"ds-plate\"><div class=\"ds-bug\"><span class=\"ds-tag\">Encounter DPS</span><span class=\"ds-num\">597,4 mil</span></div><div class=\"ds-details\"><span><span>Damage</span><strong>61,2 mi</strong></span><span><span>Crit rate</span><strong>27%</strong></span></div></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-plate{position:relative;width:280px;padding:12px 12px 10px;background:rgb(12 18 24 / .76);color:var(--paper);font-family:var(--font-ui);font-size:12px;font-variant-numeric:tabular-nums;text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--teal) 55%,transparent);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);} .ds-tag{display:inline-block;padding:3px 12px 2px 7px;background:var(--teal);color:var(--ink);font-family:var(--font-num);font-size:13px;font-weight:800;line-height:1.1;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);} .ds-bug{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;} .ds-num{font-family:var(--font-num);font-size:30px;font-weight:800;line-height:1;letter-spacing:.01em;} .ds-details{display:flex;gap:4px 16px;margin-top:10px;color:var(--paper-2);font-family:var(--font-num);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;} .ds-details>span{display:inline-flex;flex-direction:row-reverse;align-items:baseline;gap:5px;} .ds-details strong{color:var(--paper);font-size:19px;font-weight:800;letter-spacing:.01em;text-transform:none;}"
+    },
+    {
+      "name": "Ranking Rows",
+      "kind": "custom",
+      "refersTo": "ranking-row",
+      "description": "Striped bands with a flat team fill to the row's share and a bright leading cap.",
+      "html": "<div class=\"ds-plate\"><div class=\"ds-ranking\"><div class=\"ds-row\" style=\"--fill:100%;--c:var(--team-1)\"><span class=\"ds-player\"><span class=\"ds-rank\">1.</span><span class=\"ds-name\">Amass</span></span><span class=\"ds-val\">959,7 mil</span></div><div class=\"ds-row\" style=\"--fill:71%;--c:var(--team-3)\"><span class=\"ds-player\"><span class=\"ds-rank\">2.</span><span class=\"ds-name\">Björn</span></span><span class=\"ds-val\">682,9 mil</span></div><div class=\"ds-row\" style=\"--fill:62%;--c:var(--team-2)\"><span class=\"ds-player\"><span class=\"ds-rank\">3.</span><span class=\"ds-name\">Yuridisu</span></span><span class=\"ds-val\">597,4 mil</span></div></div></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-plate{position:relative;width:280px;padding:12px 12px 10px;background:rgb(12 18 24 / .76);color:var(--paper);font-family:var(--font-ui);font-size:12px;font-variant-numeric:tabular-nums;text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--teal) 55%,transparent);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);} .ds-ranking{display:grid;gap:2px;} .ds-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:30px;padding:3px 8px 3px 4px;overflow:hidden;background:var(--stripe);} .ds-row:nth-child(even){background:rgba(244,247,250,.075);} .ds-row::before{position:absolute;inset:0 auto 0 0;width:var(--fill);background:color-mix(in srgb,var(--c) 52%,transparent);box-shadow:inset -2px 0 0 color-mix(in srgb,var(--c) 70%,white);content:'';} .ds-row>*{position:relative;z-index:1;} .ds-player{display:flex;align-items:center;gap:7px;min-width:0;} .ds-rank{width:2ch;color:var(--paper-2);font-family:var(--font-num);font-size:15px;font-weight:800;text-align:right;} .ds-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .ds-val{font-family:var(--font-num);font-size:16px;font-weight:700;}"
+    },
+    {
+      "name": "Resource Bar",
+      "kind": "custom",
+      "refersTo": "resource-bar-health",
+      "description": "A thin strip with a flat fill, bright cap and ten ink-hairline segments.",
+      "html": "<div class=\"ds-strip\"><div class=\"ds-res\" style=\"--fill:.7;--c:var(--hp)\"><span class=\"ds-res-label\">HP</span><span class=\"ds-res-num\">18.420 <span>/ 26.389</span></span></div></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-strip{width:320px;height:28px;background:rgb(12 18 24 / .76);color:var(--paper);text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,0 100%);} .ds-res{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;height:100%;padding:0 8px;overflow:hidden;font-family:var(--font-num);font-size:16px;font-weight:700;} .ds-res::before{position:absolute;inset:0;transform:scaleX(var(--fill));transform-origin:left center;background:color-mix(in srgb,var(--c) 78%,transparent);box-shadow:inset -3px 0 0 color-mix(in srgb,var(--c) 55%,white);content:'';transition:transform 120ms linear;} .ds-res::after{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgb(12 18 24 / .55) calc(10% - 1px) 10%);content:'';} .ds-res>*{position:relative;z-index:1;} .ds-res-label{font-weight:800;letter-spacing:.08em;text-transform:uppercase;} .ds-res-num{text-align:right;} .ds-res-num span{color:var(--paper-2);font-weight:600;}"
+    },
+    {
+      "name": "Status Icon",
+      "kind": "custom",
+      "refersTo": "status-frame",
+      "description": "Square frame with a draining ink veil, white stacks badge, channel time bar and seconds left.",
+      "html": "<div class=\"ds-status\"><div class=\"ds-frame\"><div class=\"ds-veil\" style=\"height:35%\"></div><span class=\"ds-stacks\">3</span></div><span class=\"ds-bar\"></span><span class=\"ds-left\">38</span></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-status{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:36px;color:var(--paper);text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);} .ds-frame{position:relative;width:36px;height:36px;background:#1f5a4e;box-shadow:inset 0 0 0 1px rgba(244,247,250,.22);} .ds-veil{position:absolute;inset:0 0 auto 0;background:rgb(12 18 24 / .66);} .ds-stacks{position:absolute;right:0;bottom:0;padding:0 3px;background:var(--paper);color:var(--ink);font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1.15;text-shadow:none;} .ds-bar{position:relative;display:block;width:100%;height:3px;background:rgba(244,247,250,.16);} .ds-bar::before{position:absolute;inset:0;background:var(--teal);content:'';transform:scaleX(.65);transform-origin:left;} .ds-left{font-family:var(--font-num);font-size:14px;font-weight:700;line-height:1;}"
+    },
+    {
+      "name": "Lower-Third Target Drop",
+      "kind": "card",
+      "refersTo": "lower-third-card",
+      "description": "A drop card that wipes in from its banner, once per event.",
+      "html": "<div class=\"ds-drop\"><div class=\"ds-banner\">Target drop!</div><div class=\"ds-card\"><div class=\"ds-card-head\"><span class=\"ds-card-name\">Starfire</span><span class=\"ds-slot\">Jewel</span></div><div class=\"ds-stat\"><span>Int</span><strong>3</strong></div></div></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} @keyframes ds-wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}} .ds-drop{display:flex;flex-direction:column;width:260px;color:var(--paper);font-family:var(--font-ui);text-shadow:0 0 2px rgb(12 18 24 / .95),0 1px 3px rgb(12 18 24 / .85);} .ds-banner{align-self:flex-start;padding:4px 16px 3px 10px;background:var(--gold);color:var(--ink);font-family:var(--font-num);font-size:15px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);animation:ds-wipe .26s var(--ease-out) both;} .ds-card{padding:10px 12px 11px;background:rgb(12 18 24 / .92);box-shadow:0 4px 14px rgba(0,0,0,.45);animation:ds-wipe .32s var(--ease-out) .08s both;} .ds-card-head{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;box-shadow:inset 0 -1px 0 var(--rule);} .ds-card-name{font-size:15px;font-weight:700;} .ds-slot{align-self:flex-start;padding:2px 10px 1px 6px;background:var(--gold);color:var(--ink);font-family:var(--font-num);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%);} .ds-stat{display:flex;flex-direction:column;padding-top:8px;} .ds-stat span{color:var(--paper-2);font-size:12px;} .ds-stat strong{font-family:var(--font-num);font-size:19px;font-weight:800;} @media (prefers-reduced-motion:reduce){.ds-banner,.ds-card{animation:none}}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "quiet-button",
+      "description": "In-plate reset button; fills with the channel on hover.",
+      "html": "<button class=\"ds-quiet\" type=\"button\">Reset</button>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-quiet{padding:2px 9px 1px;border:0;background:rgba(244,247,250,.1);color:var(--paper-2);font-family:var(--font-num);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;} .ds-quiet:hover{background:var(--teal);color:var(--ink);} .ds-quiet:focus-visible{outline:2px solid var(--paper);outline-offset:2px;}"
+    },
+    {
+      "name": "Lock Pill",
+      "kind": "button",
+      "refersTo": "lock-pill",
+      "description": "Primary edit-mode action: a teal parallelogram.",
+      "html": "<button class=\"ds-lock\" type=\"button\">Lock overlay</button>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-lock{padding:9px 18px 8px;border:0;background:var(--teal);color:var(--ink);font-family:var(--font-num);font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);} .ds-lock:hover{background:color-mix(in srgb,var(--teal) 82%,white);} .ds-lock:focus-visible{outline:2px solid var(--paper);outline-offset:2px;}"
+    },
+    {
+      "name": "Region Tabs",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Boss timer region tabs; active takes the channel fill, an underline marks a boss in window or overdue.",
+      "html": "<div class=\"ds-tabs\"><span class=\"ds-tab is-active\">NA</span><span class=\"ds-tab is-window\">SA</span><span class=\"ds-tab is-expired\">EU</span></div>",
+      "css": ":host{--ink:#0c1218;--paper:#f4f7fa;--paper-2:rgba(244,247,250,.74);--paper-3:rgba(244,247,250,.52);--rule:rgba(244,247,250,.14);--stripe:rgba(244,247,250,.045);--teal:#00c2a8;--flame:#ff5a36;--gold:#ffc145;--hp:#e5484d;--mp:#2f6fe0;--violet:#9b6cff;--team-1:#3d8bff;--team-2:#ff4f8b;--team-3:#e04ef0;--font-num:'Barlow Condensed','Bahnschrift SemiCondensed','Arial Narrow',sans-serif;--font-ui:'Atkinson Hyperlegible Next','Segoe UI',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1)} .ds-tabs{display:flex;gap:2px;} .ds-tab{padding:2px 9px 1px;background:rgba(244,247,250,.1);color:var(--paper-2);font-family:var(--font-num);font-size:13px;font-weight:800;letter-spacing:.08em;} .ds-tab.is-active{background:var(--gold);color:var(--ink);} .ds-tab.is-window{color:var(--gold);box-shadow:inset 0 -2px 0 var(--gold);} .ds-tab.is-expired{color:var(--flame);box-shadow:inset 0 -2px 0 var(--flame);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Championship Broadcast Package",
+    "overview": "Every surface is a stream graphic: a scorebug, a stat bug, a standings table, a lower-third. Each is cut from a solid ink plate with one 45-degree corner clipped away, named by a small solid tag in the colour of the channel it speaks on, and filled with heavy condensed numerals over legible names. A viewer reads it the way they read a match: tag, number, order, then back to the action. The world deliberately refuses the dark, rounded, translucent meter-panel stack that DPS addons ship.\n\nDensity is high and flat. Plates carry no rounded corners, no gradients of tone, no glass. Data sits in alternating striped bands; meters are flat fills with a bright leading cap; time is drawn as length. Colour is a channel, never a decoration: teal is the broadcast's own voice, flame is threat, gold is loot and value, and five team colours say only who.\n\nThe in-game overlay (`packages/overlay`) is the first and only surface built in this world. The tool windows (launcher, Settings, Rewards, Combat, Boss Timers, Character, Build Export, Companion) still use the previous Material 3 dark-green theme in `packages/ui-kit/theme.css` and have not been migrated; they are planned to move into this world next. Until they do, this file describes the overlay's shipped system and the rules the windows should adopt, not the windows' current look.",
+    "keyCharacteristics": [
+      "Square ink plates, one corner cut, alpha set by the player's per-element opacity.",
+      "Titles as solid channel-colour tags with a slanted trailing end.",
+      "Barlow Condensed for every number and label; Atkinson Hyperlegible Next for names and sentences.",
+      "Striped rows, flat fills with a bright cap, ten-segment gauges.",
+      "Motion only on arrival: a lower-third wipe or a two-beat flash, then stillness."
+    ],
+    "rules": [
+      {
+        "name": "The Channel Rule",
+        "body": "Every plate speaks on exactly one channel, set once per element (`--channel`), and its tag, top edge, chart line, time bars and active tab all take that colour. Never mix two channels' tags on one plate.",
+        "section": "colors"
+      },
+      {
+        "name": "The Who-Only Rule",
+        "body": "Team colours say only which player a row is; they never mean threat, loot or value, and channel colours never fill a player's row.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-On-Colour Rule",
+        "body": "Text set on a solid channel or team fill is ink and loses the text halo; text set on ink is paper and keeps it. User-chosen loot rule colours pick ink or white by luminance.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers-Are-Condensed Rule",
+        "body": "Every numeral is Barlow Condensed and tabular; every name is Atkinson. A number set in Atkinson or a name set in Barlow uppercase is wrong.",
+        "section": "typography"
+      },
+      {
+        "name": "The Halo Rule",
+        "body": "Paper text on a plate carries a tight two-layer ink halo (`0 0 2px` at .95, `0 1px 3px` at .85) so it survives any game scene at any plate opacity.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Plate Rule",
+        "body": "A plate at rest has no outer shadow; lift is reserved for cards that arrive over others and for edit mode.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** cut every plate from ink at the player's opacity, square with the top-right 45-degree cut (10px; 6px on thin strips).",
+      "**Do** name every element with a solid channel tag, ink letters, slanted trailing end.",
+      "**Do** set every number in Barlow Condensed, tabular; set every name in Atkinson Hyperlegible Next.",
+      "**Do** draw time and share as length: fills, time bars and veils, not percentages alone.",
+      "**Do** keep the two-layer ink halo on paper text over plates, and drop it on solid colour fills.",
+      "**Do** animate only on arrival: one lower-third wipe or a two-beat flash that then holds; honour `prefers-reduced-motion` by showing the end state."
+    ],
+    "donts": [
+      "**Don't** round corners; the minimap radar is the only circle.",
+      "**Don't** use smooth tonal gradients or glass blur on plates; repeating gradients are for stripes, segments and hazard bands only.",
+      "**Don't** loop any animation during play; nothing keeps blinking during a fight.",
+      "**Don't** use a team colour to mean anything but who, or a channel colour to fill a player's row.",
+      "**Don't** use text glyphs or emoji as icons; draw them as 2px square-capped strokes on the 16px grid, or use the game's own rasters.",
+      "**Don't** add hard offset shadows; lift is soft and ambient, and only for floating cards and edit mode."
+    ]
+  }
+}

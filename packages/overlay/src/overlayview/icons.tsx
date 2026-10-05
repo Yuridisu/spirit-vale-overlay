@@ -24,3 +24,12 @@ export function StarIcon() {
     </svg>
   );
 }
+
+/** A grave cross, for a boss gravestone on the minimap. */
+export function GravestoneIcon() {
+  return (
+    <svg class="icon" viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true">
+      <path d="M8 2v12M4 6h8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" />
+    </svg>
+  );
+}
