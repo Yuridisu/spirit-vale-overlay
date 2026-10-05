@@ -78,7 +78,8 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
   let world: SiteWorldData | undefined;
   let library: SiteBuildRow[] = [];
   let libraryClass: string | undefined;
-  let libraryLoading = false;
+  // Loading until the first list arrives, so the window says so rather than looking empty.
+  let libraryLoading = true;
   let libraryError: string | undefined;
   let build: { id: string; name: string; author: string; data: SiteBuildData } | undefined;
   let buildLoading = false;
@@ -202,7 +203,11 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
 
   const loadLibrary = async () => {
     const name = className();
-    if (!name) return;
+    if (!name) {
+      libraryLoading = false;
+      emit();
+      return;
+    }
     libraryClass = name;
     libraryLoading = true;
     libraryError = undefined;
@@ -246,14 +251,25 @@ export function createBuildGuideService(options: BuildGuideServiceOptions): Buil
         if (!settings.className && className() !== before) void loadLibrary();
         else emit();
       });
+      // The skill trees are all the list needs; the much larger drop and map data follow on their own,
+      // and the farming plan fills in when they arrive.
+      const worldLoad = options.client.world().then((loaded) => {
+        world = loaded;
+        recompute();
+        emit();
+      }, (error: unknown) => {
+        options.onWarning?.(`Build guide drop data could not be loaded: ${message(error)}`);
+      });
       try {
-        [classes, world] = await Promise.all([options.client.classes(), options.client.world()]);
+        classes = await options.client.classes();
       } catch (error) {
         libraryError = message(error);
+        libraryLoading = false;
         options.onWarning?.(`Build guide data could not be loaded: ${libraryError}`);
+        emit();
       }
       if (stopped) return;
-      await Promise.all([loadLibrary(), settings.buildId ? loadBuild(settings.buildId) : Promise.resolve()]);
+      await Promise.all([loadLibrary(), settings.buildId ? loadBuild(settings.buildId) : Promise.resolve(), worldLoad]);
     },
     stop() {
       stopped = true;

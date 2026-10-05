@@ -60,7 +60,7 @@ function App() {
         <div class="library-head">
           <div class="class-line">
             <span class="tag">{state?.className || "—"}</span>
-            <span class="class-note">{state?.classPicked ? t("buildGuide.class.picked") : state?.character ? t("buildGuide.class.yours") : t("buildGuide.class.none")}</span>
+            {state && <span class="class-note">{state.classPicked ? t("buildGuide.class.picked") : state.character ? t("buildGuide.class.yours") : t("buildGuide.class.none")}</span>}
           </div>
           {state && state.classes.length > 0 && (
             <CustomSelect
