@@ -7,6 +7,8 @@ import { statusNow, statusState } from "../store.ts";
 
 const FLASH_REMAINING_FRACTION = 0.15;
 const FLASH_MINIMUM_DURATION_MS = 59_000;
+/** Every status's bar is drawn on this one scale, so a longer bar always means more time left. */
+const SHARED_TIME_SCALE_MS = 60_000;
 
 export function StatusOverlayElement({
   id,
@@ -100,6 +102,7 @@ export function StatusCell(
         {remainingFraction !== undefined && <span class="status-timer-fill" aria-hidden="true" />}
         {status.stacks !== undefined && status.stacks > 1 && <span class="status-stacks">{status.stacks}</span>}
       </div>
+      {remainingMs !== undefined && <span class="status-time-bar" aria-hidden="true" style={`--time-left:${Math.min(1, remainingMs / SHARED_TIME_SCALE_MS)}`} />}
       {remainingMs !== undefined && <span class="status-remaining">{formatRemaining(remainingMs)}</span>}
     </div>
   );

@@ -4,6 +4,7 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayElementId } from "../app-types.ts";
 import { applyControl, elementStates, panelPosition, selectedElementId } from "./store.ts";
 import { desktopView, setElementEnabled } from "./transport.ts";
+import { CloseIcon } from "./icons.tsx";
 
 export function ElementInspectorPanel({ selectedId }: { selectedId: OverlayElementId | undefined }) {
   const t = useTranslator();
@@ -36,7 +37,7 @@ export function ElementInspectorPanel({ selectedId }: { selectedId: OverlayEleme
         onPointerCancel={() => setHeaderDrag(undefined)}
       >
         <span>{t(`overlay.element.${selectedId}`)}</span>
-        <button type="button" class="inspector-close" aria-label={t("overlay.inspector.close")} onPointerDown={(event) => event.stopPropagation()} onClick={() => { selectedElementId.value = undefined; }}>×</button>
+        <button type="button" class="inspector-close" aria-label={t("overlay.inspector.close")} onPointerDown={(event) => event.stopPropagation()} onClick={() => { selectedElementId.value = undefined; }}><CloseIcon /></button>
       </div>
       <label class="inspector-row">
         <span>{t("overlay.inspector.opacity")}</span>

@@ -8,6 +8,7 @@ import type { BossTimerPhase } from "@svoverlay/contracts/boss-timers";
 import type { BossTimer } from "../../app-types.ts";
 import { OverlayElement } from "../element-frame.tsx";
 import { bossNow, bossTimerState } from "../store.ts";
+import { CheckIcon } from "../icons.tsx";
 
 const BOSS_ALERT_PULSE_MS = 60_000;
 const UNKNOWN_BOSS_CHANNEL = "?";
@@ -121,16 +122,25 @@ function BossTimerRow(
   // The tile is compact, so the machine only appears in the tooltip; the Bosses settings tab lists it in full.
   const place = timer.instanceId === undefined ? placeLabel : `${placeLabel} (${timer.instanceId})`;
   return (
-    <div class={`boss-timer-row boss-${phase}`} title={t("overlay.bossTimers.tooltip", { boss: timer.bossName, place, description })}>
+    <div class={`boss-timer-row boss-${phase}`} style={`--time-left:${bossTimeLeft(timer, phase, nowMs)}`} title={t("overlay.bossTimers.tooltip", { boss: timer.bossName, place, description })}>
       <span class="boss-timer-name">
         <span class="boss-timer-name-text">{timer.bossName}</span>
-        {isOwnBossKill(timer, playerName) && <span class="boss-own-kill" aria-label={t("overlay.bossTimers.ownKill")}>✓</span>}
+        {isOwnBossKill(timer, playerName) && <span class="boss-own-kill" role="img" aria-label={t("overlay.bossTimers.ownKill")}><CheckIcon /></span>}
       </span>
       {/* A gravestone seen before the channel list arrives has no place at all; "? ?" is only noise. */}
       {(timer.region !== undefined || timer.channel !== undefined) && <span class="boss-timer-channel">{placeLabel}</span>}
       <span class="boss-timer-status">{status}</span>
     </div>
   );
+}
+
+/** The wait or the window still to run, as a share of its whole length, for the row's time bar. */
+function bossTimeLeft(timer: BossTimer, phase: BossTimerPhase, nowMs: number): number {
+  const [from, to] = phase === "waiting"
+    ? [timer.diedAtMs, bossEligibleAtMs(timer)]
+    : phase === "window" ? [bossEligibleAtMs(timer), bossDueAtMs(timer)] : [0, 0];
+  if (to <= from) return 0;
+  return Math.max(0, Math.min(1, (to - nowMs) / (to - from)));
 }
 
 function bossPlaceLabel(timer: BossTimer): string {

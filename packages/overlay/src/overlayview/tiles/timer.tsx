@@ -22,9 +22,10 @@ export function TimerElement() {
   const finished = timerFinished(timer, now);
   const state = finished ? "finished" : running ? "running" : "paused";
   return (
-    <div class={`timer-tile timer-${state}`}>
+    <div class={`timer-tile timer-${state}`} style={timer.mode === "countdown" && timer.durationMs > 0 ? `--time-left:${Math.max(0, Math.min(1, timerDisplayMs(timer, now) / timer.durationMs))}` : undefined}>
       <span class="timer-mode">{t(`overlay.timer.mode.${timer.mode}`)}</span>
       <span class="timer-value">{formatTimer(timerDisplayMs(timer, now))}</span>
+      {timer.mode === "countdown" && <span class="timer-bar" aria-hidden="true" />}
     </div>
   );
 }

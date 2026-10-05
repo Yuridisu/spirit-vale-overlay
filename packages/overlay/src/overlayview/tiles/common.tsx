@@ -16,6 +16,25 @@ export function WaitingForDps({ label }: { label?: string } = {}) {
   );
 }
 
+/** How many team colours there are; see `--team-*` in the stylesheet. */
+const TEAM_COLORS = 5;
+
+/** Each player's colour, handed out in the order they first appear and kept for the session. */
+const teamColors = new Map<string, number>();
+
+/**
+ * A player's own colour, the same in every table and every boss block, so overtaking someone never
+ * repaints either of you. The first eight players met each get a colour of their own.
+ */
+export function teamColor(name: string): string {
+  let slot = teamColors.get(name);
+  if (slot === undefined) {
+    slot = teamColors.size % TEAM_COLORS;
+    teamColors.set(name, slot);
+  }
+  return `var(--team-${slot + 1})`;
+}
+
 export function overlayClassIcon(archetype: number | undefined): string {
   return classIconUrlForArchetype(archetype) ?? classIconUrlForName("Weaver")!;
 }

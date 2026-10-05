@@ -1,3 +1,4 @@
+import { useState } from "preact/hooks";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayGearPickupEvent } from "../../app-types.ts";
 import { artifactPickups, gearPickups, lootAlerts, targetDrops } from "../store.ts";
@@ -67,10 +68,11 @@ function PickupCards({ cards, kind }: { cards: readonly GearPickupCardState[]; k
 
 function GearPickupCard({ event }: { event: OverlayGearPickupEvent }) {
   const t = useTranslator();
+  const [iconMissing, setIconMissing] = useState(false);
   return (
     <div class="gear-pickup-card">
       <div class="gear-pickup-header">
-        {event.iconUrl !== undefined && <img class="gear-pickup-icon" src={event.iconUrl} alt="" aria-hidden="true" />}
+        {event.iconUrl !== undefined && !iconMissing && <img class="gear-pickup-icon" src={event.iconUrl} alt="" aria-hidden="true" onError={() => setIconMissing(true)} />}
         <div class="gear-pickup-title">
           <span class="gear-pickup-name">{event.displayName}</span>
           {event.slot !== undefined && <span class="gear-pickup-slot">{event.slot}</span>}

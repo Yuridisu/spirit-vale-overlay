@@ -129,5 +129,6 @@ export async function copyViewAssets(options: {
     copyFile(icon("icon/eggplant_icon.ico"), path.join(options.resourcesDir, "favicon.ico")),
     cp(icon("class_icons"), path.join(assets, "class-icons"), { recursive: true }),
     cp(icon("status-icons"), path.join(assets, "status-icons"), { recursive: true }),
+    cp(icon("fonts"), path.join(assets, "fonts"), { recursive: true }),
   ]);
 }

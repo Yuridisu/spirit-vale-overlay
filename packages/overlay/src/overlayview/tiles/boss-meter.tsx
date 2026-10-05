@@ -2,14 +2,8 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatDps, formatDuration, formatInteger } from "@svoverlay/ui-kit/format";
 import type { OverlayBossFightState } from "../../app-types.ts";
 import { bossFightState } from "../store.ts";
-import { overlayClassIcon } from "./common.tsx";
+import { overlayClassIcon, teamColor } from "./common.tsx";
 
-const BOSS_ROW_COLORS = [
-  "rgba(40, 132, 210, 0.52)", "rgba(111, 91, 211, 0.52)",
-  "rgba(213, 130, 42, 0.52)", "rgba(193, 71, 139, 0.52)",
-  "rgba(27, 151, 135, 0.52)", "rgba(99, 153, 52, 0.52)",
-  "rgba(190, 74, 69, 0.52)", "rgba(181, 151, 45, 0.52)",
-] as const;
 
 /** With several bosses, each one's block lists this many players at most, so all of them fit. */
 const ROWS_PER_BOSS = 6;
@@ -30,11 +24,8 @@ export function BossMeterElement() {
   }
   // A fight of one hit has no length yet; a second is the least it can be divided by.
   const seconds = Math.max(1, fight.durationMs / 1_000);
-  // A player keeps one colour in every block, the one of their place in the whole fight.
-  const colorOf = (name: string): string => {
-    const place = fight.rows.findIndex((row) => row.name === name);
-    return BOSS_ROW_COLORS[(place < 0 ? fight.rows.length : place) % BOSS_ROW_COLORS.length]!;
-  };
+  // A player keeps one colour in every block and in the party table.
+  const colorOf = teamColor;
   return (
     <div class="element-content">
       <div class="boss-meter-heading">

@@ -5,10 +5,10 @@ import { damageTakenState, itemCounter, killState, meterState, summonsState } fr
 import { WaitingForDps } from "./common.tsx";
 import { StatusCell } from "./status.tsx";
 
-const SKILL_ROW_COLOR = "rgba(40, 132, 210, 0.52)";
-const KILL_ROW_COLOR = "rgba(190, 74, 69, 0.46)";
-const TAKEN_ROW_COLOR = "rgba(213, 130, 42, 0.5)";
-const ITEM_ROW_COLOR = "rgba(86, 160, 96, 0.46)";
+const SKILL_ROW_COLOR = "var(--teal)";
+const KILL_ROW_COLOR = "var(--flame)";
+const TAKEN_ROW_COLOR = "var(--flame)";
+const ITEM_ROW_COLOR = "transparent";
 
 /** The local player's encounter damage, broken down by the skill or attack that dealt it. */
 export function DpsDetailsElement() {
@@ -95,9 +95,9 @@ function healthShare(row: { health?: number; maxHealth?: number }): number | und
 
 /** Green when healthy, through amber, to red when nearly gone. */
 function healthColor(share: number): string {
-  if (share > 0.6) return "rgb(76, 186, 104)";
-  if (share > 0.3) return "rgb(222, 168, 46)";
-  return "rgb(222, 74, 62)";
+  if (share > 0.6) return "var(--lime)";
+  if (share > 0.3) return "var(--gold)";
+  return "var(--hp)";
 }
 
 /** The local player's summons with their health and statuses, with the weakest called out at the top. */

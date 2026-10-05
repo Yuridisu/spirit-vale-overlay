@@ -3,14 +3,8 @@ import { formatCompact, formatDps, formatDuration } from "@svoverlay/ui-kit/form
 import type { OverlayMeterPoint } from "../../app-types.ts";
 import type { OverlayChrome } from "../store.ts";
 import { chromeState, meterState } from "../store.ts";
-import { WaitingForDps, overlayClassIcon } from "./common.tsx";
+import { WaitingForDps, overlayClassIcon, teamColor } from "./common.tsx";
 
-const PARTY_ROW_COLORS = [
-  "rgba(111, 91, 211, 0.52)", "rgba(40, 132, 210, 0.52)",
-  "rgba(27, 151, 135, 0.52)", "rgba(213, 130, 42, 0.52)",
-  "rgba(193, 71, 139, 0.52)", "rgba(99, 153, 52, 0.52)",
-  "rgba(190, 74, 69, 0.52)", "rgba(181, 151, 45, 0.52)",
-] as const;
 
 function meterMetricLabel(next: OverlayChrome): string {
   return next.meterStatType === "tanked" ? "TPS" : next.meterStatType === "heal" ? "HPS" : "DPS";
@@ -65,17 +59,15 @@ export function PersonalDpsElement() {
   const personalDpsMode = chromeState.value?.personalDpsMode;
   return (
     <div class="element-content">
-      <div class="personal-heading">
+      <div class="personal-scorebug">
         <img class="personal-class-icon" src={overlayClassIcon(personal?.archetype)} alt="" aria-hidden="true" />
-        <div>
-          <h2 class="element-title">{t(personalDpsMode === "live" ? "overlay.personal.live" : "overlay.personal.encounter")}</h2>
-          {personalDpsMode !== "live" && <span class="personal-duration">{formatDuration(personal?.durationMs ?? 0)}</span>}
-        </div>
+        <h2 class="element-title">{t(personalDpsMode === "live" ? "overlay.personal.live" : "overlay.personal.encounter")}</h2>
+        {personal && <span class="personal-value">{formatDps(personal.currentDps)}<span class="personal-unit">{t("overlay.personal.unit")}</span></span>}
       </div>
       {personal ? (
         <>
-          <span class="personal-value">{formatDps(personal.currentDps)}</span><span class="personal-unit">{t("overlay.personal.unit")}</span>
           <div class="personal-details">
+            {personalDpsMode !== "live" && <span class="personal-duration">{formatDuration(personal.durationMs)}</span>}
             <span>{t("overlay.personal.damage")}<strong>{formatCompact(personal.damage)}</strong></span>
             <span>{t("overlay.personal.critRate")}<strong>{personal.critRate === undefined ? "—" : `${Math.round(personal.critRate * 100)}%`}</strong></span>
           </div>
@@ -107,7 +99,7 @@ export function PartyRankingElement() {
         <div
           class="ranking-row"
           key={actor.actorId}
-          style={`--row-fill:${actor.dps / maxDps * 100}%;--row-color:${PARTY_ROW_COLORS[index % PARTY_ROW_COLORS.length]}`}
+          style={`--row-fill:${actor.dps / maxDps * 100}%;--row-color:${teamColor(actor.displayName)}`}
         >
           <span class="ranking-player">
             <img class="ranking-class-icon" src={overlayClassIcon(actor.archetype)} alt="" aria-hidden="true" />

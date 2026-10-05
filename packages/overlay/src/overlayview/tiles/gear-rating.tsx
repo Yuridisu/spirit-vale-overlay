@@ -1,9 +1,10 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { OverlayGearRating } from "../../app-types.ts";
 import { gearRatingState } from "../store.ts";
+import { StarIcon } from "../icons.tsx";
 
 const MAX_STARS = 6;
-const STARS = "★".repeat(MAX_STARS);
+const STARS = Array.from({ length: MAX_STARS }, (_, index) => <StarIcon key={index} />);
 
 /**
  * Star ratings for the ten equipped items, in the two columns of the game's equipment screen.
