@@ -1748,6 +1748,7 @@ export class CaptureCoordinator {
       if (activeBefore === connectionId && this.lastAuthenticated?.connectionId === connectionId) {
         this.lastAuthenticated = { connectionId, tick: packet.tick };
         this.diagnostics.logPacketAdmission(packet, "rejected", "same-connection-reauthenticated", activeBefore);
+        this.forgetGroundLoot();
         return { accepted: false, suppressBeforeAdmission: true };
       }
       this.lastAuthenticated = { connectionId, tick: packet.tick };
@@ -1760,6 +1761,17 @@ export class CaptureCoordinator {
       this.diagnostics.logPacketAdmission(packet, "accepted", undefined, activeBefore);
     }
     return { accepted: true, suppressBeforeAdmission: false };
+  }
+
+  /**
+   * A same-connection reauthentication keeps the session, but the client drops every ground item it
+   * had and the server spawns the ones still in view again. Items picked up or gone in between
+   * never get a despawn, so without this their minimap markers stayed after the loot was taken.
+   */
+  private forgetGroundLoot(): void {
+    if (this.loot.active().length === 0) return;
+    this.loot.reset();
+    if (this.minimapEnabled()) this.publishMinimap(true);
   }
 
   private syncLocalActorIdentity(): void {

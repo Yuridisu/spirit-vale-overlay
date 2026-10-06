@@ -1559,6 +1559,41 @@ describe("central capture coordinator", () => {
     });
   });
 
+  test("drops ground loot markers when the same connection reauthenticates", async () => {
+    await withCoordinator({}, async ({ coordinator, capture }) => {
+      const loot = (): unknown => {
+        let latest: unknown;
+        coordinator.subscribeMinimap((state) => { latest = state.loot.map((drop) => drop.objectId); })();
+        return latest;
+      };
+      const payload = Buffer.alloc(0);
+      const lootSpawn = (tick: number, objectId: number): TestPacket => ({
+        tick,
+        packetId: 0,
+        packetName: "objectSpawn",
+        objectId,
+        spawnCollectionId: 0,
+        spawnPrefabId: 0,
+        spawnLocalPosition: [1, 0, 2],
+        raw: payload,
+        payload,
+        connectionId: "test-connection",
+      });
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet(lootSpawn(2, 501));
+      capture.packet(lootSpawn(3, 502));
+      expect(loot()).toEqual([501, 502]);
+
+      // The game reauthenticates the live connection and spawns only what is still on the ground;
+      // 501 was picked up in between and never gets a despawn.
+      capture.packet(authenticatedPacket(4, "test-connection"));
+      capture.packet(lootSpawn(5, 502));
+      expect(loot()).toEqual([502]);
+      await coordinator.stop();
+    });
+  });
+
   test("marks a standing gravestone on the minimap until it despawns", async () => {
     await withCoordinator({}, async ({ coordinator, capture }) => {
       const gravestones = (): unknown => {
