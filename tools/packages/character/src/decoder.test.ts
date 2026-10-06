@@ -102,6 +102,14 @@ describe("positional and chaos character fields", () => {
     expect(decodeCharacterRpcPayload(syntheticCharacter(true), true).snapshot.loadouts).toBeUndefined();
   });
 
+  test("counts equipped grimoires in the carried weight, as the game does", () => {
+    const withBooks = decodeCharacterRpcPayload(syntheticCharacter(true, true, "Example Hero", {
+      grimoires: ["Rogue_5", null, "Rogue_2"],
+    }), true);
+    // Two books at ten each on top of the plain character's 71; the empty slot weighs nothing.
+    expect(withBooks.currentWeight).toBe(91);
+  });
+
   test("labels grimoires by slot so an empty first slot cannot promote the second book", () => {
     const decoded = decodeCharacterRpcPayload(syntheticCharacter(true, true, "Example Hero", {
       grimoires: [null, "Book Of Fire"],

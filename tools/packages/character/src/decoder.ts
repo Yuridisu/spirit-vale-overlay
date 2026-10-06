@@ -195,11 +195,14 @@ function readCharacterHistory(
     const monsterKills = leafNumber(data, "MonsterKills", 0);
     const bossKills = leafNumber(data, "BossKills", 0);
     const deaths = leafNumber(data, "Deaths", 0);
+    // Equipped grimoires weigh like equipment too: with three equipped (ten each) the total read
+    // 1,677 where the game's bag showed 1,707.
+    const grimoireWeight = grimoires.reduce((total, item) => total + equipmentWeight(item.itemId), 0);
     return {
       skills,
       ...(assigned.length ? { assignedSkills: assigned } : {}),
       grimoires,
-      currentWeight: equippedWeight + inventoryWeight,
+      currentWeight: equippedWeight + inventoryWeight + grimoireWeight,
       ...(inventory ? { inventory: stackables } : {}),
       playtimeSeconds,
       monsterKills,
