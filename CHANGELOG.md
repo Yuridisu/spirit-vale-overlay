@@ -33,6 +33,10 @@ section as the GitHub Release notes, so write it for the people who use the app.
   in its window. In the meters each player keeps one colour, the same in every table. Time left is
   drawn as a bar on buffs, boss timers and the countdown, and alerts flash once and then hold
   instead of blinking. Your layout, sizes and opacities stay as they were.
+- **Prefer the old look? Switch back.** Settings > General > Visual style switches every window
+  and the overlay between the new look and the classic 0.10.13 one, at once, with nothing else
+  changing. Both looks share your layout, so an element you sized for one may need a resize in
+  the other.
 - **Skill points show at once.** Pressing Apply in the game's skill window now updates your
   character, the Character window and the Build Guide right away, instead of after the next map
   change.
