@@ -10,12 +10,12 @@ function packed(value: number): Buffer {
   return Buffer.from(bytes);
 }
 
-function entry(statusId: string, remaining: number, stacks: number, maxStacks: number, showFx = 0): Buffer {
+function entry(statusId: string, remaining: number, stacks: number, maxStacks: number, showFx = 0, level = 0): Buffer {
   const seconds = Buffer.alloc(4);
   seconds.writeFloatLE(remaining);
   return Buffer.concat([
     packed(Buffer.byteLength(statusId)), Buffer.from(statusId),
-    seconds, packed(stacks), packed(maxStacks), Buffer.from([showFx]),
+    seconds, packed(stacks), packed(maxStacks), packed(level), Buffer.from([showFx]),
   ]);
 }
 
@@ -87,6 +87,18 @@ describe("decodeEffectDisplays", () => {
       { statusId: "FictionalWard", remainingSeconds: 2.5, stacks: 1, maxStacks: 0 },
     ]);
     expect(decoded.removes).toEqual([]);
+  });
+
+  test("reads each status level, which the current build sends before ShowFx", () => {
+    // The shape of a live Priest batch: four self-buffs at level 5, no stacks, no removals.
+    const decoded = decodeEffectDisplays(payload([
+      entry("FictionalFrenzy", 1, 0, 0, 0, 5),
+      entry("FictionalZeal", 240, 0, 0, 0, 5),
+    ]));
+    expect(decoded.applies).toEqual([
+      { statusId: "FictionalFrenzy", remainingSeconds: 1, stacks: 0, maxStacks: 0, level: 5 },
+      { statusId: "FictionalZeal", remainingSeconds: 240, stacks: 0, maxStacks: 0, level: 5 },
+    ]);
   });
 
   test("decodes a removal-only batch", () => {

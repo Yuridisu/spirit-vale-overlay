@@ -224,7 +224,8 @@ export function packed(value: number): Buffer {
   return Buffer.from(bytes);
 }
 
-export function effectEntry(statusId: string, remaining: number, stacks = 1, maxStacks = 0): Buffer {
+/** One `QueuedEffectDisplay` in the current wire layout: Id, Duration, Stacks, StacksMax, Level, ShowFx. */
+export function effectEntry(statusId: string, remaining: number, stacks = 1, maxStacks = 0, level = 0): Buffer {
   const seconds = Buffer.alloc(4);
   seconds.writeFloatLE(remaining);
   return Buffer.concat([
@@ -233,6 +234,7 @@ export function effectEntry(statusId: string, remaining: number, stacks = 1, max
     seconds,
     packed(stacks),
     packed(maxStacks),
+    packed(level),
     Buffer.from([0]),
   ]);
 }

@@ -12,6 +12,8 @@ interface FishNetEffectDisplay {
   stacks: number;
   /** Server-declared stack ceiling; 0 where the status declares none. */
   maxStacks: number;
+  /** The status level (`QueuedEffectDisplay.Level`, on the wire since the 2026-10-01 build). */
+  level?: number;
 }
 
 export interface FishNetEffectDisplayBatch {
@@ -42,6 +44,11 @@ export function decodeEffectDisplays(payload: Buffer): FishNetEffectDisplayBatch
     offset = stacks.nextOffset;
     const maxStacks = readSignedPackedWhole(payload, offset);
     offset = maxStacks.nextOffset;
+    // `QueuedEffectDisplay.Level`, added by the 2026-10-01 game build ahead of ShowFx. Without it
+    // the level byte was read as ShowFx, every batch failed, and no status was ever applied from
+    // this feed: buffs already on when capture started never showed.
+    const level = readSignedPackedWhole(payload, offset);
+    offset = level.nextOffset;
     // `QueuedEffectDisplay.ShowFx`: a cosmetic apply-flash flag the client uses for VFX only.
     // Read to keep the cursor aligned; nothing downstream needs it.
     offset = readBoolean(payload, offset, "effect display showFx flag").nextOffset;
@@ -52,6 +59,7 @@ export function decodeEffectDisplays(payload: Buffer): FishNetEffectDisplayBatch
       ...(remainingSeconds < 0 || !Number.isFinite(remainingSeconds) ? {} : { remainingSeconds }),
       stacks: stacks.value,
       maxStacks: Math.max(0, maxStacks.value),
+      ...(level.value > 0 ? { level: level.value } : {}),
     });
   }
 
