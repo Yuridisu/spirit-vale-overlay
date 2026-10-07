@@ -6,6 +6,7 @@ import { syntheticCharacter } from "./synthetic-character.test-helper.ts";
 
 /** Inspect_T carries no leading CharacterUpdateType, hence `syntheticCharacter(false, …)`. */
 function inspectPacket(name: string, rpcName: string | null = "Inspect_T"): CapturedFishNetPacket {
+  const character = syntheticCharacter(false, true, name);
   // Partial fixture, as elsewhere in this package: the roster reads only these fields.
   const packet = {
     tick: 1,
@@ -13,7 +14,8 @@ function inspectPacket(name: string, rpcName: string | null = "Inspect_T"): Capt
     packetName: "targetRpc",
     ...(rpcName === null ? {} : { rpcName }),
     raw: Buffer.alloc(0),
-    payload: syntheticCharacter(false, true, name),
+    // InspectVisiblePlayer_T puts the inspected player's object first: a packed id, then "spawned".
+    payload: rpcName === "InspectVisiblePlayer_T" ? Buffer.concat([Buffer.from([0x02, 0x01]), character]) : character,
     connectionId: "test-connection",
   } as CapturedFishNetPacket;
   return packet;
@@ -24,6 +26,15 @@ describe("FishNetInspectRoster", () => {
     const roster = new FishNetInspectRoster();
 
     expect(roster.consume(inspectPacket("Fictional Stranger"))).toBe(true);
+
+    expect(roster.list().map((entry) => entry.snapshot.name)).toEqual(["Fictional Stranger"]);
+    expect(roster.get("Fictional Stranger")?.equipment).toHaveLength(1);
+  });
+
+  test("decodes the reply the game sends now, InspectVisiblePlayer_T, with the target first", () => {
+    const roster = new FishNetInspectRoster();
+
+    expect(roster.consume(inspectPacket("Fictional Stranger", "InspectVisiblePlayer_T"))).toBe(true);
 
     expect(roster.list().map((entry) => entry.snapshot.name)).toEqual(["Fictional Stranger"]);
     expect(roster.get("Fictional Stranger")?.equipment).toHaveLength(1);

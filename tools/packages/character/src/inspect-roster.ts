@@ -1,9 +1,11 @@
 import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
-import { decodeCharacterRpcPayload } from "./decoder.ts";
+import { decodeCharacterRpcPayload, decodeInspectVisiblePlayerPayload } from "./decoder.ts";
 import type { CharacterSnapshot } from "./types.ts";
 
-/** `PlayerController.Inspect_T(conn, CharacterData)` — the reply to inspecting another player. */
+/** `PlayerController.Inspect_T(conn, CharacterData)` — the reply to inspecting another player, before 2026-10. */
 const INSPECT_RPC = "Inspect_T";
+/** `PlayerController.InspectVisiblePlayer_T(conn, target, CharacterData)` — the reply the game sends now. */
+const INSPECT_VISIBLE_PLAYER_RPC = "InspectVisiblePlayer_T";
 
 /** Roster cap. */
 const DEFAULT_LIMIT = 24;
@@ -30,12 +32,14 @@ export class FishNetInspectRoster {
   /** Returns true when the packet was an inspect reply this roster consumed. */
   consume(packet: CapturedFishNetPacket, now = new Date()): boolean {
     // Matched by name alone.
-    if (packet.rpcName !== INSPECT_RPC) return false;
+    if (packet.rpcName !== INSPECT_RPC && packet.rpcName !== INSPECT_VISIBLE_PLAYER_RPC) return false;
 
     let snapshot: CharacterSnapshot;
     try {
-      // No leading CharacterUpdateType on this RPC, unlike CharacterCallback_T.
-      ({ snapshot } = decodeCharacterRpcPayload(packet.payload, false, now));
+      // No leading CharacterUpdateType on either RPC, unlike CharacterCallback_T.
+      ({ snapshot } = packet.rpcName === INSPECT_VISIBLE_PLAYER_RPC
+        ? decodeInspectVisiblePlayerPayload(packet.payload, now)
+        : decodeCharacterRpcPayload(packet.payload, false, now));
     } catch {
       return false;
     }

@@ -1,4 +1,4 @@
-import { characterDataParameter, CURRENT_GAME_BUILD_FINGERPRINT, decodeFieldRun } from "@kar-mi/spirit-vale-tools-capture";
+import { characterDataParameter, CURRENT_GAME_BUILD_FINGERPRINT, decodeFieldRun, type FishNetRpcParameter } from "@kar-mi/spirit-vale-tools-capture";
 import type { FishNetDecodedField } from "@kar-mi/spirit-vale-tools-capture";
 import { readSignedPackedWhole } from "@kar-mi/spirit-vale-tools-capture/wire-reader";
 import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
@@ -29,7 +29,25 @@ export function resolveCharacterArchetypeId(name: string): number | undefined {
   return ARCHETYPE_IDS.get(name);
 }
 
-export function decodeCharacterRpcPayload(payload: Buffer, includesUpdateType: boolean, now = new Date()): DecodedCharacterUpdate {
+/** `PlayerController.InspectVisiblePlayer_T(target, CharacterData)`: the inspected player's object comes first. */
+const INSPECT_TARGET_PARAMETER: FishNetRpcParameter = { name: "target", typeName: "FishNet.Object.NetworkObject", codec: "networkObject" };
+
+/**
+ * The reply to inspecting a player. The game sends it as InspectVisiblePlayer_T, with the
+ * inspected player's object before the CharacterData; the older Inspect_T had the CharacterData
+ * alone.
+ */
+export function decodeInspectVisiblePlayerPayload(payload: Buffer, now = new Date()): DecodedCharacterUpdate {
+  return decodeCharacterRpcPayload(payload, false, now, [INSPECT_TARGET_PARAMETER]);
+}
+
+export function decodeCharacterRpcPayload(
+  payload: Buffer,
+  includesUpdateType: boolean,
+  now = new Date(),
+  /** Parameters the RPC carries before its CharacterData. */
+  leadingParameters: readonly FishNetRpcParameter[] = [],
+): DecodedCharacterUpdate {
   let startOffset = 0;
   let updateType = 327417855;
   if (includesUpdateType) {
@@ -37,7 +55,7 @@ export function decodeCharacterRpcPayload(payload: Buffer, includesUpdateType: b
     updateType = decoded.value;
     startOffset = decoded.nextOffset;
   }
-  const run = decodeFieldRun(payload, [characterDataParameter()], startOffset);
+  const run = decodeFieldRun(payload, [...leadingParameters, characterDataParameter()], startOffset);
   const tree = buildFieldTree(run.fields);
   const data = child(tree, "data");
   if (!data) throw new Error("CharacterData payload is null");
