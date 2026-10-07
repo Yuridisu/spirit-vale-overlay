@@ -82,6 +82,17 @@ export class FishNetLootDropTracker {
     return [];
   }
 
+  /**
+   * Stops tracking a drop the game took without despawning it (a pet's pickup). Returns its
+   * removal, or nothing when it was not on the ground.
+   */
+  forget(objectId: number, tick = 0): FishNetLootDropEvent | undefined {
+    const drop = this.drops.get(objectId);
+    if (!drop) return undefined;
+    this.drops.delete(objectId);
+    return { kind: "removed", tick, drop: { ...drop } };
+  }
+
   /** Drops are scoped to one connection's object IDs, so a session boundary clears them. */
   reset(): void {
     this.drops.clear();

@@ -18,6 +18,7 @@ import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
 import { decodeBossGravestone, FishNetEternalTowerTracker, resolveBundledMapName } from "@kar-mi/spirit-vale-tools-capture";
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
+import { PickedUpDrops } from "./picked-up-drops.ts";
 import { LootOwnership } from "./loot-ownership.ts";
 import { BossFightTracker, type BossFightState } from "./boss-fight.ts";
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
@@ -186,6 +187,8 @@ export class CaptureCoordinator {
   private readonly mobs = new FishNetMobDirectory();
   private readonly positions: FishNetPositionTracker;
   private readonly loot = new FishNetLootDropTracker();
+  /** Picked-up items whose drops the game never despawned (a pet's pickups), to take off the minimap. */
+  private readonly pickedUpDrops = new PickedUpDrops();
   private readonly minimapListeners = new Set<(state: CaptureMinimapState) => void>();
   private minimapTimer?: ClockTimer;
   private lastPublishedMinimapJson?: string;
@@ -355,6 +358,7 @@ export class CaptureCoordinator {
     this.toastedLootIds.clear();
     this.positions.reset();
     this.loot.reset();
+    this.pickedUpDrops.reset();
     this.tower.reset();
     this.mobs.reset();
 
@@ -1225,6 +1229,7 @@ export class CaptureCoordinator {
       this.lastObservedMapId = undefined;
       this.positions.reset();
       this.loot.reset();
+      this.pickedUpDrops.reset();
       if (this.minimapEnabled()) this.publishMinimap(true);
     }
     const towerChanged = this.tower.consume(packet) || towerReset;
@@ -1309,10 +1314,13 @@ export class CaptureCoordinator {
   private consumeRewardsPacket(packet: CapturedFishNetPacket, combatEvents: FishNetCombatEvent[]): boolean {
     try {
       const lootEvents = this.loot.consume(packet);
+      const nowMs = this.clock.now();
+      for (const event of lootEvents) if (event.kind === "removed") this.pickedUpDrops.noteRemoved(event.drop, nowMs);
       if (this.minimapEnabled() && lootEvents.length > 0) this.scheduleMinimapPublish();
       this.emitLootToasts(lootEvents);
       this.trackBossDrops(lootEvents);
       this.emitGearPickups(packet);
+      this.forgetPickedUpDrops(nowMs, packet.tick);
       const tracked = this.shouldTrackRewardPacket(combatEvents)
         ? this.rewards.consume(packet)
         : [];
@@ -1625,18 +1633,32 @@ export class CaptureCoordinator {
       ? [{ name: stackableName(item.category, item.itemId), count: item.count }]
       : []);
     if (this.inventoryCounter.addPickup(stacks, this.clock.now())) this.publishInventory();
+    const pickedUp: string[] = [];
     for (const item of pickup.items) {
       const itemType = NAMED_PICKUP_ITEM_TYPES[item.category];
       if (itemType === undefined || item.count <= 0) continue;
       const displayName = resolveFishNetItemDisplayName(itemType, item.itemId) ?? item.itemId;
+      pickedUp.push(displayName);
       for (const listener of this.stackPickupListeners) listener({ displayName, count: item.count });
     }
+    for (const equipment of pickup.equipment) pickedUp.push(resolveFishNetItemDisplayName(2, equipment.itemId) ?? equipment.itemId);
+    for (const artifact of pickup.artifacts) pickedUp.push(resolveFishNetItemDisplayName(3, artifact.itemId) ?? artifact.itemId);
+    this.pickedUpDrops.notePickup(pickedUp, this.clock.now());
     for (const equipment of pickup.equipment) {
       for (const listener of this.gearPickupListeners) listener(equipment);
     }
     for (const artifact of pickup.artifacts) {
       for (const listener of this.artifactPickupListeners) listener(artifact);
     }
+  }
+
+  /** Takes off the minimap the drops picked up without a despawn, once their grace has passed. */
+  private forgetPickedUpDrops(nowMs: number, tick: number): void {
+    if (!this.pickedUpDrops.hasPending()) return;
+    const self = this.positions.self();
+    const forgotten = this.pickedUpDrops.due(nowMs, this.loot.active(), self)
+      .flatMap((objectId) => this.loot.forget(objectId, tick) ?? []);
+    if (forgotten.length > 0 && this.minimapEnabled()) this.scheduleMinimapPublish();
   }
 
   /** Records, once each, the lock format the game uses and the moment the player's own drops are recognised. */
@@ -1771,6 +1793,7 @@ export class CaptureCoordinator {
   private forgetGroundLoot(): void {
     if (this.loot.active().length === 0) return;
     this.loot.reset();
+    this.pickedUpDrops.reset();
     if (this.minimapEnabled()) this.publishMinimap(true);
   }
 

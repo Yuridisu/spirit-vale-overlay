@@ -81,6 +81,15 @@ describe("FishNetLootDropTracker", () => {
     expect(tracker.active()).toEqual([]);
   });
 
+  test("forgets a drop the game took without despawning it", () => {
+    const tracker = new FishNetLootDropTracker({ rpcMap: map });
+    tracker.consume(spawn(503, 7, [0, 0, 0]));
+
+    expect(tracker.forget(503, 20)).toMatchObject({ kind: "removed", tick: 20, drop: { objectId: 503 } });
+    expect(tracker.active()).toEqual([]);
+    expect(tracker.forget(503)).toBeUndefined();
+  });
+
   test("emits nothing when a sync repeats values already held", () => {
     const tracker = new FishNetLootDropTracker({ rpcMap: map });
     tracker.consume(spawn(503, 7, [0, 0, 0]));
