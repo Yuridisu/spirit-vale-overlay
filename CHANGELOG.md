@@ -41,6 +41,17 @@ section as the GitHub Release notes, so write it for the people who use the app.
   character, the Character window and the Build Guide right away, instead of after the next map
   change.
 
+### Fixed
+
+- **Carried weight counts your grimoires.** Equipped grimoires now add their weight, so the
+  weight shown matches the game's.
+- **Minimap loot markers go away.** Markers for loot you already picked up no longer stay on the
+  minimap after a map or channel change.
+- **Buffs after the game's October 1 update.** That update added a level to the game's status
+  messages, and buffs and statuses already on you were no longer read. They show again.
+- **Build Guide.** Builds list before the drop data finishes loading, items count as they move
+  into your bag, and the skill grids line up with the game's skill window by name.
+
 ### Credits
 
 - Builds are written by their authors on spiritvalers.com and shown with their names. The skill
