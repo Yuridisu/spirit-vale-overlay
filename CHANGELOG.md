@@ -5,6 +5,11 @@ section as the GitHub Release notes, so write it for the people who use the app.
 
 ## 0.10.14
 
+**This is my last update to Spirit Vale Overlay.** Thank you to everyone who used it, reported
+bugs and sent ideas. From here on, please follow Crowley's Spiritvale Companion 2.0, which carries
+on this work, on
+[its Discord channel](https://discord.com/channels/1257586742865956875/1554234942203105370).
+
 ### Added
 
 - **Build Guide.** A new Build Guide tile opens the public builds of
