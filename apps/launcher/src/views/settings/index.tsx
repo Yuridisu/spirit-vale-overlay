@@ -54,6 +54,7 @@ function App() {
 
   const actions: SettingsActions = {
     setUiScale: (uiScale) => update(desktopView.rpc?.request.setUiScale({ uiScale })),
+    setLook: (look) => update(desktopView.rpc?.request.setLook({ look })),
     setMinimizeToTray: (minimizeToTray) => update(desktopView.rpc?.request.setMinimizeToTray({ minimizeToTray })),
     setCaptureAdapter: (value) => update(desktopView.rpc?.request.setCaptureAdapter({ deviceName: value === "auto" ? null : value })),
     refreshCaptureDevices: () => update(desktopView.rpc?.request.refreshCaptureDevices({})),

@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import path from "node:path";
 import type { BunPlugin } from "bun";
 
@@ -36,6 +36,15 @@ export async function bundle(options: {
     ...(options.target === "bun" ? { naming: "index.[ext]" } : {}),
   });
   if (!result.success) throw new AggregateError(result.logs, `Build failed: ${options.entrypoint}`);
+}
+
+async function exists(file: string): Promise<boolean> {
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function rewriteViewScheme(source: string): string {
@@ -79,9 +88,14 @@ async function buildView(options: {
     target: "browser",
     plugins: options.plugins,
   });
+  // Each view also ships its classic (0.10.13) look; a view without its own classic stylesheet
+  // (new since the redesign) uses its current one over the classic theme. See desktop-platform/look.ts.
+  const classic = path.join(options.source, "index.classic.css");
   await Promise.all([
     copyFile(path.join(options.source, "index.css"), path.join(destination, "index.css")),
     copyFile(path.join(options.workspace, "packages/ui-kit/theme.css"), path.join(destination, "theme.css")),
+    copyFile((await exists(classic)) ? classic : path.join(options.source, "index.css"), path.join(destination, "index.classic.css")),
+    copyFile(path.join(options.workspace, "packages/ui-kit/theme.classic.css"), path.join(destination, "theme.classic.css")),
   ]);
   const html = options.rewrite(await readFile(path.join(options.source, "index.html"), "utf8"));
   await writeFile(path.join(destination, "index.html"), html);

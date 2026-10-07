@@ -22,6 +22,7 @@ export interface SettingsSection {
 
 export interface SettingsActions {
   setUiScale(value: SharedSettingsState["launcher"]["uiScale"]): void;
+  setLook(value: SharedSettingsState["launcher"]["look"]): void;
   setMinimizeToTray(value: boolean): void;
   setCaptureAdapter(value: string): void;
   refreshCaptureDevices(): void;

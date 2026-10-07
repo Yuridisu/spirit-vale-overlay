@@ -1,4 +1,5 @@
 import { DisposableStore, onceWindowEvent } from "@svoverlay/desktop-platform/window-lifecycle";
+import { registerLookWindow } from "@svoverlay/desktop-platform/look-window";
 import { translate } from "@svoverlay/i18n/backend";
 import { BrowserView, BrowserWindow } from "@svoverlay/desktop-runtime";
 
@@ -105,6 +106,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
   });
   window.setAlwaysOnTop(true);
   window.hideFromTaskbar();
+  lifecycle.add(registerLookWindow(window));
   window.setClickThrough(controller.locked);
   if (controller.overlayVisible) window.showInactive();
   lifecycle.add(onceWindowEvent(window, "close", () => {

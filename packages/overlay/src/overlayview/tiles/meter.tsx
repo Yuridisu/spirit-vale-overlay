@@ -4,6 +4,7 @@ import type { OverlayMeterPoint } from "../../app-types.ts";
 import type { OverlayChrome } from "../store.ts";
 import { chromeState, meterState } from "../store.ts";
 import { WaitingForDps, overlayClassIcon, teamColor } from "./common.tsx";
+import { lookState } from "../look.ts";
 
 
 function meterMetricLabel(next: OverlayChrome): string {
@@ -57,6 +58,29 @@ export function PersonalDpsElement() {
   const t = useTranslator();
   const personal = meterState.value?.personal;
   const personalDpsMode = chromeState.value?.personalDpsMode;
+  if (lookState.value === "classic") {
+    // The 0.10.13 markup, which the classic stylesheet lays out.
+    return (
+      <div class="element-content">
+        <div class="personal-heading">
+          <img class="personal-class-icon" src={overlayClassIcon(personal?.archetype)} alt="" aria-hidden="true" />
+          <div>
+            <h2 class="element-title">{t(personalDpsMode === "live" ? "overlay.personal.live" : "overlay.personal.encounter")}</h2>
+            {personalDpsMode !== "live" && <span class="personal-duration">{formatDuration(personal?.durationMs ?? 0)}</span>}
+          </div>
+        </div>
+        {personal ? (
+          <>
+            <span class="personal-value">{formatDps(personal.currentDps)}</span><span class="personal-unit">{t("overlay.personal.unit")}</span>
+            <div class="personal-details">
+              <span>{t("overlay.personal.damage")}<strong>{formatCompact(personal.damage)}</strong></span>
+              <span>{t("overlay.personal.critRate")}<strong>{personal.critRate === undefined ? "—" : `${Math.round(personal.critRate * 100)}%`}</strong></span>
+            </div>
+          </>
+        ) : <WaitingForDps />}
+      </div>
+    );
+  }
   return (
     <div class="element-content">
       <div class="personal-scorebug">

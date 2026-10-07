@@ -78,6 +78,7 @@ import { WindowSlot } from "./window-slot.ts";
 import { resolveDesktopStoragePaths } from "./portable-paths.ts";
 import type { WindowFrame } from "@svoverlay/ui-kit/window-chrome";
 import { registerUiScaleWindow, scaledSize, setUiScale } from "@svoverlay/desktop-platform/ui-scale-window";
+import { registerLookWindow, setLook } from "@svoverlay/desktop-platform/look-window";
 import { WindowPlacementStore } from "@svoverlay/desktop-platform/window-placement";
 import { launcherMinimizeAction, trayAction } from "./launcher-tray-actions.ts";
 import { findAvailableUpdate, type ReleaseDownload } from "../launcher/update-check.ts";
@@ -189,6 +190,7 @@ const bossTimers = await createBossTimerCoordinator({
 });
 const settings = await loadLauncherSettings(storagePaths.launcherSettingsPath);
 setUiScale(settings.uiScale);
+setLook(settings.look);
 const placements = await WindowPlacementStore.load(storagePaths.windowPlacementsPath, {
   onWarning: (warning) => reportStorageWarning("window placements", saveFailure(warning)),
 });
@@ -208,6 +210,7 @@ let launcherState: LauncherState = {
   adapterFallback: false,
   adapters: [],
   uiScale: settings.uiScale,
+  look: settings.look,
   minimizeToTray: settings.minimizeToTray,
   resetMeterOnMapChange: settings.resetMeterOnMapChange,
   resetGoldOnMapChange: settings.resetGoldOnMapChange,
@@ -643,6 +646,10 @@ const settingsRpc = BrowserView.defineRPC<LauncherSettingsRpc>({
         await setLauncherUiScale(uiScale);
         return sharedSettingsState();
       },
+      setLook: async ({ look }) => {
+        setLauncherLook(look);
+        return sharedSettingsState();
+      },
       setMinimizeToTray: async ({ minimizeToTray }) => {
         setMinimizeToTray(minimizeToTray);
         return sharedSettingsState();
@@ -715,6 +722,7 @@ launcherWindow = new BrowserWindow({
 applyRoundedCorners(launcherWindow.ptr);
 setWindowIcon(launcherWindow.ptr, appIconPath);
 launcherLifecycle.add(registerUiScaleWindow(launcherWindow, { scaleInitialFrame: false }));
+launcherLifecycle.add(registerLookWindow(launcherWindow));
 launcherLifecycle.add(placements.track("launcher", launcherWindow));
 
 const tray = new Tray({
@@ -962,9 +970,11 @@ async function applyLauncherSettings(next: LauncherSettings): Promise<void> {
   const previousAdapter = settings.captureAdapter;
   Object.assign(settings, next);
   setUiScale(settings.uiScale);
+  setLook(settings.look);
   launcherState = {
     ...launcherState,
     uiScale: settings.uiScale,
+    look: settings.look,
     minimizeToTray: settings.minimizeToTray,
     resetMeterOnMapChange: settings.resetMeterOnMapChange,
     resetGoldOnMapChange: settings.resetGoldOnMapChange,
@@ -1079,6 +1089,7 @@ function openSettings(section?: SettingsSectionId): void {
   applyRoundedCorners(nextWindow.ptr);
   setWindowIcon(nextWindow.ptr, appIconPath);
   lifecycle.add(registerUiScaleWindow(nextWindow, { scaleInitialFrame: false }));
+  lifecycle.add(registerLookWindow(nextWindow));
   lifecycle.add(placements.track("launcher-settings", nextWindow));
   lifecycle.add(onWindowEvent(nextWindow, "resize", (event: { data: { width: number; height: number } }) => {
     const width = Math.max(scaledSize(560), event.data.width);
@@ -1121,6 +1132,10 @@ function applySetting<K extends keyof LauncherSettings & keyof LauncherState>(
 
 async function setLauncherUiScale(uiScale: typeof settings.uiScale): Promise<LauncherState> {
   return applySetting("uiScale", setUiScale(uiScale));
+}
+
+function setLauncherLook(look: typeof settings.look): LauncherState {
+  return applySetting("look", setLook(look));
 }
 
 function setMinimizeToTray(minimizeToTray: boolean): LauncherState {

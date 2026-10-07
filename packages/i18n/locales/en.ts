@@ -316,6 +316,10 @@ export const en = {
   "settings.general.description": "Configure application behavior and appearance.",
   "settings.general.interfaceScale.label": "Interface scale",
   "settings.general.interfaceScale.search": "Interface scale UI appearance zoom percentage",
+  "settings.general.look.label": "Visual style",
+  "settings.general.look.search": "Visual style look layout theme design classic legacy new old 0.10.13 0.10.14",
+  "settings.general.look.broadcast": "New (0.10.14)",
+  "settings.general.look.classic": "Classic (0.10.13)",
   "settings.general.minimizeToTray.label": "Minimize and close the launcher to the tray (exit from the tray icon)",
   "settings.general.minimizeToTray.search": "Minimize launcher to tray notification area close behavior",
 

@@ -1,0 +1,257 @@
+/* Classic look (0.10.13), chosen in Settings > General > Visual style.
+   This is the stylesheet as it was before the 0.10.14 redesign (9bc56e9); the build ships it
+   beside the new one as index.classic.css / theme.classic.css. Keep fixes to either look in
+   its own file. */
+
+
+:root,
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.app-shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: 40px auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 620px;
+  min-height: 520px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+}
+
+.log-tabs { margin: 6px 12px; }
+.boss-screen { display: flex; min-height: 0; flex: 1; flex-direction: column; padding: 0 12px 12px; overflow: auto; }
+.boss-fight-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }
+.boss-fight-list { display: grid; gap: 6px; }
+.boss-fight-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface-container);
+  color: var(--on-surface);
+  text-align: left;
+}
+.boss-fight-item:hover { border-color: var(--primary); }
+.boss-fight-item.active { border-color: var(--primary); background: var(--primary-container); }
+.boss-fight-item strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.boss-fight-item span { color: var(--on-surface-variant); font-size: 11px; font-variant-numeric: tabular-nums; }
+.boss-fight-detail { display: grid; min-width: 0; gap: 10px; }
+.boss-fight-title { margin: 0; color: var(--on-surface); font-size: 16px; }
+.boss-fight-map { margin-left: 10px; color: var(--on-surface-variant); font-size: 12px; font-weight: 400; }
+.boss-fight-bosses { display: flex; flex-wrap: wrap; gap: 6px; }
+.boss-fight-bosses .btn { height: 28px; font-size: 12px; }
+.boss-fight-clear { justify-self: stretch; font-size: 12px; }
+.boss-fight-clear.is-confirming { border-color: var(--error); color: var(--error); }
+.boss-fight-hint { margin: 0; color: var(--on-surface-variant); font-size: 11px; }
+.boss-skill-row > td { padding: 6px 10px 10px 34px; background: var(--surface-container-low); }
+.boss-skill-table { width: 100%; font-size: 12px; }
+.meter-table-row.is-expanded { outline: 1px solid var(--primary); outline-offset: -1px; }
+.boss-drop-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.boss-drop {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--outline-variant);
+  border-left: 3px solid var(--on-surface-variant);
+  border-radius: var(--shape-sm, 6px);
+  background: var(--surface-container);
+  font-size: 12px;
+}
+.boss-drop.rarity-1 { border-left-color: #6fbf73; }
+.boss-drop.rarity-2 { border-left-color: #4a90ff; }
+.boss-drop.rarity-3 { border-left-color: #c48aff; }
+.boss-drop.rarity-4 { border-left-color: #ffd54a; }
+.log-tabs > button { flex: 1; padding: 6px 10px; font-size: 12px; }
+
+.live-screen {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.titlebar {
+  background: var(--surface-container-low);
+}
+
+.icon-button.active,
+.seg > button.active {
+  background: var(--secondary-container);
+}
+
+.banner.is-warn {
+  background: var(--warning-container);
+}
+
+.command-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  padding: 4px 10px 0;
+}
+
+.command-bar-actions { display: flex; gap: 6px; }
+.zone-pill { max-width: 220px; overflow: hidden; padding: 4px 8px; border-radius: var(--shape-sm); background: var(--tertiary-container); color: var(--on-tertiary-container); font-size: 11px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+
+.command-bar .btn { padding: 4px 8px; font-size: 11px; }
+
+.stat-type-picker { display: grid; gap: 4px; min-width: 140px; }
+
+.status-strip {
+  display: grid;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.summary-table-scroll { width: 100%; }
+.summary-table { min-width: 100%; table-layout: fixed; }
+.summary-table :is(th, td) { width: 25%; overflow: hidden; padding: 5px 8px; text-overflow: ellipsis; }
+.summary-table tbody td { font-size: 14px; }
+
+#storage-warning { margin: 0 12px 10px; }
+
+.tabs { margin: 0 12px 8px; }
+.tabs > button { flex: 1; padding: 5px 10px; font-size: 11px; }
+
+.panel {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px 14px;
+}
+
+.meter-table-scroll { width: 100%; }
+.meter-table { min-width: 480px; }
+.meter-table :is(th, td) { padding: 4px 7px; }
+.meter-table thead th.sortable-column { padding: 0; }
+.party-meter-table { min-width: 100%; table-layout: fixed; }
+.party-meter-table :is(th, td):first-child { width: 18%; }
+.party-meter-table :is(th, td):nth-child(2) { width: 22%; text-align: left; }
+.party-meter-table :is(th, td):nth-child(n + 3) { width: 10%; padding-right: 4px; padding-left: 4px; }
+.party-meter-table :is(th, td):nth-child(n + 3) .sort-button { padding-right: 4px; padding-left: 4px; }
+.party-meter-table tbody :is(th, td) { overflow: hidden; text-overflow: ellipsis; }
+.meter-table .sort-button { padding: 4px 7px; }
+.meter-table-row { background: linear-gradient(90deg, var(--primary-container) 0 var(--row-fill), var(--surface-container-low) var(--row-fill) 100%) !important; }
+.meter-table-row:nth-child(even) { background: linear-gradient(90deg, var(--primary-container) 0 var(--row-fill), var(--surface-container) var(--row-fill) 100%) !important; }
+.live-player-row { cursor: default; }
+.live-player-row:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+.combat-class-cell { text-align: left !important; }
+.combat-class-content { display: flex; align-items: center; gap: 5px; }
+.combat-class-icon, .combat-class-placeholder { flex: 0 0 18px; width: 18px; height: 18px; }
+.combat-class-icon { object-fit: contain; }
+.combat-class-placeholder { display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: 11px; }
+.combat-class-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.player-combat-table { min-width: 760px; }
+.player-combat-table :is(th, td):nth-child(2) { text-align: left; }
+
+@media (max-width: 380px) {
+  .brand > span:not(.brand-tag) { display: none; }
+}
+
+.personal-form { margin: 10px 0 6px; }
+.personal-form .t-label { display: block; margin: 0 0 5px 1px; }
+.personal-form .actor-label { margin-top: 10px; }
+.detected-character { min-height: 20px; margin: 0; padding: 7px 10px; border-radius: var(--shape-sm); background: var(--surface-container-low); }
+
+.personal-hint {
+  min-height: 14px;
+  margin: 4px 1px 10px;
+  color: var(--on-surface-variant);
+  font-size: 11px;
+}
+
+.past-session-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  min-height: 0;
+  padding: 10px 16px 16px;
+}
+
+.picker-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.picker-intro h1 { margin: 0; font-size: 18px; font-weight: 500; }
+.picker-intro p { margin: 5px 0 0; color: var(--on-surface-variant); font-size: 12px; }
+.picker-status.is-error { color: var(--error); }
+.past-date-filter { position: relative; display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--outline-variant); border-radius: var(--shape-md); background: var(--surface-container-low); }
+.custom-date-range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.date-boundary { position: relative; display: grid; grid-template-columns: minmax(130px, 1fr) minmax(150px, auto); gap: 6px; }
+.date-boundary-label { grid-column: 1 / -1; color: var(--on-surface-variant); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.date-field { display: flex; align-items: center; gap: 7px; min-width: 0; height: 32px; padding: 5px 9px; border: 1px solid var(--outline); border-radius: var(--shape-xs); background: transparent; color: var(--on-surface); font-size: 11px; text-align: left; }
+.date-field:hover, .date-field.is-open { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.date-field span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-icon { flex: 0 0 15px; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+.typed-time { display: grid; grid-template-columns: 52px auto; height: 32px; border: 1px solid var(--outline); border-radius: var(--shape-xs); }
+.typed-time:focus-within { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.typed-time.is-invalid { border-color: var(--error); }
+.typed-time label { min-width: 0; }
+.typed-time input { box-sizing: border-box; width: 100%; height: 30px; padding: 5px 6px; border: 0; outline: 0; background: transparent; color: var(--on-surface); font: inherit; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
+.typed-time input::placeholder { color: var(--on-surface-variant); }
+.meridiem-picker { display: grid; grid-template-columns: 1fr 1fr; margin: 2px; border-radius: 3px; background: var(--surface-container); }
+.meridiem-picker button { min-width: 31px; padding: 0 4px; border: 0; border-radius: 3px; background: transparent; color: var(--on-surface-variant); font-size: 9px; }
+.meridiem-picker button.is-active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.date-range-arrow { align-self: end; padding-bottom: 7px; color: var(--on-surface-variant); }
+.date-filter-actions { display: flex; gap: 4px; }
+.date-filter-actions .btn { height: 32px; padding: 5px 9px; white-space: nowrap; }
+.zone-filter { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; justify-items: start; }
+.zone-filter .date-boundary-label { color: var(--on-surface-variant); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.zone-filter .multi-select-toggle { height: 32px; font-size: 11px; }
+.zone-filter .multi-select-panel { right: auto; left: 0; }
+.desktop-calendar { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; display: grid; gap: 7px; width: 276px; padding: 10px; border: 1px solid var(--outline); border-radius: var(--shape-md); background: var(--surface-container-high); box-shadow: 0 12px 28px rgb(0 0 0 / .35); }
+.calendar-header { display: grid; grid-template-columns: 30px 1fr 30px; align-items: center; }
+.calendar-header strong { font-size: 12px; font-weight: 600; text-align: center; }
+.calendar-header button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface); font-size: 20px; line-height: 1; }
+.calendar-header button:hover { background: var(--surface-container-highest); }
+.calendar-weekdays, .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.calendar-weekdays span { color: var(--on-surface-variant); font-size: 9px; font-weight: 600; text-align: center; text-transform: uppercase; }
+.calendar-days button { aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface); font-size: 11px; }
+.calendar-days button:hover { background: var(--surface-container-highest); }
+.calendar-days button.is-outside { color: var(--outline); }
+.calendar-days button.is-today { box-shadow: inset 0 0 0 1px var(--primary); }
+.calendar-days button.is-selected { background: var(--primary); color: var(--on-primary); box-shadow: none; }
+.session-list { display: grid; align-content: start; gap: 7px; min-height: 0; overflow: auto; padding-right: 3px; }
+.session-list-item { min-width: 0; }
+.session-row { display: grid; gap: 6px; width: 100%; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--shape-md); background: var(--surface-container-low); color: var(--on-surface); text-align: left; }
+.session-row:hover { background: var(--surface-container); }
+.session-row:disabled { cursor: default; opacity: .58; }
+.session-heading { display: flex; align-items: center; gap: 8px; }
+.session-heading .zone-pill { max-width: min(340px, 48vw); }
+.session-time { font-size: 13px; font-weight: 500; }
+.active-badge { background: var(--primary-container); color: var(--on-primary-container); }
+.session-summary { color: var(--on-surface-variant); font-size: 12px; font-variant-numeric: tabular-nums; }
+.picker-actions { display: flex; justify-content: flex-start; gap: 8px; }
+
+.past-analysis-panel { min-height: 0; overflow-y: auto; padding: 10px 16px 16px; }
+.past-analysis-panel .toolbar { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+.past-analysis-panel .back-button { align-self: center; }
+.past-analysis-panel .encounter-picker { display: grid; flex: 0 1 240px; gap: 4px; min-width: 160px; }
+.past-analysis-panel .stat-type-picker { display: grid; gap: 4px; min-width: 130px; }
+.past-analysis-panel .toolbar-meta { display: flex; flex: 1; justify-content: flex-end; }
+.past-analysis-panel .analysis-status { margin: 0 0 10px; color: var(--on-surface-variant); font-size: 12px; }
+.past-analysis-panel .banner { margin-bottom: 10px; }
+.past-analysis-panel .totals { margin-bottom: 14px; }
+.past-analysis-panel .players-section { min-height: 0; }
+.past-analysis-panel .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.past-analysis-panel .section-head h1 { margin: 0; font-size: 14px; font-weight: 500; }
+.past-analysis-panel .section-head p { margin: 0; color: var(--on-surface-variant); font-size: 12px; }
+.past-analysis-panel .player-row { cursor: default; }
+.past-analysis-panel .combat-table .player-row:hover,
+.past-analysis-panel .combat-table .player-row:focus { outline: none; background: var(--secondary-container); }
+.past-analysis-panel .combat-table .player-row:hover > *,
+.past-analysis-panel .combat-table .player-row:focus > * { color: var(--on-secondary-container); }
+
+@media (max-width: 760px) {
+  .custom-date-range { grid-template-columns: 1fr; }
+  .date-boundary { grid-template-columns: minmax(150px, 1fr) minmax(150px, auto); }
+  .date-range-arrow { display: none; }
+  .date-filter-actions { justify-self: start; }
+  .past-analysis-panel .toolbar { flex-wrap: wrap; }
+  .past-analysis-panel .toolbar-meta { flex: 0; justify-content: flex-start; }
+}

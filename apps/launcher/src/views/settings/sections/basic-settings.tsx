@@ -71,6 +71,11 @@ export function buildBasicSettingsSections({ state, busy, actions, t }: Settings
           content: <label class="settings-field"><span>{t("settings.general.interfaceScale.label")}</span><CustomSelect ariaLabel={t("settings.general.interfaceScale.label")} disabled={busy} value={String(launcher.uiScale)} options={UI_SCALE_OPTIONS} onChange={(value) => actions.setUiScale(Number(value) as typeof launcher.uiScale)} /></label>,
         },
         {
+          id: "look",
+          searchText: t("settings.general.look.search"),
+          content: <label class="settings-field"><span>{t("settings.general.look.label")}</span><CustomSelect ariaLabel={t("settings.general.look.label")} disabled={busy} value={launcher.look} options={[{ value: "broadcast", label: t("settings.general.look.broadcast") }, { value: "classic", label: t("settings.general.look.classic") }]} onChange={(value) => actions.setLook(value === "classic" ? "classic" : "broadcast")} /></label>,
+        },
+        {
           id: "minimize-to-tray",
           searchText: t("settings.general.minimizeToTray.search"),
           content: <label class="settings-check"><input type="checkbox" checked={launcher.minimizeToTray} disabled={busy} onChange={(event) => actions.setMinimizeToTray(event.currentTarget.checked)} /><span>{t("settings.general.minimizeToTray.label")}</span></label>,

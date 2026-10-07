@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { normalizeUiScale, type UiScale } from "@svoverlay/desktop-platform/ui-scale";
+import { normalizeLook, type Look } from "@svoverlay/desktop-platform/look";
 import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
 import { DEFAULT_HISTORY_SESSION_LIMIT, normalizeHistorySessionLimit } from "@svoverlay/desktop-platform/session-summary-journal";
@@ -8,6 +9,8 @@ import { DEFAULT_HISTORY_SESSION_LIMIT, normalizeHistorySessionLimit } from "@sv
 export interface LauncherSettings {
   captureAdapter: "auto" | string;
   uiScale: UiScale;
+  /** The windows' and overlay's visual style: the 0.10.14 broadcast look or the 0.10.13 classic one. */
+  look: Look;
   minimizeToTray: boolean;
   resetMeterOnMapChange: boolean;
   resetGoldOnMapChange: boolean;
@@ -18,6 +21,7 @@ export interface LauncherSettings {
 const defaults: LauncherSettings = {
   captureAdapter: "auto",
   uiScale: 1,
+  look: "broadcast",
   minimizeToTray: false,
   resetMeterOnMapChange: true,
   resetGoldOnMapChange: false,
@@ -35,6 +39,7 @@ export async function loadLauncherSettings(file = defaultSettingsFile()): Promis
         ? candidate.captureAdapter
         : defaults.captureAdapter,
       uiScale: normalizeUiScale(candidate.uiScale),
+      look: normalizeLook(candidate.look),
       minimizeToTray: candidate.minimizeToTray === true,
       resetMeterOnMapChange: typeof candidate.resetMeterOnMapChange === "boolean"
         ? candidate.resetMeterOnMapChange

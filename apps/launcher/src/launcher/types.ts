@@ -3,6 +3,7 @@ import type { OverlayTimerState, TimerMode } from "@svoverlay/overlay/timer";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { WindowFrame } from "@svoverlay/ui-kit/window-chrome";
 import type { UiScale } from "@svoverlay/desktop-platform/ui-scale";
+import type { Look } from "@svoverlay/desktop-platform/look";
 import type {
   KeybindAction,
   OverlayElementId,
@@ -50,6 +51,7 @@ export interface LauncherState {
   adapterFallback: boolean;
   adapters: CaptureAdapterOption[];
   uiScale: UiScale;
+  look: Look;
   minimizeToTray: boolean;
   resetMeterOnMapChange: boolean;
   resetGoldOnMapChange: boolean;
@@ -121,6 +123,7 @@ export type LauncherSettingsRpc = {
     getState: { params: Record<string, never>; response: SharedSettingsState };
     setCaptureAdapter: { params: { deviceName: string | null }; response: SharedSettingsState };
     setUiScale: { params: { uiScale: UiScale }; response: SharedSettingsState };
+    setLook: { params: { look: Look }; response: SharedSettingsState };
     setMinimizeToTray: { params: { minimizeToTray: boolean }; response: SharedSettingsState };
     setResetMeterOnMapChange: { params: { resetMeterOnMapChange: boolean }; response: SharedSettingsState };
     setResetGoldOnMapChange: { params: { resetGoldOnMapChange: boolean }; response: SharedSettingsState };
