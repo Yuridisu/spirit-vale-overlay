@@ -25,6 +25,8 @@ import {
 } from "../mapping/rpc-map.ts";
 import type { RpcLookup } from "../mapping/rpc-map.ts";
 import { parseObjectSpawn } from "./spawn.ts";
+import { recoverOwnDamageLink } from "../inference/own-links.ts";
+import type { NetworkTransformAxes } from "./network-transform.ts";
 import type { SpawnCandidate } from "./spawn.ts";
 import {
   checkedEnd,
@@ -48,6 +50,10 @@ export interface ConnectionState {
   components: Map<string, string>;
   staleLinks: Map<number, RpcLinkRegistrationState>;
   staleComponents: Map<string, string>;
+  /** Objects the local client moves itself (it sends their transforms), with their last position. */
+  ownPositions: Map<number, NetworkTransformAxes>;
+  /** Unregistered links that have landed hits near one of those objects, waiting to be bound. */
+  pendingOwnLinks: Map<number, { objectId: number; hits: number }>;
 }
 
 export interface ParsedMessage {
@@ -227,7 +233,10 @@ function parseRpcLink(
 
   const registration = state.links.get(packetId);
   const stale = registration === undefined ? state.staleLinks.get(packetId) : undefined;
-  const resolved = registration ?? stale;
+  // The local player's own object is spawned for them without its links, so hits on it are bound here.
+  const recovered = registration ?? stale ? undefined : recoverOwnDamageLink(options.rpcMap, state, packetId, packet.payload);
+  if (recovered) state.links.set(packetId, recovered);
+  const resolved = registration ?? stale ?? recovered;
   packet.linkResolved = resolved !== undefined;
   if (!resolved) return { packet, end, stop };
 
@@ -249,6 +258,7 @@ function parseRpcLink(
   packet.rpcHash = resolved.rpcHash;
   packet.networkBehaviourType = behaviourType;
   applyRpcLookup(packet, lookup);
+  if (recovered && packet.rpcResolution === "verified") packet.rpcResolution = "recovered";
   if (!stale) return { packet, end, stop };
 
   // Corroborated once is enough: promote it so later packets on this link cost a plain map hit, and report the weaker provenance.

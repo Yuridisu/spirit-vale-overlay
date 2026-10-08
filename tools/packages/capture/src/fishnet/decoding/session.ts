@@ -1,4 +1,5 @@
 import { parseMessage } from "./messages.ts";
+import { forgetOwnObject, noteOwnTransform } from "../inference/own-links.ts";
 import type { ConnectionState } from "./messages.ts";
 import { FishNetProtocolError, opaquePacket } from "./protocol.ts";
 import { readSignedPackedWhole } from "./wire-reader.ts";
@@ -58,7 +59,14 @@ export class FishNetSessionDecoder {
   private getConnection(key: string): ConnectionState {
     let state = this.connections.get(key);
     if (!state) {
-      state = { links: new Map(), components: new Map(), staleLinks: new Map(), staleComponents: new Map() };
+      state = {
+        links: new Map(),
+        components: new Map(),
+        staleLinks: new Map(),
+        staleComponents: new Map(),
+        ownPositions: new Map(),
+        pendingOwnLinks: new Map(),
+      };
       this.connections.set(key, state);
     }
     return state;
@@ -152,6 +160,11 @@ export class FishNetSessionDecoder {
       if (parsed.packet.packetName === "objectSpawn" && parsed.packet.objectId !== undefined) {
         removeObjectLinks(state, parsed.packet.objectId);
         removeObjectComponents(state, parsed.packet.objectId);
+        forgetOwnObject(state, parsed.packet.objectId);
+      }
+      // Only an object's owner sends the server its transform, so these are the local player's own.
+      if (parsed.packet.packetName === "serverRpc" && parsed.packet.objectId !== undefined && parsed.packet.networkTransform) {
+        noteOwnTransform(state, parsed.packet.objectId, parsed.packet.networkTransform.position);
       }
       // Freshly registered data always wins over a quarantined guess for the same key.
       if (parsed.componentBindings) {

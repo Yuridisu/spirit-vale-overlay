@@ -1617,3 +1617,58 @@ describe("FishNet bundles and sessions", () => {
     expect(unsupportedSpawn[0]).toMatchObject({ packetName: "objectSpawn", bundleIndex: 0 });
   });
 });
+
+describe("hits on the local player's own object", () => {
+  const map = loadBundledFishNetRpcMap();
+  const transformHash = map.behaviours
+    .find(({ typeName }) => typeName.endsWith("NetworkTransform"))!.rpcs
+    .find(({ methodName }) => methodName === "ServerUpdateTransform")!.wireHash;
+  const vector = (x: number, y: number, z: number) => Buffer.concat([f32(x), f32(y), f32(z)]);
+  /** The transform the local client sends for its own object: every axis as a full float. */
+  const ownTransform = (objectId: number, x: number, z: number) => {
+    const entry = Buffer.concat([Buffer.from([0x2a]), vector(x, 0, z)]);
+    return fixedServerRpc(objectId, 8, transformHash, Buffer.concat([packed(entry.length), entry]));
+  };
+  const hit = (team: number, attackerId: number, at: Buffer) => Buffer.concat([
+    packed(team), packed(1200), packed(2), packed(0), packed(1),
+    packed(Buffer.byteLength("Basic Attack")), Buffer.from("Basic Attack"),
+    packed(attackerId), Buffer.from([0, 0]),
+    packed(0), packed(0), packed(1),
+    at, vector(0, 0, 0),
+  ]);
+  /** The player's own spawn: the player prefab, with no RPC Link registrations, as the server sends it. */
+  const setup = (connectionId: string) => {
+    const decoder = new FishNetSessionDecoder(map);
+    const context = { reliable: true, connectionId };
+    decoder.decode(tick(1, spawnWithoutLinks(500, 4, 0)), context);
+    decoder.decode(tick(2, ownTransform(500, 10, 20)), context);
+    return (at: number, payload: Buffer) => decoder.decode(tick(at, linked(900, payload)), context)[0];
+  };
+
+  test("a link landing a monster's hits where the player stands is bound to their HealthComponent", () => {
+    const decode = setup("own-hit");
+    expect(decode(3, hit(1, 7000, vector(10.5, 0, 20)))).toMatchObject({ packetName: "rpcLink", linkResolved: false });
+    const second = decode(4, hit(1, 7000, vector(9.2, 0, 21)));
+    expect(second).toMatchObject({
+      linkResolved: true,
+      objectId: 500,
+      networkBehaviourType: "HealthComponent",
+      rpcName: "ApplyDamage_C",
+      rpcResolution: "recovered",
+    });
+    // Bound: later hits decode wherever they land.
+    expect(decode(5, hit(1, 7000, vector(60, 0, 60)))).toMatchObject({ linkResolved: true, objectId: 500, rpcName: "ApplyDamage_C" });
+  });
+
+  test("hits far from the player, or dealt by the player's side, are not taken as theirs", () => {
+    const far = setup("own-far");
+    expect(far(3, hit(1, 7000, vector(40, 0, 40)))).toMatchObject({ linkResolved: false });
+    expect(far(4, hit(1, 7000, vector(40, 0, 40)))).toMatchObject({ linkResolved: false });
+    const ownSide = setup("own-side");
+    expect(ownSide(3, hit(0, 7000, vector(10, 0, 20)))).toMatchObject({ linkResolved: false });
+    expect(ownSide(4, hit(0, 7000, vector(10, 0, 20)))).toMatchObject({ linkResolved: false });
+    const ownHits = setup("own-attacker");
+    expect(ownHits(3, hit(1, 500, vector(10, 0, 20)))).toMatchObject({ linkResolved: false });
+    expect(ownHits(4, hit(1, 500, vector(10, 0, 20)))).toMatchObject({ linkResolved: false });
+  });
+});
