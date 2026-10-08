@@ -37,6 +37,16 @@ describe("PickedUpDrops", () => {
     expect(dropKey("+9 Speed Gauntlets")).toBe("speed gauntlets");
   });
 
+  test("an artifact picked up matches its drop, which is named for its slot", () => {
+    const drops = new PickedUpDrops(1_000);
+    drops.notePickup(["Blitzcore"], 0, { artifacts: true });
+    expect(drops.due(1_000, [drop(1, "Blitzcore Jewel", [2, 0, 0]), drop(2, "Spider Web", [0, 0, 0])], self)).toEqual([1]);
+    // Only artifacts: an item called "Blitzcore" would not take a "Blitzcore Jewel" drop.
+    const items = new PickedUpDrops(1_000);
+    items.notePickup(["Blitzcore"], 0);
+    expect(items.due(1_000, [drop(1, "Blitzcore Jewel", [2, 0, 0])], self)).toEqual([]);
+  });
+
   test("a pickup with no matching drop on the ground is dropped quietly", () => {
     const drops = new PickedUpDrops(1_000);
     drops.notePickup(["Starfire Relic"], 0);

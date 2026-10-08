@@ -1672,8 +1672,8 @@ export class CaptureCoordinator {
       for (const listener of this.stackPickupListeners) listener({ displayName, count: item.count });
     }
     for (const equipment of pickup.equipment) pickedUp.push(resolveFishNetItemDisplayName(2, equipment.itemId) ?? equipment.itemId);
-    for (const artifact of pickup.artifacts) pickedUp.push(resolveFishNetItemDisplayName(3, artifact.itemId) ?? artifact.itemId);
     this.pickedUpDrops.notePickup(pickedUp, this.clock.now());
+    this.pickedUpDrops.notePickup(pickup.artifacts.map((artifact) => resolveFishNetItemDisplayName(3, artifact.itemId) ?? artifact.itemId), this.clock.now(), { artifacts: true });
     for (const equipment of pickup.equipment) {
       for (const listener of this.gearPickupListeners) listener(equipment);
     }

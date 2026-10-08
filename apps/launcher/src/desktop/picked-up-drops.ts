@@ -3,7 +3,10 @@ import type { FishNetLootDrop } from "@kar-mi/spirit-vale-tools-rewards";
 /** How long a pickup and a despawn of the same item may be apart and still be the same pickup. */
 export const PICKUP_GRACE_MS = 3_000;
 
-interface Pending { key: string; atMs: number }
+interface Pending { key: string; atMs: number; artifact?: boolean }
+
+/** An artifact drops named for its slot ("Blitzcore Jewel") while the pickup names only the artifact ("Blitzcore"). */
+const ARTIFACT_SLOT = / (rune|jewel|scroll|relic)$/;
 
 /**
  * Finds the ground drops a pickup took when the game never despawns them. Items a pet picks up
@@ -22,9 +25,11 @@ export class PickedUpDrops {
     if (drop.displayName) this.removals.push({ key: dropKey(drop.displayName), atMs: nowMs });
   }
 
-  /** Items that just entered the bag, by display name. */
-  notePickup(names: readonly string[], nowMs: number): void {
-    for (const name of names) if (name.trim()) this.pickups.push({ key: dropKey(name), atMs: nowMs });
+  /** Items that just entered the bag, by display name; artifacts match a drop named for their slot too. */
+  notePickup(names: readonly string[], nowMs: number, options: { artifacts?: boolean } = {}): void {
+    for (const name of names) {
+      if (name.trim()) this.pickups.push({ key: dropKey(name), atMs: nowMs, ...(options.artifacts ? { artifact: true } : {}) });
+    }
   }
 
   /** The object ids of drops to forget now, out of those still believed to be on the ground. */
@@ -34,9 +39,9 @@ export class PickedUpDrops {
     const waiting: Pending[] = [];
     for (const pickup of this.pickups) {
       if (nowMs - pickup.atMs < this.graceMs) { waiting.push(pickup); continue; }
-      const despawned = this.removals.findIndex((removal) => sameItem(removal.key, pickup.key) && Math.abs(removal.atMs - pickup.atMs) <= this.graceMs);
+      const despawned = this.removals.findIndex((removal) => matches(removal.key, pickup) && Math.abs(removal.atMs - pickup.atMs) <= this.graceMs);
       if (despawned >= 0) { this.removals.splice(despawned, 1); continue; }
-      const candidates = left.filter((drop) => sameItem(dropKey(drop.displayName!), pickup.key) && !forget.includes(drop.objectId));
+      const candidates = left.filter((drop) => matches(dropKey(drop.displayName!), pickup) && !forget.includes(drop.objectId));
       if (!candidates.length) continue;
       const nearest = candidates.reduce((best, drop) => (distance(drop, self) < distance(best, self) ? drop : best));
       forget.push(nearest.objectId);
@@ -61,6 +66,10 @@ export function dropKey(name: string): string {
 
 function sameItem(a: string, b: string): boolean {
   return a === b || a.endsWith(` ${b}`) || b.endsWith(` ${a}`);
+}
+
+function matches(dropName: string, pickup: Pending): boolean {
+  return sameItem(dropName, pickup.key) || (pickup.artifact === true && sameItem(dropName.replace(ARTIFACT_SLOT, ""), pickup.key));
 }
 
 function distance(drop: FishNetLootDrop, self: { x: number; y: number; z: number } | undefined): number {
