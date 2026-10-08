@@ -297,3 +297,17 @@ body {
 .battle-row { border-radius: var(--shape-sm); }
 .battle-stack, .battle-bar, .battle-bar span { border-radius: 999px; }
 .battle-tag { border-radius: 999px; }
+
+/* Best next stat */
+.battle-advice { display: grid; gap: 6px; padding: 10px 12px; background: var(--surface-container); box-shadow: inset 3px 0 0 var(--primary); }
+.battle-advice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.battle-advice-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.battle-advice-list li { display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(60px, 1fr) 160px; align-items: center; gap: 10px; color: var(--on-surface-variant); font-size: 13px; }
+.battle-advice-list li.is-best { color: var(--on-surface); }
+.battle-advice-label strong { color: var(--on-surface); font-weight: 800; }
+.battle-advice-bar { height: 5px; overflow: hidden; background: var(--surface-container-high); }
+.battle-advice-bar span { display: block; height: 100%; background: var(--outline); }
+.battle-advice-list li.is-best .battle-advice-bar span { background: var(--primary); }
+.battle-advice { border-radius: var(--shape-sm); }
+.battle-advice-bar, .battle-advice-bar span { border-radius: 999px; }
+.battle-advice-list .battle-num { text-align: right; }

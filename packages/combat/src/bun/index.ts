@@ -21,6 +21,7 @@ import type { CombatReadModelSource } from "../combat-history.ts";
 import { readCombatLocations } from "../zone-log.ts";
 import { matchesZoneKeys, spiritValeLocationKey, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
 import { LiveCombatController } from "./live-combat-controller.ts";
+import type { SkillFormula } from "../battle-analysis.ts";
 import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
 import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 
@@ -41,6 +42,8 @@ export interface DpsWindowOptions {
   getBossFights?: () => BossFightReport[];
   subscribeBossFights?: (listener: (fights: BossFightReport[]) => void) => () => void;
   onClearBossFights?: () => void;
+  /** Skill damage formulas by game skill id, from spiritvalers.com, for Battle Analysis. */
+  loadSkillFormulas?: () => Promise<Record<string, SkillFormula>>;
 }
 
 export async function createDpsWindow(options: DpsWindowOptions) {
@@ -222,6 +225,10 @@ window = managed.window;
 const unsubscribeCharacter = options.subscribeCharacter((state) => live.syncCharacter(state));
 await loadJsonSettings(battleSetsPath, (value) => { live.battle.loadSets(value); return true; }, () => false);
 battleSetsRevision = live.battle.revision;
+void options.loadSkillFormulas?.().then((formulas) => {
+  live.battle.setSkillFormulas(formulas);
+  if (screen === "battle") publish();
+}).catch(() => { /* Battle Analysis shows no formulas */ });
 const battleSetsTimer = setInterval(() => { void saveBattleSets(); }, 30_000);
 battleSetsTimer.unref?.();
 const unsubscribeBossFights = options.subscribeBossFights?.((fights) => {

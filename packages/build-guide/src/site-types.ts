@@ -28,6 +28,8 @@ export interface SiteSkill {
   maxLevel: number;
   isPassive: boolean;
   requirements: Array<{ id: string; name?: string; level: number }>;
+  /** Per-level numbers; `damage` is the percent of ATK or MATK, `base + level × skill level`. */
+  values?: { damage?: { base: number; level: number } };
 }
 
 /** A row of `/api/builds?shape=library`. */

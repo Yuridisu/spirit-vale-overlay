@@ -56,6 +56,7 @@ function Sources({ view }: { view: BattleAnalysisView }) {
   const top = view.sources[0]?.damage || 1;
   return (
     <>
+      {view.advice.length > 0 && <Advice view={view} />}
       {view.elements.length > 0 && (
         <div class="battle-elements">
           <div class="battle-stack">{view.elements.map((e) => <span key={e.name} style={{ width: `${(e.share * 100).toFixed(2)}%`, background: elementColor(e.name) }} />)}</div>
@@ -65,6 +66,7 @@ function Sources({ view }: { view: BattleAnalysisView }) {
       <ul class="battle-list">
         {view.sources.map((s) => {
           const meta: string[] = [];
+          if (s.formula) meta.push(t("combat.battle.formula", { level: s.formula.level, percent: s.formula.percent, stat: s.formula.scales }));
           if (s.autocasts) meta.push(t("combat.battle.autocasts", { count: s.autocasts, level: s.autocastLevels[0]?.level ?? "?" }));
           if (s.casts) meta.push(t("combat.battle.casts", { count: s.casts }));
           if (s.cloneShare >= 0.01) meta.push(t("combat.battle.byClones", { share: pct(s.cloneShare) }));
@@ -81,6 +83,35 @@ function Sources({ view }: { view: BattleAnalysisView }) {
         })}
       </ul>
     </>
+  );
+}
+
+/** The stats worth raising next, the best in bold: whatever bonus is held least is worth most. */
+function Advice({ view }: { view: BattleAnalysisView }) {
+  const t = useTranslator();
+  const ranked = view.advice.filter((row) => row.kind === "percent");
+  const flats = view.advice.filter((row) => row.kind === "flat");
+  const best = ranked[0]?.gain || 1;
+  return (
+    <div class="battle-advice">
+      <div class="battle-advice-head">
+        <span class="battle-name">{t("combat.battle.advice.title")}</span>
+        <span class="battle-meta">{t("combat.battle.advice.basis")}</span>
+      </div>
+      <ul class="battle-advice-list">
+        {ranked.map((row) => (
+          <li key={row.key} class={row.best ? "is-best" : undefined}>
+            <span class="battle-advice-label">{row.best ? <strong>{row.label}</strong> : row.label}{row.best ? <span class="battle-badge">{t("combat.battle.advice.best")}</span> : null}</span>
+            <span class="battle-advice-bar"><span style={{ width: `${Math.max(4, (row.gain / best) * 100).toFixed(1)}%` }} /></span>
+            <span class="battle-num">+{(row.gain * 100).toFixed(2)}%<small>{t("combat.battle.advice.now", { value: row.now })}</small></span>
+          </li>
+        ))}
+      </ul>
+      {flats.map((row) => (
+        <p class="battle-meta" key={row.key}>{t("combat.battle.advice.flat", { label: row.label, gain: (row.gain * 100).toFixed(2), equals: (row.equalsPercent ?? 0).toFixed(1), now: row.now, stat: row.key === "atk-flat" ? "ATK" : "MATK" })}</p>
+      ))}
+      <p class="battle-hint">{t("combat.battle.advice.hint")}</p>
+    </div>
   );
 }
 

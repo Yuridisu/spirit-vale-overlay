@@ -32,6 +32,8 @@ const STAT = {
   MAGIC_DAMAGE: 48,
   SKILL_DAMAGE: 49,
   MULTISTRIKE: 80,
+  ATK_MULTIPLIER: 69,
+  MATK_MULTIPLIER: 70,
 } as const;
 
 /** Hits closer together than this count as one stretch of fighting for damage per second. */
@@ -68,6 +70,36 @@ export type SubstatRescaler = (snapshot: CharacterSnapshot) => CharacterSnapshot
 
 export type BattlePartKind = "measured" | "split" | "estimated";
 
+/** A skill's damage from spiritvalers.com: `base + perLevel × level` percent of ATK or MATK. */
+export interface SkillFormula {
+  base: number;
+  perLevel: number;
+  /** The site's name for it ("Meteor"), to find it when the game's id differs. */
+  name?: string;
+}
+
+/**
+ * One stat the player could raise next and what it would add, as a share of damage per second.
+ * Estimated: bonuses of one kind add up and different kinds multiply, so +1% is worth
+ * share / (100 + the bonus already held); flat ATK or MATK is worth its share of the total.
+ */
+export interface BattleAdviceRow {
+  key: string;
+  label: string;
+  /** Damage per second gained, as a fraction (0.004 = +0.4%). */
+  gain: number;
+  /** What the player holds of it now, from gear. */
+  now: string;
+  /**
+   * "percent" bonuses are ranked against each other (the best one is marked); a "flat" amount is
+   * not comparable to a percent, so it is given as what percent of MATK or ATK it equals.
+   */
+  kind: "percent" | "flat";
+  /** For a flat amount: the percent of MATK or ATK it is worth as much as. */
+  equalsPercent?: number;
+  best: boolean;
+}
+
 export interface BattleSourceRow {
   id: string;
   label: string;
@@ -83,6 +115,8 @@ export interface BattleSourceRow {
   autocastLevels: Array<{ level: number; count: number }>;
   element?: string;
   multistrike?: { extraHits: number; damage: number };
+  /** The skill's damage formula at the learned level, when spiritvalers.com has it. */
+  formula?: { level: number; percent: number; scales: "MATK" | "ATK" };
 }
 
 export interface BattleItemPart {
@@ -124,6 +158,8 @@ export interface BattleAnalysisView {
   dps: number;
   cloneShare: number;
   hasGear: boolean;
+  /** Stats to raise next, best first; empty until there is damage and gear to judge by. */
+  advice: BattleAdviceRow[];
   sources: BattleSourceRow[];
   elements: Array<{ name: string; damage: number; share: number }>;
   items: BattleItemRow[];
@@ -155,6 +191,7 @@ interface SourceTally {
   casts: number;
   autocastLevels: Map<number, number>;
   elements: Map<string, number>;
+  types: Map<number, number>;
 }
 
 interface Session {
@@ -269,12 +306,27 @@ export class BattleAnalysis {
   private lines: GearLine[] = [];
   private loadout: string | undefined;
   private readonly sets = new Map<string, BattleSetRecord & { lastHitAt?: number }>();
+  private formulas = new Map<string, SkillFormula>();
+  private attack: { magic?: number; physical?: number } = {};
   revision = 0;
 
   constructor(private readonly deps: { resolveItem: ItemResolver; resolveSkill?: SkillResolver; rescale?: SubstatRescaler }) {}
 
   reset(nowMs = Date.now()): void {
     this.session = newSession(nowMs);
+    this.revision += 1;
+  }
+
+  /** Skill damage formulas by game skill id (FirePillar), from spiritvalers.com. */
+  setSkillFormulas(formulas: Record<string, SkillFormula>): void {
+    this.formulas = new Map(Object.entries(formulas));
+    this.revision += 1;
+  }
+
+  /** The character's attack totals (from the stat sheet), for what flat ATK or MATK is worth. */
+  setAttack(attack: { magic?: number; physical?: number }): void {
+    if (attack.magic === this.attack.magic && attack.physical === this.attack.physical) return;
+    this.attack = attack;
     this.revision += 1;
   }
 
@@ -332,6 +384,7 @@ export class BattleAnalysis {
     if (event.hitResult === "critical") row.crits += 1;
     if (event.isClone) { row.cloneDamage += value; s.cloneDamage += value; }
     bump(row.elements, element, value);
+    if (event.damageType !== undefined) bump(row.types, num(event.damageType), value);
     s.damage += value;
     bump(s.elements, element, value);
     if (event.damageType !== undefined) bump(s.types, num(event.damageType), value);
@@ -379,6 +432,7 @@ export class BattleAnalysis {
           casts: row.casts,
           ...(casts ? { autocastShare: row.autocasts / casts } : {}),
           autocastLevels: [...row.autocastLevels.entries()].sort((a, b) => b[1] - a[1]).map(([level, count]) => ({ level, count })),
+          ...this.formulaFor(row),
           ...(element && element !== "Unknown" ? { element } : {}),
           ...(row.id === BASIC_ATTACK && s.multistrike.extraHits ? { multistrike: { ...s.multistrike } } : {}),
         };
@@ -408,6 +462,7 @@ export class BattleAnalysis {
       dps: s.activeMs > 0 ? s.damage / activeSec : 0,
       cloneShare: s.damage ? s.cloneDamage / s.damage : 0,
       hasGear: this.lines.length > 0,
+      advice: this.advice(),
       sources,
       elements,
       items: this.items(),
@@ -435,10 +490,81 @@ export class BattleAnalysis {
     }
   }
 
+  /** The skill's percent at the level learned (or autocast at), and what it scales with. */
+  /**
+   * The formula for a damage source: by the game's id, else by name, else the one site id the
+   * game's id starts with (the game's MeteorStorm is the site's Meteor).
+   */
+  private findFormula(row: SourceTally): { id: string; formula: SkillFormula } | undefined {
+    const exact = this.formulas.get(row.id);
+    if (exact) return { id: row.id, formula: exact };
+    const label = row.label.toLowerCase();
+    for (const [id, formula] of this.formulas) if (formula.name?.toLowerCase() === label) return { id, formula };
+    const prefixed = [...this.formulas].filter(([id]) => id.length >= 4 && row.id.startsWith(id));
+    return prefixed.length === 1 ? { id: prefixed[0]![0], formula: prefixed[0]![1] } : undefined;
+  }
+
+  private formulaFor(row: SourceTally): Pick<BattleSourceRow, "formula"> {
+    const found = this.findFormula(row);
+    if (!found) return {};
+    const { formula } = found;
+    const learned = this.snapshot?.skills?.find((skill) => skill.id === row.id || skill.id === found.id)?.level ?? 0;
+    const autocast = [...row.autocastLevels.keys()].reduce((a, b) => Math.max(a, b), 0);
+    const level = Math.max(learned, autocast);
+    if (level <= 0) return {};
+    const physical = (row.types.get(DAMAGE_TYPES.PHYSICAL) ?? 0) > (row.types.get(DAMAGE_TYPES.MAGIC) ?? 0);
+    return { formula: { level, percent: formula.base + formula.perLevel * level, scales: physical ? "ATK" : "MATK" } };
+  }
+
+  /** Gear total of one bonus: a type, and for element and skill bonuses, its target. */
+  private bonusTotal(type: number, target?: string): number {
+    return this.lines
+      .filter((line) => line.type === type && (target === undefined ? !line.target : String(line.target?.id ?? "").toLowerCase() === target.toLowerCase()))
+      .reduce((sum, line) => sum + line.value, 0);
+  }
+
+  /** What one more point of each damage stat would add, best first. */
+  private advice(): BattleAdviceRow[] {
+    const s = this.session;
+    if (s.damage <= 0 || !this.lines.length) return [];
+    const rows: Omit<BattleAdviceRow, "best">[] = [];
+    const flats: Omit<BattleAdviceRow, "best">[] = [];
+    const pct = (value: number) => `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}%`;
+    const percentRow = (key: string, label: string, share: number, held: number) => {
+      if (share < 0.05) return;
+      rows.push({ key, label, gain: share / (100 + held), now: pct(held), kind: "percent" });
+    };
+    for (const [element, damage] of s.elements) {
+      if (element === "Unknown" || element === "Neutral") continue;
+      percentRow(`element:${element}`, `+1% ${element} Damage`, damage / s.damage, this.bonusTotal(STAT.ELEMENT_DAMAGE, element));
+    }
+    const magic = (s.types.get(DAMAGE_TYPES.MAGIC) ?? 0) / s.damage;
+    const physical = (s.types.get(DAMAGE_TYPES.PHYSICAL) ?? 0) / s.damage;
+    percentRow("magic-damage", "+1% Magic Damage", magic, this.bonusTotal(STAT.MAGIC_DAMAGE));
+    const matkMult = this.bonusTotal(STAT.MATK_MULTIPLIER);
+    percentRow("matk-mult", "+1% MATK", magic, matkMult);
+    if (magic >= 0.05 && this.attack.magic && this.attack.magic > 0) {
+      const gain = (magic * 10 * (1 + matkMult / 100)) / this.attack.magic;
+      flats.push({ key: "matk-flat", label: "+10 MATK", gain, now: `${Math.round(this.attack.magic)} MATK`, kind: "flat", equalsPercent: gain / (magic / (100 + matkMult)) });
+    }
+    const atkMult = this.bonusTotal(STAT.ATK_MULTIPLIER);
+    percentRow("atk-mult", "+1% ATK", physical, atkMult);
+    if (physical >= 0.05 && this.attack.physical && this.attack.physical > 0) {
+      const gain = (physical * 10 * (1 + atkMult / 100)) / this.attack.physical;
+      flats.push({ key: "atk-flat", label: "+10 ATK", gain, now: `${Math.round(this.attack.physical)} ATK`, kind: "flat", equalsPercent: gain / (physical / (100 + atkMult)) });
+    }
+    for (const row of [...s.sources.values()].sort((a, b) => b.damage - a.damage).slice(0, 2)) {
+      if (row.id === "Basic Attack") continue;
+      percentRow(`skill:${row.id}`, `+1% ${row.label} Damage`, row.damage / s.damage, this.bonusTotal(STAT.SKILL_DAMAGE, row.id));
+    }
+    rows.sort((a, b) => b.gain - a.gain);
+    return [...rows.map((row, index) => ({ ...row, best: index === 0 })), ...flats.map((row) => ({ ...row, best: false }))];
+  }
+
   private sourceRow(id: string, label?: string): SourceTally {
     let row = this.session.sources.get(id);
     if (!row) {
-      row = { id, label: label || id, damage: 0, hits: 0, crits: 0, cloneDamage: 0, autocasts: 0, casts: 0, autocastLevels: new Map(), elements: new Map() };
+      row = { id, label: label || id, damage: 0, hits: 0, crits: 0, cloneDamage: 0, autocasts: 0, casts: 0, autocastLevels: new Map(), elements: new Map(), types: new Map() };
       this.session.sources.set(id, row);
     }
     if (label && row.label === row.id) row.label = label;

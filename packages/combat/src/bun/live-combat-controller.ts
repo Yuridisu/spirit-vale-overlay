@@ -28,6 +28,19 @@ export interface LiveCombatState {
   snapshots: Pick<DpsAppState, "snapshot" | "tankedSnapshot" | "healSnapshot">;
 }
 
+/** The stat sheet's attack totals, the server's own value where it was sent. */
+function attackTotals(state: CharacterViewState): { magic?: number; physical?: number } {
+  const value = (id: string) => {
+    const stat = state.stats.find((entry) => entry.id === id);
+    const n = stat?.record ?? stat?.value;
+    return n !== undefined && Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  const melee = value("melee-attack");
+  const ranged = value("ranged-attack");
+  const physical = melee === undefined && ranged === undefined ? undefined : Math.max(melee ?? 0, ranged ?? 0);
+  return { ...(value("magic-attack") === undefined ? {} : { magic: value("magic-attack") }), ...(physical === undefined ? {} : { physical }) };
+}
+
 export class LiveCombatController {
   private readonly overridePath = process.env.SPIRIT_VALE_COMBAT_LOG;
   private readonly source;
@@ -59,6 +72,7 @@ export class LiveCombatController {
   constructor(logDirectory: string, initialCharacterState: CharacterViewState, private readonly publish: () => void) {
     this.personalName = detectedPersonalName(initialCharacterState);
     this.battle.setCharacter(initialCharacterState.snapshot);
+    this.battle.setAttack(attackTotals(initialCharacterState));
     this.meter = this.createMeter();
     this.source = createLiveLogSource(logDirectory, this.overridePath, POLL_MS);
     this.statusDetail = this.overridePath
@@ -95,6 +109,7 @@ export class LiveCombatController {
 
   syncCharacter(characterState: CharacterViewState): void {
     this.battle.setCharacter(characterState.snapshot);
+    this.battle.setAttack(attackTotals(characterState));
     const nextName = detectedPersonalName(characterState);
     if (nextName === this.personalName) return;
     this.personalName = nextName;

@@ -261,7 +261,19 @@ const actorIdentityPersistence = new SafeSaveQueue<ActorIdentityCache>({
   onWarning: (warning) => reportStorageWarning("actor identities", saveFailure(warning)),
 });
 
+/** spiritvalers.com, cached beside the character file: builds for the Build Guide, skill formulas for Battle Analysis. */
+const spiritValers = new SpiritValersClient({ cacheDir: path.join(path.dirname(storagePaths.characterStatePath), "build-guide") });
 const combatWindow = new WindowSlot((onClosed) => createDpsWindow({
+  loadSkillFormulas: async () => {
+    const formulas: Record<string, { base: number; perLevel: number; name: string }> = {};
+    for (const siteClass of Object.values(await spiritValers.classes())) {
+      for (const skill of siteClass.skills ?? []) {
+        const damage = skill.values?.damage;
+        if (skill.gameId && damage && Number.isFinite(damage.level)) formulas[skill.gameId] = { base: Number(damage.base) || 0, perLevel: Number(damage.level), name: skill.name };
+      }
+    }
+    return formulas;
+  },
   logDirectory,
   readModel,
   getCharacterState: () => capture.characterState(),
@@ -521,7 +533,7 @@ watchOwnedItems();
 capture.subscribeInventory(() => watchOwnedItems());
 const ownedItemsTimer = setInterval(watchOwnedItems, 3_000);
 buildGuide = createBuildGuideService({
-  client: new SpiritValersClient({ cacheDir: path.join(path.dirname(storagePaths.characterStatePath), "build-guide") }),
+  client: spiritValers,
   settingsPath: path.join(path.dirname(storagePaths.launcherSettingsPath), "build-guide.json"),
   getCharacter: () => capture.characterState().snapshot,
   subscribeCharacter: (listener) => capture.subscribeCharacter(() => listener()),

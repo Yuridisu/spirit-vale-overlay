@@ -101,6 +101,37 @@ describe("BattleAnalysis", () => {
     expect(view.items.filter((i) => i.name === "Stormcall Kunai").map((i) => i.parts.find((p) => p.label.startsWith("Multistrike"))!.damage)).toEqual([50, 50]);
   });
 
+  test("shows each skill's formula at its level, and ranks the next stat by what it adds", () => {
+    const a = new BattleAnalysis({ resolveItem });
+    a.setCharacter(snapshot, 0);
+    a.setSkillFormulas({ ChainLightning: { base: 0, perLevel: 300 } });
+    a.setAttack({ magic: 1000 });
+    a.noteActivation(cast("AutoCast_C", "ChainLightning", 5));
+    a.noteDamage(hit("ChainLightning", 900), 0);
+    a.noteDamage(hit("Basic Attack", 100, { element: 0, damageType: 2 }), 0);
+    const view = a.view();
+    expect(view.sources[0]!.formula).toEqual({ level: 5, percent: 1500, scales: "MATK" });
+    const byKey = Object.fromEntries(view.advice.map((row) => [row.key, row]));
+    // Wind is 90% of the damage and the cards hold 12% of it: 0.9 / 112.
+    expect(byKey["element:Wind"]!.gain).toBeCloseTo(0.9 / 112, 6);
+    // Magic Damage has 4% held already (0.9 / 104); MATK % has none (0.9 / 100), so it leads:
+    // the bonus held least is the one worth most.
+    expect(byKey["magic-damage"]!.gain).toBeCloseTo(0.9 / 104, 6);
+    expect(view.advice[0]!.key).toBe("matk-mult");
+    expect(view.advice[0]!.best).toBe(true);
+    // Flat MATK is not ranked against percents; it is given as the MATK % it equals.
+    expect(byKey["matk-flat"]).toMatchObject({ kind: "flat", best: false });
+    expect(byKey["matk-flat"]!.gain).toBeCloseTo((0.9 * 10) / 1000, 6);
+    expect(byKey["matk-flat"]!.equalsPercent).toBeCloseTo(1, 6);
+    expect(view.advice.filter((row) => row.best)).toHaveLength(1);
+    // A game id the site spells shorter is found by its prefix.
+    const b = new BattleAnalysis({ resolveItem });
+    b.setCharacter({ ...snapshot, skills: [{ id: "Meteor", displayName: "Meteor", level: 10, effects: [] }] } as unknown as CharacterSnapshot, 0);
+    b.setSkillFormulas({ Meteor: { base: 0, perLevel: 400, name: "Meteor" } });
+    b.noteDamage(hit("MeteorStorm", 100, { sourceLabel: "Meteor Storm" }), 0);
+    expect(b.view().sources[0]!.formula).toEqual({ level: 10, percent: 4000, scales: "MATK" });
+  });
+
   test("damage per second counts fighting time only, follows the worn set, and sets survive a reset and a reload", () => {
     const a = new BattleAnalysis({ resolveItem });
     a.setCharacter(snapshot, 0);
