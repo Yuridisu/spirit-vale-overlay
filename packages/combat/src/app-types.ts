@@ -1,4 +1,5 @@
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { BattleAnalysisView } from "./battle-analysis.ts";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
 
@@ -25,7 +26,7 @@ export type {
 } from "@svoverlay/contracts/meter";
 
 export type DpsAppTab = "all" | "personal";
-export type CombatLogScreen = "live" | "past" | "boss";
+export type CombatLogScreen = "live" | "past" | "boss" | "battle";
 export type DpsAppStatus = "waiting" | "capturing" | "loading" | "ready" | "stopped" | "error";
 
 export interface DpsEncounterOption {
@@ -50,6 +51,8 @@ export interface DpsAppState {
   liveDeathLogAvailable: boolean;
   /** Boss fights on record, newest first. */
   bossFights: BossFightReport[];
+  /** Battle Analysis, sent only while its screen is open. */
+  battle?: BattleAnalysisView;
   past:
     | { view: "selector"; picker: SessionPickerState }
     | { view: "analysis"; analysis: CombatAnalysisState };
@@ -61,6 +64,7 @@ export type DpsAppRpc = {
       getState: { params: Record<string, never>; response: DpsAppState };
       setScreen: { params: { screen: CombatLogScreen }; response: DpsAppState };
       clearBossFights: { params: Record<string, never>; response: DpsAppState };
+      resetBattle: { params: { what: "session" | "sets" }; response: DpsAppState };
       refreshPastSessions: { params: Record<string, never>; response: void };
       setPastDateRange: { params: SessionDateRange; response: DpsAppState };
       setPastZones: { params: { zones: string[] }; response: DpsAppState };

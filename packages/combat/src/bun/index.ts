@@ -21,6 +21,8 @@ import type { CombatReadModelSource } from "../combat-history.ts";
 import { readCombatLocations } from "../zone-log.ts";
 import { matchesZoneKeys, spiritValeLocationKey, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
 import { LiveCombatController } from "./live-combat-controller.ts";
+import { loadJsonSettings, writeJsonFileAtomic } from "@svoverlay/desktop-platform/json-settings";
+import { resolveLocalStorageRoot } from "@svoverlay/desktop-platform/local-storage";
 
 const MINIMUM_WIDTH = DPS_WINDOW_MINIMUM_WIDTH;
 const MINIMUM_HEIGHT = DPS_WINDOW_MINIMUM_HEIGHT;
@@ -43,6 +45,9 @@ export interface DpsWindowOptions {
 
 export async function createDpsWindow(options: DpsWindowOptions) {
 const settings = await loadDpsAppSettings(options.settingsPath);
+/** Battle Analysis' gear sets, kept between runs beside dps.json. */
+const battleSetsPath = path.join(path.dirname(options.settingsPath ?? path.join(resolveLocalStorageRoot(), "data", "settings", "dps.json")), "battle-sets.json");
+let battleSetsRevision = -1;
 const initialCharacterState = options.getCharacterState();
 
 let window: BrowserWindow;
@@ -93,6 +98,12 @@ const rpc = BrowserView.defineRPC<DpsAppRpc>({
       clearBossFights: () => {
         options.onClearBossFights?.();
         bossFights = options.getBossFights?.() ?? [];
+        return appState();
+      },
+      resetBattle: ({ what }) => {
+        if (what === "sets") live.battle.clearSets();
+        else live.battle.reset();
+        void saveBattleSets();
         return appState();
       },
       refreshPastSessions: () => { void refreshPastSessions(); },
@@ -209,6 +220,10 @@ const managed = createManagedWindow({
 window = managed.window;
 
 const unsubscribeCharacter = options.subscribeCharacter((state) => live.syncCharacter(state));
+await loadJsonSettings(battleSetsPath, (value) => { live.battle.loadSets(value); return true; }, () => false);
+battleSetsRevision = live.battle.revision;
+const battleSetsTimer = setInterval(() => { void saveBattleSets(); }, 30_000);
+battleSetsTimer.unref?.();
 const unsubscribeBossFights = options.subscribeBossFights?.((fights) => {
   bossFights = fights;
   // The other screens do not show it, and a fight in progress reports several times a second.
@@ -248,7 +263,18 @@ function appState(): DpsAppState {
     liveDeathLogAvailable: liveState.logPath !== undefined,
     bossFights,
     past,
+    ...(screen === "battle" ? { battle: live.battle.view() } : {}),
   };
+}
+
+async function saveBattleSets(): Promise<void> {
+  if (live.battle.revision === battleSetsRevision) return;
+  battleSetsRevision = live.battle.revision;
+  try {
+    await writeJsonFileAtomic(battleSetsPath, live.battle.saveSets());
+  } catch {
+    /* the sets still apply for this run */
+  }
 }
 
 function publish(): void {
@@ -465,6 +491,8 @@ async function shutdown(): Promise<void> {
   analysis.close();
   unsubscribeCharacter();
   unsubscribeBossFights?.();
+  clearInterval(battleSetsTimer);
+  await saveBattleSets();
   if (!window.isMaximized()) settings.frame = mainFrame.unscale(window.getFrame());
   live.close();
   notifyClosed();

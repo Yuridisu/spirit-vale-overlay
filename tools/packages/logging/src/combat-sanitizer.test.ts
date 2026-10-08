@@ -11,6 +11,12 @@ describe("combat log sanitizer", () => {
     expect(value).toEqual({ kind: "actorIdentity", operation: "upsert", tick: 1, actorId: 2, displayName: "Example", uid: "00000000-0000-4000-8000-000000000001", ownerConnectionId: 3 });
   });
 
+  test("keeps a hit's element, damage type, clone flags and hit count, for Battle Analysis", () => {
+    expect(sanitizeCombatData("combat.event", {
+      kind: "damage", value: 120, element: 6, damageType: 1, isClone: true, isSummon: false, wireHits: 5, position: [1, 2, 3],
+    })).toEqual({ kind: "damage", value: 120, element: 6, damageType: 1, isClone: true, isSummon: false, wireHits: 5 });
+  });
+
   test("keeps status effect fields", () => {
     const value = sanitizeCombatData("combat.event", {
       kind: "status", tick: 1, actorId: 2, statusId: "Bleed", level: 3, action: "applied",

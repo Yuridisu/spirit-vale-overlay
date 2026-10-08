@@ -9,6 +9,10 @@ import type { DpsAppState, DpsAppStatus } from "../app-types.ts";
 import { detectedPersonalName } from "../personal-character.ts";
 import { locationFromLogData } from "../zone-log.ts";
 import { createLiveLogSource } from "./live-log-source.ts";
+import { rescaleSubstats } from "@kar-mi/spirit-vale-tools-character";
+import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
+import { resolveFishNetSkill } from "@kar-mi/spirit-vale-tools-skills";
+import { BattleAnalysis, type BattleEvent } from "../battle-analysis.ts";
 
 const POLL_MS = 1_000;
 const METER_TICK_MS = 1_000;
@@ -39,9 +43,16 @@ export class LiveCombatController {
   private lastEventWallMs?: number;
   private logPath?: string;
   private location?: SpiritValeLocation;
+  /** Battle Analysis: the player's own damage by source, by item and per gear set. Kept across log sessions. */
+  readonly battle = new BattleAnalysis({
+    resolveItem: (type, id) => resolveFishNetItem(type, id),
+    resolveSkill: (id) => resolveFishNetSkill(id),
+    rescale: (snapshot) => rescaleSubstats(snapshot),
+  });
 
   constructor(logDirectory: string, initialCharacterState: CharacterViewState, private readonly publish: () => void) {
     this.personalName = detectedPersonalName(initialCharacterState);
+    this.battle.setCharacter(initialCharacterState.snapshot);
     this.meter = this.createMeter();
     this.source = createLiveLogSource(logDirectory, this.overridePath, POLL_MS);
     this.statusDetail = this.overridePath
@@ -77,6 +88,7 @@ export class LiveCombatController {
   }
 
   syncCharacter(characterState: CharacterViewState): void {
+    this.battle.setCharacter(characterState.snapshot);
     const nextName = detectedPersonalName(characterState);
     if (nextName === this.personalName) return;
     this.personalName = nextName;
@@ -128,7 +140,10 @@ export class LiveCombatController {
         if (location !== undefined) this.location = location;
       }
       if (event.kind === "actorIdentity") this.meter.consumeIdentity(event, observedAtMs);
-      else this.meter.consumeCombat(event, observedAtMs);
+      else {
+        this.meter.consumeCombat(event, observedAtMs);
+        this.noteBattle(event as unknown as BattleEvent, observedAtMs);
+      }
       batchLastObservedAtMs = Math.max(batchLastObservedAtMs ?? observedAtMs, observedAtMs);
     }
     if (batchLastObservedAtMs !== undefined) {
@@ -147,6 +162,19 @@ export class LiveCombatController {
           : this.updateStatus(this.latestRecord() ? "ready" : "waiting", localized("combat.status.watching", { file: fileName }));
     if (!statusChanged && (batch.events.length > 0 || batch.reset)) this.publishProgress();
     this.scheduleTick();
+  }
+
+  /** The player's own casts, and hits on enemies (a clone's hits carry the player's id). */
+  private noteBattle(event: BattleEvent, observedAtMs: number): void {
+    const me = this.meter.getPersonalActorId();
+    if (me === undefined || event.actorId !== me) return;
+    if (event.kind === "activation") {
+      this.battle.noteActivation(event);
+      return;
+    }
+    const hit = event.kind === "damage" || (event.kind === "death" && event.duplicatesDamageEvent === false);
+    if (!hit || event.team !== 0 || event.targetId === me) return;
+    this.battle.noteDamage({ ...event, kind: "damage" }, observedAtMs);
   }
 
   private tick = (): void => {
