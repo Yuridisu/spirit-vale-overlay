@@ -32,6 +32,7 @@ const snapshot = {
 const hit = (sourceId: string, value: number, extra: Partial<BattleEvent> = {}): BattleEvent =>
   ({ kind: "damage", sourceId, sourceLabel: sourceId, value, element: 6, damageType: 1, hitResult: "normal", tick: 1, targetId: 9, ...extra });
 const cast = (rpc: string, sourceId: string, level?: number): BattleEvent => ({ kind: "activation", rpc, sourceId, ...(level === undefined ? {} : { level }) });
+const REFLECT_ID = "reflect";
 
 describe("gearLines", () => {
   test("keeps targets, multiplies refine effects and reads cards", () => {
@@ -130,6 +131,53 @@ describe("BattleAnalysis", () => {
     b.setSkillFormulas({ Meteor: { base: 0, perLevel: 400, name: "Meteor" } });
     b.noteDamage(hit("MeteorStorm", 100, { sourceLabel: "Meteor Storm" }), 0);
     expect(b.view().sources[0]!.formula).toEqual({ level: 10, percent: 4000, scales: "MATK" });
+  });
+
+  test("tank: hits taken by type, element and attacker, what was avoided, reflected and absorbed, and the defence to raise", () => {
+    const names: Record<number, string> = { 50: "Fire Drake", 51: "Ally Cleric" };
+    const a = new BattleAnalysis({ resolveItem, nameOf: (id) => names[id] });
+    a.setCharacter(snapshot, 0);
+    const taken = (value: number, extra: Partial<BattleEvent>): BattleEvent => ({ kind: "damage", actorId: 50, targetId: 1, value, hitResult: "normal", ...extra });
+    for (let i = 0; i < 8; i += 1) a.noteTaken(taken(100, { sourceId: "Basic Attack", sourceLabel: "Basic Attack", damageType: 0, element: 0 }), i * 1000);
+    a.noteTaken(taken(0, { hitResult: "blocked", damageType: 0, element: 0 }), 8000);
+    a.noteTaken(taken(0, { hitResult: "dodged", damageType: 0, element: 0 }), 9000);
+    a.noteTaken(taken(600, { sourceId: "FireBreath", sourceLabel: "Fire Breath", damageType: 1, element: 4, hitResult: "critical" }), 10000);
+    a.noteDamage(hit(REFLECT_ID, 70, { damageType: 4, element: 0, sourceLabel: "Reflect Damage" }), 10000);
+    a.noteRecovery({ kind: "shield", action: "absorbed", targetId: 1, value: 50 }, 10000, { byMe: false, toMe: true });
+    a.noteRecovery({ kind: "heal", actorId: 51, targetId: 1, value: 300, sourceLabel: "Heal", recoveryStyle: "standard" }, 10000, { byMe: false, toMe: true });
+    const tank = a.view().tank;
+    expect(tank).toMatchObject({ taken: 1400, attempts: 11, landed: 9, blocked: 1, dodged: 1, crits: 1, absorbed: 50, received: 300 });
+    expect(tank.activeSec).toBe(10);
+    expect(tank.types.map((row) => [row.name, row.damage])).toEqual([["Physical", 800], ["Magic", 600]]);
+    expect(tank.attackers[0]).toMatchObject({ label: "Fire Drake", amount: 1400, count: 9, parts: ["Basic Attack 57%", "Fire Breath 43%"] });
+    expect(tank.healers[0]).toMatchObject({ label: "Ally Cleric", amount: 300 });
+    expect(tank.reflect).toMatchObject({ damage: 70, hits: 1 });
+    // Magic is 43% of the damage with nothing held: 0.43 / 100; Fire resistance the same; melee 57%.
+    const byKey = Object.fromEntries(tank.advice.map((row) => [row.key, row]));
+    expect(byKey["taken:magic"]!.gain).toBeCloseTo(600 / 1400 / 100, 6);
+    expect(byKey["taken:physical"]!.gain).toBeCloseTo(800 / 1400 / 100, 6);
+    // Block: 10 physical hits aimed, 8 landed: each 1% saves 800/1400 x 1% x 10 / 8.
+    expect(byKey["block"]!.gain).toBeCloseTo((800 / 1400) * 0.01 * 10 / 8, 6);
+    expect(byKey["perfect-dodge"]).toBeUndefined();
+    expect(tank.advice.filter((row) => row.best)).toHaveLength(1);
+  });
+
+  test("support: heals and shields cast, per ally and per skill, without the player's own regeneration", () => {
+    const names: Record<number, string> = { 51: "Ally Knight" };
+    const a = new BattleAnalysis({ resolveItem, nameOf: (id) => names[id] });
+    a.noteRecovery({ kind: "heal", actorId: 1, targetId: 51, value: 1000, sourceLabel: "Heal", recoveryStyle: "standard" }, 0, { byMe: true, toMe: false });
+    a.noteRecovery({ kind: "heal", actorId: 1, targetId: 51, value: 1000, sourceLabel: "Heal", recoveryStyle: "standard" }, 2000, { byMe: true, toMe: false });
+    a.noteRecovery({ kind: "shield", action: "gained", actorId: 1, targetId: 51, value: 500, sourceLabel: "Sacred Aegis" }, 4000, { byMe: true, toMe: false });
+    a.noteRecovery({ kind: "heal", actorId: 1, targetId: 1, value: 400, sourceLabel: "Heal", recoveryStyle: "standard" }, 4000, { byMe: true, toMe: true });
+    a.noteRecovery({ kind: "heal", actorId: 1, targetId: 1, value: 9999, sourceLabel: "Passive regeneration", recoveryStyle: "passive-regeneration" }, 4000, { byMe: true, toMe: true });
+    const support = a.view().support;
+    expect(support).toMatchObject({ healing: 2400, shields: 500, toAllies: 2500, count: 4, activeSec: 4 });
+    expect(support.allyHps).toBeCloseTo(2500 / 4, 6);
+    expect(support.targets.map((row) => [row.label, row.amount, row.self ?? false])).toEqual([["Ally Knight", 2500, false], ["You", 400, true]]);
+    expect(support.targets[0]!.shields).toBe(500);
+    expect(support.skills.map((row) => [row.label, row.amount])).toEqual([["Heal", 2400], ["Sacred Aegis", 500]]);
+    // Regeneration is the player's own sustain: received for Tank, never counted as support.
+    expect(a.view().tank.received).toBe(10399);
   });
 
   test("damage per second counts fighting time only, follows the worn set, and sets survive a reset and a reload", () => {

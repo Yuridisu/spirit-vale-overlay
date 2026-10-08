@@ -62,11 +62,14 @@ export class LiveCombatController {
    * keeps its own; an id is dropped as soon as the game hands it to someone else.
    */
   private readonly ownActorIds = new Set<number>();
+  /** Player and monster names by actor id, for who hit the player and whom they healed. */
+  private readonly names = new Map<number, string>();
   /** Battle Analysis: the player's own damage by source, by item and per gear set. Kept across log sessions. */
   readonly battle = new BattleAnalysis({
     resolveItem: (type, id) => resolveFishNetItem(type, id),
     resolveSkill: (id) => resolveFishNetSkill(id),
     rescale: (snapshot) => rescaleSubstats(snapshot),
+    nameOf: (actorId) => this.names.get(actorId),
   });
 
   constructor(logDirectory: string, initialCharacterState: CharacterViewState, private readonly publish: () => void) {
@@ -191,6 +194,7 @@ export class LiveCombatController {
   /** The player's own casts, and hits on enemies (a clone's hits carry the player's id). */
   private noteOwnIdentity(identity: { actorId?: number; displayName?: string }): void {
     if (identity.actorId === undefined || !identity.displayName) return;
+    this.names.set(identity.actorId, identity.displayName);
     const mine = Boolean(this.personalName) && normalizeName(identity.displayName) === normalizeName(this.personalName);
     if (mine) this.ownActorIds.add(identity.actorId);
     else this.ownActorIds.delete(identity.actorId);
@@ -202,14 +206,29 @@ export class LiveCombatController {
     return picked !== undefined ? actorId === picked : this.ownActorIds.has(actorId);
   }
 
-  private noteBattle(event: BattleEvent, observedAtMs: number): void {
-    if (!this.isOwnActor(event.actorId)) return;
+  /** The player's casts and hits, the hits aimed at them, and the heals and shields they cast or got. */
+  private noteBattle(event: BattleEvent & { operation?: string; displayName?: string }, observedAtMs: number): void {
+    if (event.kind === "monsterIdentity") {
+      if (event.operation === "upsert" && event.actorId !== undefined && event.displayName) this.names.set(event.actorId, event.displayName);
+      return;
+    }
+    const byMe = this.isOwnActor(event.actorId);
+    const toMe = this.isOwnActor(event.targetId);
+    if (event.kind === "heal" || event.kind === "shield") {
+      if (byMe || toMe) this.battle.noteRecovery(event, observedAtMs, { byMe, toMe });
+      return;
+    }
+    if (event.kind === "damage" && toMe && !byMe) {
+      this.battle.noteTaken(event, observedAtMs);
+      return;
+    }
+    if (!byMe) return;
     if (event.kind === "activation") {
       this.battle.noteActivation(event);
       return;
     }
     const hit = event.kind === "damage" || (event.kind === "death" && event.duplicatesDamageEvent === false);
-    if (!hit || event.team !== 0 || this.isOwnActor(event.targetId)) return;
+    if (!hit || event.team !== 0 || toMe) return;
     this.battle.noteDamage({ ...event, kind: "damage" }, observedAtMs);
   }
 

@@ -12,6 +12,10 @@
  * Flat ATK / MATK, attack speed, crit and the like cannot be pulled out of a hit; the Sets view
  * compares damage per second between gear sets instead.
  *
+ * Tank and Support read the other side: the hits aimed at the player (what landed, what was missed,
+ * dodged or blocked, by type, element and attacker), what the player reflected, and the heals and
+ * shields the player cast, on whom and per second.
+ *
  * Pure: the caller feeds it the player's own events and character snapshot; resolvers are injected.
  * Ported from the analysis written for Spiritvale Companion 2.0.
  */
@@ -22,8 +26,8 @@ export const ELEMENT_NAMES: Record<number, string> = {
   0: "Neutral", 1: "Poison", 2: "Earth", 3: "Shadow", 4: "Fire", 5: "Water", 6: "Wind", 7: "Holy", 8: "Undead", 9: "Ghost",
 };
 
-/** ApplyDamage_C damage types seen in captures. */
-export const DAMAGE_TYPES = { MAGIC: 1, PHYSICAL: 2, STATUS: 3 } as const;
+/** ApplyDamage_C damage types seen in captures: 0 is a plain attack (physical), 4 reflected damage. */
+export const DAMAGE_TYPES = { PLAIN: 0, MAGIC: 1, PHYSICAL: 2, STATUS: 3, REFLECT: 4 } as const;
 
 const STAT = {
   AUTOCAST_ON_HIT: 39,
@@ -34,10 +38,22 @@ const STAT = {
   MULTISTRIKE: 80,
   ATK_MULTIPLIER: 69,
   MATK_MULTIPLIER: 70,
+  ELEMENT_RESISTANCE: 53,
+  DAMAGE_FROM_MAGIC: 57,
+  DAMAGE_FROM_MELEE: 58,
+  HEALING: 67,
+  BLOCK: 85,
+  REFLECT_DAMAGE: 86,
+  SPELL_REFLECT: 94,
 } as const;
 
 /** Hits closer together than this count as one stretch of fighting for damage per second. */
 const ACTIVE_GAP_MS = 3_000;
+/** Tank and Support count time in combat: any hit dealt or taken, heal or shield, this close together. */
+const ENGAGED_GAP_MS = 5_000;
+const REFLECT = "reflect";
+/** Recovery that is the player's own sustain, not support: regeneration and leech. */
+const SELF_SUSTAIN = new Set(["passive-regeneration", "drain"]);
 const MAX_SETS = 12;
 const BASIC_ATTACK = "Basic Attack";
 const ITEM_TYPE = { EQUIPMENT: 2, ARTIFACT: 3, CARD: 4, GEM: 5 } as const;
@@ -59,12 +75,18 @@ export interface BattleEvent {
   isClone?: boolean;
   level?: number;
   duplicatesDamageEvent?: boolean;
+  /** Heals: "standard", "passive-regeneration", "drain". */
+  recoveryStyle?: string;
+  /** Shields: "gained" or "absorbed". */
+  action?: string;
 }
 
 interface ItemEffect { type: number; value: number; target?: { kind: string; id: string } }
 interface ItemDefinition { displayName?: string; effects?: readonly ItemEffect[]; refineEffects?: readonly ItemEffect[] }
 interface SkillDefinition { displayName?: string; effects?: readonly { label?: string }[] }
 export type ItemResolver = (itemType: number, itemId: string) => ItemDefinition | undefined | null;
+/** A player's or monster's name by actor id, from the identities seen. */
+export type NameResolver = (actorId: number) => string | undefined;
 export type SkillResolver = (skillId: string) => SkillDefinition | undefined | null;
 export type SubstatRescaler = (snapshot: CharacterSnapshot) => CharacterSnapshot;
 
@@ -119,6 +141,65 @@ export interface BattleSourceRow {
   formula?: { level: number; percent: number; scales: "MATK" | "ATK" };
 }
 
+/** One line of a breakdown: an attacker, a healer, a heal target or a heal skill. */
+export interface BattleShareRow {
+  key: string;
+  label: string;
+  amount: number;
+  share: number;
+  perSec: number;
+  count: number;
+  /** Shields, for heal targets and skills. */
+  shields?: number;
+  /** The player themself. */
+  self?: boolean;
+  /** Its biggest parts ("Fire Breath 60%"). */
+  parts: string[];
+}
+
+/** Damage the player took, how much was avoided, what was reflected, and what to raise against it. */
+export interface BattleTankView {
+  taken: number;
+  activeSec: number;
+  dtps: number;
+  /** Hits aimed at the player, and how they ended. */
+  attempts: number;
+  landed: number;
+  crits: number;
+  critDamage: number;
+  missed: number;
+  dodged: number;
+  blocked: number;
+  types: Array<{ name: string; damage: number; share: number }>;
+  elements: Array<{ name: string; damage: number; share: number }>;
+  attackers: BattleShareRow[];
+  /** Taken out of the player's shields instead of their health. */
+  absorbed: number;
+  received: number;
+  receivedPerSec: number;
+  healers: BattleShareRow[];
+  reflect: { damage: number; perSec: number; hits: number; gear: string[] };
+  /** Defences to raise next, best first; estimated like the damage advice. */
+  advice: BattleAdviceRow[];
+}
+
+/** The heals and shields the player cast: on whom, with what, and per second. */
+export interface BattleSupportView {
+  healing: number;
+  shields: number;
+  /** Heals and shields on anyone but the player. */
+  toAllies: number;
+  activeSec: number;
+  hps: number;
+  allyHps: number;
+  count: number;
+  targets: BattleShareRow[];
+  skills: BattleShareRow[];
+  /** Healing % from gear, and the share of healing +1% more would add. */
+  healingBonus: number;
+  healingGain?: number;
+}
+
 export interface BattleItemPart {
   label: string;
   detail: string;
@@ -146,6 +227,9 @@ export interface BattleSetRow {
   damage: number;
   activeSec: number;
   dps: number;
+  /** Damage taken and healing cast per second in combat with this set; 0 when there was none. */
+  dtps: number;
+  hps: number;
   lastAt: number;
   top: Array<{ label: string; share: number }>;
 }
@@ -164,6 +248,8 @@ export interface BattleAnalysisView {
   elements: Array<{ name: string; damage: number; share: number }>;
   items: BattleItemRow[];
   sets: BattleSetRow[];
+  tank: BattleTankView;
+  support: BattleSupportView;
 }
 
 /** A gear set's totals, as saved between runs. */
@@ -175,6 +261,10 @@ export interface BattleSetRecord {
   firstAt: number;
   lastAt: number;
   sources: Record<string, number>;
+  /** Damage taken, healing cast, and time in combat with this set. */
+  taken?: number;
+  healing?: number;
+  engagedMs?: number;
 }
 
 interface Owner { key: string; slot: string; name: string; refine: number }
@@ -194,11 +284,53 @@ interface SourceTally {
   types: Map<number, number>;
 }
 
+/** A breakdown line while it is counted: an amount, how many times, and what it was made of. */
+interface ShareTally {
+  label: string;
+  amount: number;
+  count: number;
+  shields: number;
+  self: boolean;
+  parts: Map<string, number>;
+}
+
+interface TakenTally {
+  damage: number;
+  attempts: number;
+  landed: number;
+  crits: number;
+  critDamage: number;
+  missed: number;
+  dodged: number;
+  blocked: number;
+  physicalAttempts: number;
+  physicalLanded: number;
+  types: Map<string, number>;
+  elements: Map<string, number>;
+  attackers: Map<string, ShareTally>;
+  absorbed: number;
+  received: number;
+  healers: Map<string, ShareTally>;
+}
+
+interface SupportTally {
+  healing: number;
+  shields: number;
+  toAllies: number;
+  count: number;
+  targets: Map<string, ShareTally>;
+  skills: Map<string, ShareTally>;
+}
+
 interface Session {
   startedAt: number;
   damage: number;
   activeMs: number;
   lastHitAt?: number;
+  engagedMs: number;
+  lastEngagedAt?: number;
+  taken: TakenTally;
+  support: SupportTally;
   sources: Map<string, SourceTally>;
   elements: Map<string, number>;
   types: Map<number, number>;
@@ -217,8 +349,64 @@ function elementOf(id: unknown): string | undefined {
 }
 
 function newSession(nowMs: number): Session {
-  return { startedAt: nowMs, damage: 0, activeMs: 0, sources: new Map(), elements: new Map(), types: new Map(), cloneDamage: 0, multistrike: { extraHits: 0, damage: 0 } };
+  return {
+    startedAt: nowMs, damage: 0, activeMs: 0, sources: new Map(), elements: new Map(), types: new Map(), cloneDamage: 0, multistrike: { extraHits: 0, damage: 0 },
+    engagedMs: 0,
+    taken: { damage: 0, attempts: 0, landed: 0, crits: 0, critDamage: 0, missed: 0, dodged: 0, blocked: 0, physicalAttempts: 0, physicalLanded: 0, types: new Map(), elements: new Map(), attackers: new Map(), absorbed: 0, received: 0, healers: new Map() },
+    support: { healing: 0, shields: 0, toAllies: 0, count: 0, targets: new Map(), skills: new Map() },
+  };
 }
+
+function elementName(element: number | undefined): string {
+  return element === undefined ? "Unknown" : ELEMENT_NAMES[element] ?? `Element ${element}`;
+}
+
+/** The kind of a hit the player took. */
+function takenType(event: BattleEvent): string {
+  if (event.sourceId === REFLECT || event.damageType === DAMAGE_TYPES.REFLECT) return "Reflected";
+  switch (event.damageType) {
+    case DAMAGE_TYPES.PLAIN:
+    case DAMAGE_TYPES.PHYSICAL: return "Physical";
+    case DAMAGE_TYPES.MAGIC: return "Magic";
+    case DAMAGE_TYPES.STATUS: return "Status";
+    default: return "Unknown";
+  }
+}
+
+function tally(map: Map<string, ShareTally>, key: string, label: string): ShareTally {
+  let row = map.get(key);
+  if (!row) {
+    row = { label, amount: 0, count: 0, shields: 0, self: false, parts: new Map() };
+    map.set(key, row);
+  }
+  return row;
+}
+
+/** Breakdown lines, biggest first, with their share of the total and per second in combat. */
+function shareRows(map: Map<string, ShareTally>, total: number, seconds: number): BattleShareRow[] {
+  return [...map.entries()]
+    .filter(([, row]) => row.amount > 0)
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([key, row]) => {
+      const parts = [...row.parts.entries()].sort((a, b) => b[1] - a[1]);
+      return {
+        key,
+        label: row.label,
+        amount: row.amount,
+        share: total > 0 ? row.amount / total : 0,
+        perSec: row.amount / seconds,
+        count: row.count,
+        ...(row.shields ? { shields: row.shields } : {}),
+        ...(row.self ? { self: true } : {}),
+        parts: parts.length === 1 ? [parts[0]![0]] : parts.slice(0, 3).map(([name, amount]) => `${name} ${Math.round((amount / row.amount) * 100)}%`),
+      };
+    });
+}
+
+const byShare = (map: Map<string, number>, total: number) => [...map.entries()]
+  .filter(([name, amount]) => name !== "Unknown" && amount > 0)
+  .sort((a, b) => b[1] - a[1])
+  .map(([name, damage]) => ({ name, damage, share: total > 0 ? damage / total : 0 }));
 
 /**
  * Every damage-relevant line of the worn gear, one entry per line, with the item it is on. Innate
@@ -305,12 +493,12 @@ export class BattleAnalysis {
   private snapshot: CharacterSnapshot | undefined;
   private lines: GearLine[] = [];
   private loadout: string | undefined;
-  private readonly sets = new Map<string, BattleSetRecord & { lastHitAt?: number }>();
+  private readonly sets = new Map<string, BattleSetRecord & { lastHitAt?: number; lastEngagedAt?: number }>();
   private formulas = new Map<string, SkillFormula>();
   private attack: { magic?: number; physical?: number } = {};
   revision = 0;
 
-  constructor(private readonly deps: { resolveItem: ItemResolver; resolveSkill?: SkillResolver; rescale?: SubstatRescaler }) {}
+  constructor(private readonly deps: { resolveItem: ItemResolver; resolveSkill?: SkillResolver; rescale?: SubstatRescaler; nameOf?: NameResolver }) {}
 
   reset(nowMs = Date.now()): void {
     this.session = newSession(nowMs);
@@ -407,6 +595,86 @@ export class BattleAnalysis {
       set.lastAt = nowMs;
       set.sources[row.label] = (set.sources[row.label] ?? 0) + value;
     }
+    this.engage(nowMs);
+    this.revision += 1;
+  }
+
+  /** A hit someone else aimed at the player, landed or not. */
+  noteTaken(event: BattleEvent, nowMs: number): void {
+    const t = this.session.taken;
+    const value = Math.max(0, num(event.value));
+    const result = String(event.hitResult ?? "normal");
+    const physical = event.damageType === DAMAGE_TYPES.PLAIN || event.damageType === DAMAGE_TYPES.PHYSICAL;
+    t.attempts += 1;
+    if (physical) t.physicalAttempts += 1;
+    if (result === "miss") t.missed += 1;
+    else if (result === "dodged") t.dodged += 1;
+    else if (result === "blocked") t.blocked += 1;
+    if (value > 0) {
+      t.landed += 1;
+      if (physical) t.physicalLanded += 1;
+      if (result === "critical") { t.crits += 1; t.critDamage += value; }
+      t.damage += value;
+      bump(t.types, takenType(event), value);
+      bump(t.elements, elementName(event.element), value);
+      const name = this.nameOf(event.actorId) ?? "Unknown";
+      const row = tally(t.attackers, name, name);
+      row.amount += value;
+      row.count += 1;
+      bump(row.parts, event.sourceLabel || event.sourceId || "Unknown", value);
+      const set = this.loadout ? this.sets.get(this.loadout) : undefined;
+      if (set) set.taken = (set.taken ?? 0) + value;
+    }
+    this.engage(nowMs);
+    this.revision += 1;
+  }
+
+  /**
+   * A heal or shield the player cast or received. The player's casts count for Support, except
+   * their own regeneration and leech; what they received counts for Tank, and a shield taking a hit
+   * on them counts as absorbed.
+   */
+  noteRecovery(event: BattleEvent, nowMs: number, who: { byMe: boolean; toMe: boolean }): void {
+    const value = num(event.value);
+    if (value <= 0) return;
+    const shield = event.kind === "shield";
+    if (shield && event.action === "absorbed") {
+      if (!who.toMe) return;
+      this.session.taken.absorbed += value;
+      this.revision += 1;
+      return;
+    }
+    if (shield && event.action !== "gained") return;
+    const skill = event.sourceLabel || event.sourceId || (shield ? "Shield" : "Heal");
+    if (who.toMe && !shield) {
+      const t = this.session.taken;
+      const healer = who.byMe ? "You" : this.nameOf(event.actorId) ?? "Not tied to anyone";
+      const row = tally(t.healers, who.byMe ? `self:${skill}` : `ally:${healer}`, who.byMe ? `You: ${skill}` : healer);
+      row.amount += value;
+      row.count += 1;
+      if (!who.byMe && event.sourceLabel) bump(row.parts, event.sourceLabel, value);
+      t.received += value;
+    }
+    if (who.byMe && !SELF_SUSTAIN.has(String(event.recoveryStyle ?? ""))) {
+      const sp = this.session.support;
+      const target = who.toMe ? "You" : this.nameOf(event.targetId) ?? "Unknown";
+      for (const row of [tally(sp.targets, who.toMe ? "self" : target, target), tally(sp.skills, skill, skill)]) {
+        row.amount += value;
+        row.count += 1;
+        if (shield) row.shields += value;
+      }
+      const targetRow = sp.targets.get(who.toMe ? "self" : target)!;
+      targetRow.self = who.toMe;
+      bump(targetRow.parts, skill, value);
+      if (!who.toMe) bump(sp.skills.get(skill)!.parts, target, value);
+      if (shield) sp.shields += value;
+      else sp.healing += value;
+      if (!who.toMe) sp.toAllies += value;
+      sp.count += 1;
+      const set = this.loadout ? this.sets.get(this.loadout) : undefined;
+      if (set) set.healing = (set.healing ?? 0) + value;
+      this.engage(nowMs);
+    }
     this.revision += 1;
   }
 
@@ -450,6 +718,8 @@ export class BattleAnalysis {
         damage: set.damage,
         activeSec: set.activeMs / 1000,
         dps: set.activeMs > 0 ? set.damage / (set.activeMs / 1000) : 0,
+        dtps: set.engagedMs ? (set.taken ?? 0) / (set.engagedMs / 1000) : 0,
+        hps: set.engagedMs ? (set.healing ?? 0) / (set.engagedMs / 1000) : 0,
         lastAt: set.lastAt,
         top: Object.entries(set.sources).sort((a, b) => b[1] - a[1]).slice(0, 3)
           .map(([label, damage]) => ({ label, share: set.damage ? damage / set.damage : 0 })),
@@ -467,11 +737,13 @@ export class BattleAnalysis {
       elements,
       items: this.items(),
       sets,
+      tank: this.tank(),
+      support: this.support(),
     };
   }
 
   saveSets(): BattleSetRecord[] {
-    return [...this.sets.values()].map(({ lastHitAt: _unused, ...rest }) => rest);
+    return [...this.sets.values()].map(({ lastHitAt: _hit, lastEngagedAt: _engaged, ...rest }) => rest);
   }
 
   loadSets(rows: unknown): void {
@@ -486,6 +758,9 @@ export class BattleAnalysis {
         firstAt: num(row.firstAt),
         lastAt: num(row.lastAt),
         sources: row.sources && typeof row.sources === "object" ? row.sources : {},
+        ...(row.taken ? { taken: num(row.taken) } : {}),
+        ...(row.healing ? { healing: num(row.healing) } : {}),
+        ...(row.engagedMs ? { engagedMs: num(row.engagedMs) } : {}),
       });
     }
   }
@@ -559,6 +834,114 @@ export class BattleAnalysis {
     }
     rows.sort((a, b) => b.gain - a.gain);
     return [...rows.map((row, index) => ({ ...row, best: index === 0 })), ...flats.map((row) => ({ ...row, best: false }))];
+  }
+
+  private nameOf(actorId: number | undefined): string | undefined {
+    if (actorId === undefined) return undefined;
+    try { return this.deps.nameOf?.(actorId) || undefined; } catch { return undefined; }
+  }
+
+  /** Time in combat, for the session and the worn set: anything the player dealt, took or cast. */
+  private engage(nowMs: number): void {
+    const s = this.session;
+    const gap = (last: number | undefined) => last === undefined ? 0 : Math.min(ENGAGED_GAP_MS, Math.max(0, nowMs - last));
+    s.engagedMs += gap(s.lastEngagedAt);
+    s.lastEngagedAt = nowMs;
+    const set = this.loadout ? this.sets.get(this.loadout) : undefined;
+    if (!set) return;
+    set.engagedMs = (set.engagedMs ?? 0) + gap(set.lastEngagedAt);
+    set.lastEngagedAt = nowMs;
+    set.lastAt = nowMs;
+  }
+
+  private tank(): BattleTankView {
+    const s = this.session;
+    const t = s.taken;
+    const seconds = Math.max(1, s.engagedMs / 1000);
+    const reflected = s.sources.get(REFLECT);
+    return {
+      taken: t.damage,
+      activeSec: s.engagedMs / 1000,
+      dtps: s.engagedMs > 0 ? t.damage / seconds : 0,
+      attempts: t.attempts,
+      landed: t.landed,
+      crits: t.crits,
+      critDamage: t.critDamage,
+      missed: t.missed,
+      dodged: t.dodged,
+      blocked: t.blocked,
+      types: byShare(t.types, t.damage),
+      elements: byShare(t.elements, t.damage),
+      attackers: shareRows(t.attackers, t.damage, seconds),
+      absorbed: t.absorbed,
+      received: t.received,
+      receivedPerSec: t.received / seconds,
+      healers: shareRows(t.healers, t.received, seconds),
+      reflect: {
+        damage: reflected?.damage ?? 0,
+        perSec: (reflected?.damage ?? 0) / seconds,
+        hits: reflected?.hits ?? 0,
+        gear: this.lines
+          .filter((line) => (line.type === STAT.REFLECT_DAMAGE || line.type === STAT.SPELL_REFLECT) && line.value)
+          .map((line) => `${line.owner.name}${line.via ? ` (${line.via})` : ""}: ${line.type === STAT.REFLECT_DAMAGE ? "Reflect damage" : "Spell reflect"} +${Math.round(line.value * 10) / 10}%`),
+      },
+      advice: this.tankAdvice(),
+    };
+  }
+
+  /**
+   * What one more step of each defence would save, as a share of damage taken. Reductions of one
+   * kind add up (gear "Damage from magic -10%" leaves 90%), so -1% more saves share / (100 + held);
+   * a resistance saves share / (100 - held). Block turns 1% of the physical hits aimed at the player
+   * into nothing: share x 1% x hits aimed / hits landed. Dodges are not ranked: players dodge with no
+   * perfect dodge on their gear, so the game's "dodged" follows Flee, which is not a percent.
+   */
+  private tankAdvice(): BattleAdviceRow[] {
+    const t = this.session.taken;
+    if (t.damage <= 0) return [];
+    const rows: Omit<BattleAdviceRow, "best">[] = [];
+    const pct = (value: number) => `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}%`;
+    const rate = (n: number, of: number) => `${Math.round((of ? n / of : 0) * 1000) / 10}%`;
+    const share = (type: string) => (t.types.get(type) ?? 0) / t.damage;
+    const add = (key: string, label: string, part: number, left: number, now: string) => {
+      if (part < 0.05 || left <= 1) return;
+      rows.push({ key, label, gain: part / left, now, kind: "percent" });
+    };
+    const melee = this.bonusTotal(STAT.DAMAGE_FROM_MELEE);
+    add("taken:physical", "-1% Melee damage taken", share("Physical"), 100 + melee, pct(melee));
+    const magic = this.bonusTotal(STAT.DAMAGE_FROM_MAGIC);
+    add("taken:magic", "-1% Magic damage taken", share("Magic"), 100 + magic, pct(magic));
+    for (const [element, damage] of t.elements) {
+      if (element === "Unknown") continue;
+      const held = this.bonusTotal(STAT.ELEMENT_RESISTANCE, element);
+      add(`resist:${element}`, `+1% ${element} resistance`, damage / t.damage, 100 - held, pct(held));
+    }
+    if (t.physicalAttempts >= 10 && t.physicalLanded > 0) {
+      rows.push({ key: "block", label: "+1% Block", gain: (share("Physical") * 0.01 * t.physicalAttempts) / t.physicalLanded, now: `${rate(t.blocked, t.physicalAttempts)} blocked${this.bonusTotal(STAT.BLOCK) ? ` (${pct(this.bonusTotal(STAT.BLOCK))} gear)` : ""}`, kind: "percent" });
+    }
+    rows.sort((a, b) => b.gain - a.gain);
+    return rows.map((row, index) => ({ ...row, best: index === 0 }));
+  }
+
+  private support(): BattleSupportView {
+    const s = this.session;
+    const sp = s.support;
+    const seconds = Math.max(1, s.engagedMs / 1000);
+    const total = sp.healing + sp.shields;
+    const healingBonus = this.bonusTotal(STAT.HEALING);
+    return {
+      healing: sp.healing,
+      shields: sp.shields,
+      toAllies: sp.toAllies,
+      activeSec: s.engagedMs / 1000,
+      hps: s.engagedMs > 0 ? total / seconds : 0,
+      allyHps: s.engagedMs > 0 ? sp.toAllies / seconds : 0,
+      count: sp.count,
+      targets: shareRows(sp.targets, total, seconds),
+      skills: shareRows(sp.skills, total, seconds),
+      healingBonus,
+      ...(sp.healing > 0 && total > 0 && 100 + healingBonus > 1 ? { healingGain: sp.healing / total / (100 + healingBonus) } : {}),
+    };
   }
 
   private sourceRow(id: string, label?: string): SourceTally {
