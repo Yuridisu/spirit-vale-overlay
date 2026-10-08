@@ -2155,3 +2155,78 @@ describe("reflected damage", () => {
     });
   });
 });
+
+describe("boss fights and a necromancer's Reanimation", () => {
+  test("a Reanimation of a boss, seen fighting for the players, leaves the fight with its hits", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture, clock }) => {
+      let fight: { bossNames: string[]; rows: Array<{ name: string; damage: number }> } | undefined;
+      coordinator.subscribeBossFight((state) => { fight = state; });
+      const hare = (tick: number, objectId: number): TestPacket => ({
+        ...monsterIdentityPacket(tick, objectId),
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed", value: "Hare" },
+          { name: "Data.Level", codec: "packedInt32", value: 30 },
+        ],
+      });
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      capture.packet(identityPacket(3, 20, "Other Necromancer", "test-connection"));
+      capture.packet(hare(4, 900)); // the real boss
+      capture.packet(hare(5, 901)); // someone's Reanimation of the same boss, on the players' side
+
+      // Its owner's hit on it opens a fight, as it still looks like a boss.
+      capture.packet(damagePacket(6, 901, 20));
+      await clock.advanceBy(1_000);
+      expect(fight?.rows.map((row) => row.name)).toEqual(["Other Necromancer"]);
+
+      // It hits the real boss for the players: it is an ally, and its hits leave the fight.
+      capture.packet(damagePacket(7, 900, 901));
+      // The real boss's reflect onto a player, on the players' team too, does not make it an ally.
+      capture.packet(damagePacket(8, 10, 900));
+      capture.packet(damagePacket(9, 900, 10));
+      capture.packet(damagePacket(10, 901, 20));
+      await clock.advanceBy(1_000);
+      expect(fight?.bossNames).toEqual(["Vorpal Hare"]);
+      // The Reanimation's own hit on the real boss still counts, named after what it is.
+      expect(fight?.rows.map((row) => [row.name, row.damage]).sort()).toEqual([["Fictional Hero", 100], ["Vorpal Hare (summon)", 100]]);
+    });
+  });
+
+  test("a boss that reflects onto a summon stays a boss (Echo Paladin Master)", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture, clock }) => {
+      let fight: { bossNames: string[]; rows: Array<{ name: string; damage: number }> } | undefined;
+      coordinator.subscribeBossFight((state) => { fight = state; });
+      const mob = (tick: number, objectId: number, id: string): TestPacket => ({
+        ...monsterIdentityPacket(tick, objectId),
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed", value: id },
+          { name: "Data.Level", codec: "packedInt32", value: 30 },
+        ],
+      });
+      const enemyHit = (tick: number, targetId: number, actorId: number): TestPacket => {
+        const packet = damagePacket(tick, targetId, actorId);
+        return { ...packet, decodedFields: packet.decodedFields!.map((field) => (field.name === "dmg.Team" ? { ...field, value: 1 } : field)) };
+      };
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      capture.packet(mob(4, 900, "Hare")); // the boss
+      capture.packet(mob(5, 950, "Abomination")); // a summon fighting for the players
+
+      capture.packet(enemyHit(6, 10, 900)); // the boss hits the player: it is an enemy
+      capture.packet(damagePacket(7, 900, 10)); // the player hits the boss
+      capture.packet(damagePacket(8, 950, 900)); // the boss reflects onto the summon
+      capture.packet(damagePacket(9, 900, 10));
+      await clock.advanceBy(1_000);
+      expect(fight?.bossNames).toEqual(["Vorpal Hare"]);
+      expect(fight?.rows.map((row) => [row.name, row.damage])).toEqual([["Fictional Hero", 200]]);
+    });
+  });
+});

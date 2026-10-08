@@ -133,6 +133,39 @@ export class BossFightTracker {
     }
   }
 
+  /**
+   * Takes a "boss" out of the fight in progress, with every hit counted on it: one that turned out
+   * to fight on the players' side (a necromancer's Reanimation keeps the boss it raised). A fight
+   * left with no boss is dropped, not kept. Returns whether anything changed.
+   */
+  forgetBoss(bossObjectId: number): boolean {
+    const fight = this.fight;
+    const boss = fight?.bosses.get(bossObjectId);
+    if (!fight || !boss) return false;
+    fight.bosses.delete(bossObjectId);
+    fight.alive.delete(bossObjectId);
+    fight.totalDamage -= boss.totalDamage;
+    for (const [name, taken] of boss.players) {
+      const tally = fight.players.get(name);
+      if (!tally) continue;
+      tally.damage -= taken.damage;
+      tally.hits -= taken.hits;
+      tally.crits -= taken.crits;
+      for (const [label, skill] of taken.skills) {
+        const total = tally.skills.get(label);
+        if (!total) continue;
+        total.damage -= skill.damage;
+        total.hits -= skill.hits;
+        total.crits -= skill.crits;
+        if (total.hits <= 0) tally.skills.delete(label);
+      }
+      if (tally.hits <= 0 && tally.deaths === 0) fight.players.delete(name);
+    }
+    fight.bossNames = [...new Set([...fight.bosses.values()].map((other) => other.name.replace(/ \d+$/, "")))];
+    if (fight.bosses.size === 0) this.fight = undefined;
+    return true;
+  }
+
   /** Names the map the fight in progress is on; the first name given stands. */
   observeMap(mapName: string | undefined): void {
     if (this.fight && this.fight.mapName === undefined && mapName !== undefined) this.fight.mapName = mapName;
