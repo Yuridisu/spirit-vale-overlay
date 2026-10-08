@@ -1,5 +1,5 @@
 import path from "node:path";
-import { LiveCombatService } from "@kar-mi/spirit-vale-tools-combat";
+import { LiveCombatService, normalizeName } from "@kar-mi/spirit-vale-tools-combat";
 import type { CharacterViewState } from "@kar-mi/spirit-vale-tools-character";
 import type { CombatEncounterRecord, DpsLogBatch } from "@kar-mi/spirit-vale-tools-combat";
 import { localized, sameLocalizedText, type LocalizedText } from "@svoverlay/i18n/messages";
@@ -43,6 +43,12 @@ export class LiveCombatController {
   private lastEventWallMs?: number;
   private logPath?: string;
   private location?: SpiritValeLocation;
+  /**
+   * The player's actor ids, learned from identities that carry the personal name. The meter finds
+   * the player by name too and only keeps an id when one is picked by hand, so Battle Analysis
+   * keeps its own; an id is dropped as soon as the game hands it to someone else.
+   */
+  private readonly ownActorIds = new Set<number>();
   /** Battle Analysis: the player's own damage by source, by item and per gear set. Kept across log sessions. */
   readonly battle = new BattleAnalysis({
     resolveItem: (type, id) => resolveFishNetItem(type, id),
@@ -92,6 +98,7 @@ export class LiveCombatController {
     const nextName = detectedPersonalName(characterState);
     if (nextName === this.personalName) return;
     this.personalName = nextName;
+    this.ownActorIds.clear();
     this.meter.setPersonalName(nextName);
     if (this.manualPersonalActorId !== undefined) {
       this.manualPersonalActorId = undefined;
@@ -139,8 +146,10 @@ export class LiveCombatController {
         const location = locationFromLogData(event as unknown as Record<string, unknown>);
         if (location !== undefined) this.location = location;
       }
-      if (event.kind === "actorIdentity") this.meter.consumeIdentity(event, observedAtMs);
-      else {
+      if (event.kind === "actorIdentity") {
+        this.meter.consumeIdentity(event, observedAtMs);
+        this.noteOwnIdentity(event as unknown as { actorId?: number; displayName?: string });
+      } else {
         this.meter.consumeCombat(event, observedAtMs);
         this.noteBattle(event as unknown as BattleEvent, observedAtMs);
       }
@@ -165,15 +174,27 @@ export class LiveCombatController {
   }
 
   /** The player's own casts, and hits on enemies (a clone's hits carry the player's id). */
+  private noteOwnIdentity(identity: { actorId?: number; displayName?: string }): void {
+    if (identity.actorId === undefined || !identity.displayName) return;
+    const mine = Boolean(this.personalName) && normalizeName(identity.displayName) === normalizeName(this.personalName);
+    if (mine) this.ownActorIds.add(identity.actorId);
+    else this.ownActorIds.delete(identity.actorId);
+  }
+
+  private isOwnActor(actorId: number | undefined): boolean {
+    if (actorId === undefined) return false;
+    const picked = this.meter.getPersonalActorId();
+    return picked !== undefined ? actorId === picked : this.ownActorIds.has(actorId);
+  }
+
   private noteBattle(event: BattleEvent, observedAtMs: number): void {
-    const me = this.meter.getPersonalActorId();
-    if (me === undefined || event.actorId !== me) return;
+    if (!this.isOwnActor(event.actorId)) return;
     if (event.kind === "activation") {
       this.battle.noteActivation(event);
       return;
     }
     const hit = event.kind === "damage" || (event.kind === "death" && event.duplicatesDamageEvent === false);
-    if (!hit || event.team !== 0 || event.targetId === me) return;
+    if (!hit || event.team !== 0 || this.isOwnActor(event.targetId)) return;
     this.battle.noteDamage({ ...event, kind: "damage" }, observedAtMs);
   }
 
