@@ -2157,7 +2157,7 @@ describe("reflected damage", () => {
 });
 
 describe("boss fights and a necromancer's Reanimation", () => {
-  test("a Reanimation of a boss, seen fighting for the players, leaves the fight with its hits", async () => {
+  test("a Reanimation drained by Unholy Frenzy leaves the fight with the hits counted on it", async () => {
     await withCoordinator({
       beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
     }, async ({ coordinator, capture, clock }) => {
@@ -2170,29 +2170,60 @@ describe("boss fights and a necromancer's Reanimation", () => {
           { name: "Data.Level", codec: "packedInt32", value: 30 },
         ],
       });
+      const frenzy = (tick: number, targetId: number, actorId: number): TestPacket => {
+        const packet = damagePacket(tick, targetId, actorId);
+        return { ...packet, decodedFields: packet.decodedFields!.map((field) => (field.name === "dmg.DamageSourceId" ? { ...field, value: "UnholyFrenzy" } : field)) };
+      };
 
       capture.packet(authenticatedPacket(1, "test-connection"));
       capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
       capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
       capture.packet(identityPacket(3, 20, "Other Necromancer", "test-connection"));
       capture.packet(hare(4, 900)); // the real boss
-      capture.packet(hare(5, 901)); // someone's Reanimation of the same boss, on the players' side
+      capture.packet(hare(5, 901)); // someone's Reanimation of the same boss
 
-      // Its owner's hit on it opens a fight, as it still looks like a boss.
+      // A hit on it opens a fight, as it still looks like a boss.
       capture.packet(damagePacket(6, 901, 20));
       await clock.advanceBy(1_000);
       expect(fight?.rows.map((row) => row.name)).toEqual(["Other Necromancer"]);
 
-      // It hits the real boss for the players: it is an ally, and its hits leave the fight.
-      capture.packet(damagePacket(7, 900, 901));
-      // The real boss's reflect onto a player, on the players' team too, does not make it an ally.
-      capture.packet(damagePacket(8, 10, 900));
-      capture.packet(damagePacket(9, 900, 10));
-      capture.packet(damagePacket(10, 901, 20));
+      // Its owner's Unholy Frenzy ticks on it: it is a summon, and it leaves the fight.
+      capture.packet(frenzy(7, 901, 20));
+      capture.packet(damagePacket(8, 900, 10));
       await clock.advanceBy(1_000);
       expect(fight?.bossNames).toEqual(["Vorpal Hare"]);
-      // The Reanimation's own hit on the real boss still counts, named after what it is.
-      expect(fight?.rows.map((row) => [row.name, row.damage]).sort()).toEqual([["Fictional Hero", 100], ["Vorpal Hare (summon)", 100]]);
+      expect(fight?.rows.map((row) => [row.name, row.damage])).toEqual([["Fictional Hero", 100]]);
+    });
+  });
+
+  test("a Reanimation drained by Unholy Frenzy never opens a fight", async () => {
+    await withCoordinator({
+      beforeStart: (coordinator) => coordinator.setCachedCharacter(syntheticCachedCharacter()),
+    }, async ({ coordinator, capture, clock }) => {
+      let fight: { bossNames: string[]; rows: Array<{ name: string; damage: number }> } | undefined;
+      coordinator.subscribeBossFight((state) => { fight = state; });
+      const mob = (tick: number, objectId: number, id: string): TestPacket => ({
+        ...monsterIdentityPacket(tick, objectId),
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed", value: id },
+          { name: "Data.Level", codec: "packedInt32", value: 30 },
+        ],
+      });
+      const hit = (tick: number, targetId: number, actorId: number, changes: Record<string, string | number>): TestPacket => {
+        const packet = damagePacket(tick, targetId, actorId);
+        return { ...packet, decodedFields: packet.decodedFields!.map((field) => (field.name in changes ? { ...field, value: changes[field.name]! } : field)) };
+      };
+
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet({ tick: 2, packetId: 10, packetName: "serverRpc", objectId: 10, rpcName: "SyntheticLocalCallback_C", raw: Buffer.alloc(0), payload: Buffer.alloc(0) });
+      capture.packet(identityPacket(3, 10, "Fictional Hero", "test-connection"));
+      capture.packet(identityPacket(3, 20, "Other Necromancer", "test-connection"));
+      capture.packet(mob(4, 901, "Hare")); // a Reanimation of the boss
+
+      capture.packet(hit(7, 901, 20, { "dmg.DamageSourceId": "UnholyFrenzy", "dmg.Type": 3 }));
+      capture.packet(damagePacket(8, 901, 10));
+      await clock.advanceBy(1_000);
+      expect(fight).toBeUndefined();
     });
   });
 

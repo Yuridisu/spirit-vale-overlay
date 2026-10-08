@@ -160,6 +160,9 @@ export interface CaptureCoordinatorOptions {
   clock?: Clock;
 }
 
+/** A necromancer's buff that drains their own summons' health, as damage from the necromancer. */
+const UNHOLY_FRENZY = "UnholyFrenzy";
+
 export class CaptureCoordinator {
   private readonly capture: PacketCapture;
   private readonly diagnostics: CaptureDiagnostics;
@@ -189,10 +192,8 @@ export class CaptureCoordinator {
   private readonly loot = new FishNetLootDropTracker();
   /** Picked-up items whose drops the game never despawned (a pet's pickups), to take off the minimap. */
   private readonly pickedUpDrops = new PickedUpDrops();
-  /** Monsters seen fighting for the players, by object id, with the mob they were then (ids are reused). */
+  /** Monsters known to be on the players' side, by object id, with the mob they were then (ids are reused). */
   private readonly alliedMonsters = new Map<number, string>();
-  /** Monsters seen hitting players for the monsters' side; never taken for allies. */
-  private readonly hostileMonsters = new Map<number, string>();
   private readonly minimapListeners = new Set<(state: CaptureMinimapState) => void>();
   private minimapTimer?: ClockTimer;
   private lastPublishedMinimapJson?: string;
@@ -366,7 +367,6 @@ export class CaptureCoordinator {
     this.tower.reset();
     this.mobs.reset();
     this.alliedMonsters.clear();
-    this.hostileMonsters.clear();
 
     if (character) {
       this.actors.reset();
@@ -1283,14 +1283,12 @@ export class CaptureCoordinator {
       // damage the players took, so it is moved to the monsters' side before anything counts it:
       // the meters, the boss fight and the combat log the Combat window reads all see it as taken.
       for (const event of events) {
-        // A monster hitting a player for the monsters' side is an enemy, whatever it hits later.
-        if (event.kind === "damage" && event.team !== 0) this.noteHostileMonster(event.actorId, event.targetId);
-        if ((event.kind === "damage" || event.kind === "death") && event.team === 0) {
-          // A monster hitting another monster for the players is on their side: a necromancer's
-          // Reanimation, which keeps the identity (and the boss rank) of what it raised. A
-          // reflect lands on a player, so it is never mistaken for one.
-          if (event.kind === "damage" && this.noteAlliedMonster(event.actorId, event.targetId)) continue;
-          if (this.isEnemyMonster(event.actorId)) event.team = 1;
+        // A necromancer's Reanimation keeps the identity (and the boss rank) of what it raised.
+        // Unholy Frenzy drains the necromancer's own summons, so what it ticks on is one. Monsters'
+        // hits on each other do not tell: Echo Masters heal and reflect onto one another.
+        if (event.kind === "damage" && event.sourceId === UNHOLY_FRENZY) this.markAlliedMonster(event.targetId);
+        if ((event.kind === "damage" || event.kind === "death") && event.team === 0 && this.isEnemyMonster(event.actorId)) {
+          event.team = 1;
         }
       }
       if (isStatusPacket(packet)) {
@@ -1455,30 +1453,15 @@ export class CaptureCoordinator {
     return relevant;
   }
 
-  /**
-   * Whether this hit shows `actorId` fighting for the players (a monster hitting a monster on the
-   * players' team). The first time, it is recorded, and a fight that took it for a boss forgets it.
-   */
-  private noteAlliedMonster(actorId: number, targetId: number): boolean {
-    const attacker = this.mobs.get(actorId);
-    if (!attacker || !this.mobs.get(targetId)) return false;
-    // An enemy's reflect onto a summon looks the same; an enemy, or a hit on an ally, is never one.
-    if (this.hostileMonsters.get(actorId) === attacker.mobId || this.isAlliedMonster(targetId)) return false;
-    if (this.alliedMonsters.get(actorId) !== attacker.mobId) {
-      this.alliedMonsters.set(actorId, attacker.mobId);
-      if (this.bossFight.forgetBoss(actorId)) this.scheduleBossFightPublish();
-    }
-    return true;
+  /** Records a monster as on the players' side; a fight that took it for a boss forgets it. */
+  private markAlliedMonster(objectId: number): void {
+    const mob = this.mobs.get(objectId);
+    if (!mob || this.alliedMonsters.get(objectId) === mob.mobId) return;
+    this.alliedMonsters.set(objectId, mob.mobId);
+    if (this.bossFight.forgetBoss(objectId)) this.scheduleBossFightPublish();
   }
 
-  private noteHostileMonster(actorId: number, targetId: number): void {
-    const attacker = this.mobs.get(actorId);
-    if (!attacker || this.mobs.get(targetId)) return;
-    this.hostileMonsters.set(actorId, attacker.mobId);
-    if (this.alliedMonsters.get(actorId) === attacker.mobId) this.alliedMonsters.delete(actorId);
-  }
-
-  /** A monster on the players' side: seen hitting monsters for them, or one of the player's own summons. */
+  /** A monster on the players' side: one drained by Unholy Frenzy, or one of the player's own summons. */
   private isAlliedMonster(objectId: number): boolean {
     const mob = this.mobs.get(objectId);
     if (mob && this.alliedMonsters.get(objectId) === mob.mobId) return true;
