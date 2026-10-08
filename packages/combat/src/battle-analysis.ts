@@ -21,9 +21,12 @@
  */
 import type { CharacterSnapshot } from "@kar-mi/spirit-vale-tools-character";
 
-/** The game's element numbers. 0, 1, 3, 4, 5, 6 and 8 are confirmed by skills and statuses. */
+/**
+ * The game's element numbers, read off the skills that carry them: Shadow Strike 2, Consecrated
+ * Ground, Grand Cross and Sacrifice 3, Earthquake 7, Soul Strike 9.
+ */
 export const ELEMENT_NAMES: Record<number, string> = {
-  0: "Neutral", 1: "Poison", 2: "Earth", 3: "Shadow", 4: "Fire", 5: "Water", 6: "Wind", 7: "Holy", 8: "Undead", 9: "Ghost",
+  0: "Neutral", 1: "Poison", 2: "Shadow", 3: "Holy", 4: "Fire", 5: "Water", 6: "Wind", 7: "Earth", 8: "Undead", 9: "Ghost",
 };
 
 /** ApplyDamage_C damage types seen in captures: 0 is a plain attack (physical), 4 reflected damage. */
