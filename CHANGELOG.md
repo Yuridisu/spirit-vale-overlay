@@ -3,6 +3,20 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.15
+
+A single fix on top of 0.10.14. Everything in the 0.10.14 notes still applies, and Crowley's
+Spiritvale Companion 2.0 is still the place to follow, on
+[its Discord channel](https://discord.com/channels/1257586742865956875/1554234942203105370).
+
+### Fixed
+
+- **Build Export now keeps class artifacts, their gems and the advanced classes' grimoires.** Its
+  item catalog predated the current game build, so class artifacts such as the Wizard's were left
+  out of the exported build together with the gems socketed in them, and so were grimoires like
+  the Wizard's and the Priest's. They are exported now, with the same ids
+  [spiritvalers.com](https://spiritvalers.com) uses.
+
 ## 0.10.14
 
 **This is my last update to Spirit Vale Overlay.** Thank you to everyone who used it, reported
