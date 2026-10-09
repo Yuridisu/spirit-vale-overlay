@@ -6,6 +6,42 @@ const DEX = 3;
 const CRIT = 15;
 const ATK_MULT = 69;
 
+describe("items newer than the bundled catalog", () => {
+  test("class artifacts, their gems and the advanced classes' grimoires are kept", () => {
+    const snapshot = {
+      name: "Fictional Wizard",
+      archetypes: ["Mage", "Wizard"],
+      level: 150,
+      jobLevel: 70,
+      attributes: { STR: 1, VIT: 1, AGI: 1, DEX: 1, INT: 99, LUK: 1 },
+      activeLoadout: "Normal",
+      equipment: [],
+      artifacts: [{ slot: "Rune", itemId: "Wizard_Artifact_1", refine: 10, gems: [{ id: "Meteor Gem", refine: 10 }], substats: [] }],
+      skills: [],
+      grimoires: [{ slot: "Grimoire 1", itemId: "Wizard_10" }, { slot: "Grimoire 2", itemId: "Mage_6" }],
+    } as unknown as CharacterSnapshot;
+    const result = snapshotToBuild(snapshot);
+    expect(result.build.arti.rune).toMatchObject({ id: "Wizard_Artifact_1", gem: "Meteor Gem", gemRefine: 10 });
+    expect(result.build.grim.slice(0, 2)).toEqual(["Wizard_10", "Mage_6"]);
+    expect(result.unresolved.artifacts).toEqual([]);
+    expect(result.unresolved.grimoires).toEqual([]);
+  });
+
+  test("an id the game does not know is still reported, not exported", () => {
+    const snapshot = {
+      name: "Fictional", archetypes: ["Mage"], level: 1, jobLevel: 1,
+      attributes: { STR: 1, VIT: 1, AGI: 1, DEX: 1, INT: 1, LUK: 1 }, activeLoadout: "Normal", equipment: [],
+      artifacts: [{ slot: "Rune", itemId: "Not_An_Artifact", refine: 0, gems: [], substats: [] }],
+      skills: [], grimoires: [{ slot: "Grimoire 1", itemId: "Not_A_Grimoire_1" }],
+    } as unknown as CharacterSnapshot;
+    const result = snapshotToBuild(snapshot);
+    expect(result.build.arti.rune).toBeNull();
+    expect(result.unresolved.artifacts).toEqual(["rune: Not_An_Artifact"]);
+    expect(result.unresolved.grimoires).toEqual(["Not_A_Grimoire_1"]);
+  });
+});
+
+
 function substat(type: number, roll: number, extra: Partial<CharacterSubstat> = {}): CharacterSubstat {
   return { type, name: `Stat ${type}`, roll, percent: false, ...extra };
 }

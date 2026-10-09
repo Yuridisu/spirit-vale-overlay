@@ -77,6 +77,7 @@
       "dependencies": {
         "@kar-mi/spirit-vale-tools-character": "workspace:*",
         "@kar-mi/spirit-vale-tools-combat": "workspace:*",
+        "@kar-mi/spirit-vale-tools-items": "workspace:*",
         "@preact/signals": "^2.9.4",
         "@svoverlay/contracts": "workspace:*",
         "@svoverlay/desktop-platform": "workspace:*",
