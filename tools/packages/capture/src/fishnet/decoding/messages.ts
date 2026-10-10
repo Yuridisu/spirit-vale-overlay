@@ -56,6 +56,8 @@ export interface ConnectionState {
   pendingOwnLinks: Map<number, { objectId: number; hits: number }>;
   /** How many payloads each unregistered link has been tried against the map's target RPCs. */
   targetLinkAttempts: Map<number, number>;
+  /** The local client's connection id, from its latest `authenticated`: what its own spawns name as owner. */
+  localConnectionId?: number;
 }
 
 export interface ParsedMessage {

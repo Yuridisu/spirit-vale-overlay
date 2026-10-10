@@ -157,11 +157,17 @@ export class FishNetSessionDecoder {
 
       if (parsed.packet.packetName === "authenticated") {
         quarantineConnectionState(state);
+        try { state.localConnectionId = readSignedPackedWhole(parsed.packet.raw, 2).value; } catch { state.localConnectionId = undefined; }
       }
       if (parsed.packet.packetName === "objectSpawn" && parsed.packet.objectId !== undefined) {
         removeObjectLinks(state, parsed.packet.objectId);
         removeObjectComponents(state, parsed.packet.objectId);
         forgetOwnObject(state, parsed.packet.objectId);
+        // The player's own object is known from its spawn, before it ever sends a transform: the
+        // channel list that arrives right after it is sent to that object alone.
+        if (state.localConnectionId !== undefined && parsed.packet.ownerConnectionId === state.localConnectionId) {
+          noteOwnTransform(state, parsed.packet.objectId, {});
+        }
       }
       // Only an object's owner sends the server its transform, so these are the local player's own.
       if (parsed.packet.packetName === "serverRpc" && parsed.packet.objectId !== undefined && parsed.packet.networkTransform) {

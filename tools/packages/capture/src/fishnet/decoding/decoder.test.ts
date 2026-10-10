@@ -1673,6 +1673,22 @@ describe("hits on the local player's own object", () => {
     expect(packet?.decodedFields?.find((field) => field.name === "currentIndex")?.value).toBe(2);
   });
 
+  test("the player's own spawn, owned by the authenticated connection, binds the channel list sent right after it", () => {
+    const decoder = new FishNetSessionDecoder(map);
+    const context = { reliable: true, connectionId: "own-login" };
+    decoder.decode(tick(1, authenticated()), context);
+    const ownSpawn = message(3, Buffer.concat([
+      Buffer.from([4]), packed(501), u16(0), packed(0), packed(1), // instantiated, object 501, collection 0, owner = the authenticated connection (1)
+      Buffer.from([0]), packed(4), u32(0), u16(0), u32(0),        // no transform, player prefab 4, no payload, no links, no SyncTypes
+    ]));
+    decoder.decode(tick(2, ownSpawn), context);
+    const instance = "fictional-instance";
+    const channelList = Buffer.concat([packed(2), packed(12), packed(40), packed(1), packed(Buffer.byteLength(instance)), Buffer.from(instance)]);
+    const [packet] = decoder.decode(tick(3, linked(902, channelList)), context);
+    expect(packet).toMatchObject({ linkResolved: true, objectId: 501, rpcName: "ChannelList_T" });
+    expect(packet?.decodedFields?.find((field) => field.name === "instanceId")?.value).toBe(instance);
+  });
+
   test("hits far from the player, or dealt by the player's side, are not taken as theirs", () => {
     const far = setup("own-far");
     expect(far(3, hit(1, 7000, vector(40, 0, 40)))).toMatchObject({ linkResolved: false });
