@@ -1,4 +1,4 @@
-import { decodeFieldRun } from "../decoding/fields.ts";
+import { decodeFieldRun, tryDecodeFields } from "../decoding/fields.ts";
 import type { NetworkTransformAxes } from "../decoding/network-transform.ts";
 import type { RpcLinkRegistrationState } from "../decoding/protocol.ts";
 import type { FishNetRpcDefinition, FishNetRpcMap } from "../types.ts";
@@ -13,6 +13,11 @@ import type { FishNetRpcDefinition, FishNetRpcMap } from "../types.ts";
  * and where they are. An unregistered link whose payload is exactly a `HealthComponent.ApplyDamage_C`,
  * dealt by someone else's side, landing where one of those objects stands, is a hit on it. After a
  * second such hit the link is bound to that object, and decodes like any registered link from then on.
+ *
+ * The same goes for the RPCs the server sends the player alone, on the components only the player's
+ * own object has (PlayerController, PlayerSave): the channel list that says which channel they are
+ * on is one. An unregistered link whose payload fits exactly one RPC in the whole map, and that one
+ * is such a target RPC, is bound to the own object's component.
  */
 
 /** How close, on the ground plane, a hit must land to the player's own position to be theirs. */
@@ -20,6 +25,10 @@ const OWN_HIT_RADIUS = 4;
 /** Hits one link must land near the same own object before it is bound to it. */
 const OWN_HIT_CORROBORATION = 2;
 const HEALTH_COMPONENT = "HealthComponent";
+/** Behaviours on the player's own object alone; their target RPCs only ever go to their owner. */
+const OWN_ONLY_BEHAVIOURS = new Set(["PlayerController", "PlayerSave"]);
+/** Payloads one unregistered link may be tried against the whole map before it is left alone. */
+const TARGET_LINK_ATTEMPTS = 40;
 const APPLY_DAMAGE = "ApplyDamage_C";
 
 export interface OwnObjectState {
@@ -27,6 +36,8 @@ export interface OwnObjectState {
   ownPositions: Map<number, NetworkTransformAxes>;
   /** Unregistered links that have landed hits near an own object, waiting to be bound. */
   pendingOwnLinks: Map<number, { objectId: number; hits: number }>;
+  /** How many payloads each unregistered link has been tried against the map's target RPCs. */
+  targetLinkAttempts: Map<number, number>;
   components: ReadonlyMap<string, string>;
   staleComponents: ReadonlyMap<string, string>;
 }
@@ -61,14 +72,64 @@ export function forgetOwnObject(state: OwnObjectState, objectId: number): void {
   }
 }
 
-function healthComponentIndex(state: OwnObjectState, objectId: number): number | undefined {
+function componentIndex(state: OwnObjectState, objectId: number, behaviour: string): number | undefined {
   const prefix = `${objectId}:`;
   for (const components of [state.components, state.staleComponents]) {
     for (const [key, typeName] of components) {
-      if (typeName === HEALTH_COMPONENT && key.startsWith(prefix)) return Number(key.slice(prefix.length));
+      if (typeName === behaviour && key.startsWith(prefix)) return Number(key.slice(prefix.length));
     }
   }
   return undefined;
+}
+
+const healthComponentIndex = (state: OwnObjectState, objectId: number) => componentIndex(state, objectId, HEALTH_COMPONENT);
+
+interface RpcCandidate { typeName: string; rpc: FishNetRpcDefinition }
+const linkableRpcs = new WeakMap<FishNetRpcMap, RpcCandidate[]>();
+
+/** Every RPC a link can carry whose payload can be checked, once per map. */
+function checkableRpcs(map: FishNetRpcMap): RpcCandidate[] {
+  let list = linkableRpcs.get(map);
+  if (!list) {
+    list = map.behaviours.flatMap(({ typeName, rpcs }) => rpcs
+      .filter((rpc) => (rpc.packetKind === "targetRpc" || rpc.packetKind === "observersRpc")
+        && (rpc.parameters?.length ?? 0) > 0
+        && !tryDecodeFields(Buffer.alloc(0), rpc.parameters).undecodable)
+      .map((rpc) => ({ typeName, rpc })));
+    linkableRpcs.set(map, list);
+  }
+  return list;
+}
+
+/**
+ * The registration for an unregistered link carrying a target RPC to the player's own object: its
+ * payload fits that RPC and no other in the map. Undefined for anything that fits none or several.
+ */
+export function recoverOwnTargetLink(
+  map: FishNetRpcMap | undefined,
+  state: OwnObjectState,
+  linkId: number,
+  payload: Buffer,
+): RpcLinkRegistrationState | undefined {
+  if (!map || state.ownPositions.size === 0 || payload.length === 0) return undefined;
+  const attempts = state.targetLinkAttempts.get(linkId) ?? 0;
+  if (attempts >= TARGET_LINK_ATTEMPTS) return undefined;
+  state.targetLinkAttempts.set(linkId, attempts + 1);
+  const fits = checkableRpcs(map).filter(({ rpc }) => {
+    const fit = tryDecodeFields(payload, rpc.parameters);
+    return fit.complete && fit.consumed === payload.length;
+  });
+  if (fits.length !== 1) return undefined;
+  const [{ typeName, rpc }] = fits as [RpcCandidate];
+  if (rpc.packetKind !== "targetRpc" || !OWN_ONLY_BEHAVIOURS.has(typeName)) return undefined;
+  const owners = [...state.ownPositions.keys()].flatMap((objectId) => {
+    const index = componentIndex(state, objectId, typeName);
+    return index === undefined ? [] : [{ objectId, index }];
+  });
+  if (owners.length !== 1) return undefined;
+  const [owner] = owners as [{ objectId: number; index: number }];
+  state.targetLinkAttempts.delete(linkId);
+  return { objectId: owner.objectId, componentIndex: owner.index, rpcHash: rpc.wireHash, packetName: "targetRpc", networkBehaviourType: typeName };
 }
 
 /**

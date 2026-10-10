@@ -1660,6 +1660,19 @@ describe("hits on the local player's own object", () => {
     expect(decode(5, hit(1, 7000, vector(60, 0, 60)))).toMatchObject({ linkResolved: true, objectId: 500, rpcName: "ApplyDamage_C" });
   });
 
+  test("the channel list sent to the player through an unregistered link is bound to their PlayerController", () => {
+    const decode = setup("own-channel");
+    const instance = "fictional-instance";
+    const channelList = Buffer.concat([
+      packed(3), packed(12), packed(40), packed(7), // playerCounts
+      packed(2), // currentIndex
+      packed(Buffer.byteLength(instance)), Buffer.from(instance),
+    ]);
+    const packet = decode(3, channelList);
+    expect(packet).toMatchObject({ linkResolved: true, objectId: 500, networkBehaviourType: "PlayerController", rpcName: "ChannelList_T", rpcResolution: "recovered" });
+    expect(packet?.decodedFields?.find((field) => field.name === "currentIndex")?.value).toBe(2);
+  });
+
   test("hits far from the player, or dealt by the player's side, are not taken as theirs", () => {
     const far = setup("own-far");
     expect(far(3, hit(1, 7000, vector(40, 0, 40)))).toMatchObject({ linkResolved: false });

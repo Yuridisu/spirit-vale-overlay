@@ -66,6 +66,7 @@ export class FishNetSessionDecoder {
         staleComponents: new Map(),
         ownPositions: new Map(),
         pendingOwnLinks: new Map(),
+        targetLinkAttempts: new Map(),
       };
       this.connections.set(key, state);
     }

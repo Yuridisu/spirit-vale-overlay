@@ -25,7 +25,7 @@ import {
 } from "../mapping/rpc-map.ts";
 import type { RpcLookup } from "../mapping/rpc-map.ts";
 import { parseObjectSpawn } from "./spawn.ts";
-import { recoverOwnDamageLink } from "../inference/own-links.ts";
+import { recoverOwnDamageLink, recoverOwnTargetLink } from "../inference/own-links.ts";
 import type { NetworkTransformAxes } from "./network-transform.ts";
 import type { SpawnCandidate } from "./spawn.ts";
 import {
@@ -54,6 +54,8 @@ export interface ConnectionState {
   ownPositions: Map<number, NetworkTransformAxes>;
   /** Unregistered links that have landed hits near one of those objects, waiting to be bound. */
   pendingOwnLinks: Map<number, { objectId: number; hits: number }>;
+  /** How many payloads each unregistered link has been tried against the map's target RPCs. */
+  targetLinkAttempts: Map<number, number>;
 }
 
 export interface ParsedMessage {
@@ -233,8 +235,12 @@ function parseRpcLink(
 
   const registration = state.links.get(packetId);
   const stale = registration === undefined ? state.staleLinks.get(packetId) : undefined;
-  // The local player's own object is spawned for them without its links, so hits on it are bound here.
-  const recovered = registration ?? stale ? undefined : recoverOwnDamageLink(options.rpcMap, state, packetId, packet.payload);
+  // The local player's own object is spawned for them without its links, so hits on it, and the
+  // RPCs sent to them alone (the channel list among them), are bound here.
+  const recovered = registration ?? stale
+    ? undefined
+    : recoverOwnDamageLink(options.rpcMap, state, packetId, packet.payload)
+      ?? recoverOwnTargetLink(options.rpcMap, state, packetId, packet.payload);
   if (recovered) state.links.set(packetId, recovered);
   const resolved = registration ?? stale ?? recovered;
   packet.linkResolved = resolved !== undefined;
