@@ -117,7 +117,8 @@ export function recoverOwnTargetLink(
   state.targetLinkAttempts.set(linkId, attempts + 1);
   const fits = checkableRpcs(map).filter(({ rpc }) => {
     const fit = tryDecodeFields(payload, rpc.parameters);
-    return fit.complete && fit.consumed === payload.length;
+    // A signature known only up to a point (a field the game added since) fits a longer payload.
+    return fit.complete && (fit.consumed === payload.length || (rpc.parameters?.at(-1)?.prefix === true && fit.consumed < payload.length));
   });
   if (fits.length !== 1) return undefined;
   const [{ typeName, rpc }] = fits as [RpcCandidate];

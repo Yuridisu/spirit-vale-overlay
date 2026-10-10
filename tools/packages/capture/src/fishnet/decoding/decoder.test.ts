@@ -1689,6 +1689,19 @@ describe("hits on the local player's own object", () => {
     expect(packet?.decodedFields?.find((field) => field.name === "instanceId")?.value).toBe(instance);
   });
 
+  test("reads the channel and server from a channel list carrying a field the map does not know", () => {
+    const decoder = new FishNetSessionDecoder(map);
+    const context = { reliable: true, connectionId: "channel-list-extra" };
+    decoder.decode(tick(1, spawnWithoutLinks(502, 4, 0)), context);
+    // As the game sends it: five channels, index 1, "nova-10", then one more byte the map has no field for.
+    const payload = Buffer.from("0a0002000000020e6e6f76612d313008", "hex");
+    const [packet] = decoder.decode(tick(2, targetRpc(502, 0, 38, payload)), context);
+    expect(packet).toMatchObject({ rpcName: "ChannelList_T", networkBehaviourType: "PlayerController" });
+    const value = (name: string) => packet?.decodedFields?.find((field) => field.name === name)?.value;
+    expect(value("currentIndex")).toBe(1);
+    expect(value("instanceId")).toBe("nova-10");
+  });
+
   test("hits far from the player, or dealt by the player's side, are not taken as theirs", () => {
     const far = setup("own-far");
     expect(far(3, hit(1, 7000, vector(40, 0, 40)))).toMatchObject({ linkResolved: false });

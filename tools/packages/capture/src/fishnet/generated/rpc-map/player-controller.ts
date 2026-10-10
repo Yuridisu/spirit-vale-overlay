@@ -3053,7 +3053,8 @@ export const playerControllerRpcs = [
       {
         "name": "instanceId",
         "typeName": "System.String",
-        "codec": "stringUtf8Packed"
+        "codec": "stringUtf8Packed",
+        "prefix": true
       }
     ]
   },
