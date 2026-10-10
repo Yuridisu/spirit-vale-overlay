@@ -1412,6 +1412,57 @@ describe("central capture coordinator", () => {
     });
   });
 
+  test("a channel switch the player asked for carries the new channel past the reconnection", async () => {
+    const kills: Array<{ mobId: string; bossName: string; killedBy?: string; channel?: number; instanceId?: string; diedAtMs: number }> = [];
+    await withCoordinator({ options: {
+        onBossGravestone: (gravestone) => kills.push(gravestone),
+      } }, async ({ capture, coordinator }) => {
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet(channelListPacket(2, 1, "na3-12", "test-connection"));
+      capture.packet(channelSwitchPacket(3, 4, "test-connection"));
+      capture.connection("conn-b", "opened");
+      capture.packet(authenticatedPacket(4, "conn-b"));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(5, 700, diedAtMs, "Testerson", "Lady Fey", "Sunflora Pixie", "conn-b"));
+      expect(kills).toEqual([{ mobId: "Sunflora Pixie", bossName: "Lady Fey", killedBy: "Testerson", channel: 5, instanceId: "na", diedAtMs }]);
+      await coordinator.stop();
+    });
+  });
+
+  test("a channel switch lands when the game re-authenticates on the same socket", async () => {
+    const kills: Array<{ mobId: string; bossName: string; killedBy?: string; channel?: number; instanceId?: string; diedAtMs: number }> = [];
+    await withCoordinator({ options: {
+        onBossGravestone: (gravestone) => kills.push(gravestone),
+      } }, async ({ capture, coordinator }) => {
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet(channelListPacket(2, 1, "na3-12", "test-connection"));
+      capture.packet(channelSwitchPacket(3, 6, "test-connection"));
+      capture.packet(authenticatedPacket(4, "test-connection"));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(5, 700, diedAtMs, "Testerson", "Lady Fey", "Sunflora Pixie", "test-connection"));
+      expect(kills).toEqual([{ mobId: "Sunflora Pixie", bossName: "Lady Fey", killedBy: "Testerson", channel: 7, instanceId: "na", diedAtMs }]);
+      await coordinator.stop();
+    });
+  });
+
+  test("a refused channel switch leaves the channel unknown after a reconnection, as before", async () => {
+    const kills: Array<{ mobId: string; bossName: string; killedBy?: string; channel?: number; instanceId?: string; diedAtMs: number }> = [];
+    await withCoordinator({ options: {
+        onBossGravestone: (gravestone) => kills.push(gravestone),
+      } }, async ({ capture, coordinator }) => {
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet(channelListPacket(2, 1, "na3-12", "test-connection"));
+      capture.packet(channelSwitchPacket(3, 4, "test-connection"));
+      capture.packet({ tick: 4, packetId: 22, packetName: "targetRpc", objectId: 1, rpcName: "ChannelSwitchRejected_T", decodedFields: [{ name: "reason", codec: "stringUtf8Packed", value: "full" }], raw: Buffer.alloc(0), payload: Buffer.alloc(0), connectionId: "test-connection" });
+      capture.connection("conn-b", "opened");
+      capture.packet(authenticatedPacket(5, "conn-b"));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(6, 700, diedAtMs, "Testerson", "Lady Fey", "Sunflora Pixie", "conn-b"));
+      expect(kills).toEqual([{ mobId: "Sunflora Pixie", bossName: "Lady Fey", killedBy: "Testerson", diedAtMs }]);
+      await coordinator.stop();
+    });
+  });
+
   test("dates a boss kill nobody witnessed from its gravestone", async () => {
     const kills: Array<{
       mobId: string;
@@ -1848,6 +1899,21 @@ function ownedSpawnPacket(
   };
 }
 
+
+/** The player asking the server for a channel, by its zero-based index. */
+function channelSwitchPacket(tick: number, channelIndex: number, connectionId: string): TestPacket {
+  return {
+    tick,
+    packetId: 8,
+    packetName: "serverRpc",
+    objectId: 1,
+    rpcName: "RequestChannelSwitch",
+    decodedFields: [{ name: "channelIndex", codec: "packedInt32", value: channelIndex }],
+    raw: Buffer.alloc(0),
+    payload: Buffer.alloc(0),
+    connectionId,
+  };
+}
 
 function channelListPacket(
   tick: number,

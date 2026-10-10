@@ -19,6 +19,7 @@ import { decodeBossGravestone, FishNetEternalTowerTracker, resolveBundledMapName
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
 import { PickedUpDrops } from "./picked-up-drops.ts";
+import { bossRegionOf } from "@svoverlay/contracts/boss-timers";
 import { LootOwnership } from "./loot-ownership.ts";
 import { BossFightTracker, type BossFightState } from "./boss-fight.ts";
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
@@ -267,6 +268,11 @@ export class CaptureCoordinator {
   private towerLocationDeadlineMs?: number;
   private pendingTowerLocationTick = 0;
   private currentChannel: number | undefined;
+  /**
+   * The channel the player asked to switch to, and the server region they were on. A switch
+   * reconnects, and the server sends no channel list after it, so this is how the new channel is known.
+   */
+  private requestedChannel: { channel: number; region?: string; atMs: number } | undefined;
   private currentInstanceId: string | undefined;
   private readonly reportedGravestones = new Map<number, string>();
   /** Where each live object spawned; a fresh gravestone only names itself in a later SyncType. */
@@ -1502,9 +1508,22 @@ export class CaptureCoordinator {
   }
 
   private trackChannel(packet: CapturedFishNetPacket): void {
+    if (packet.rpcName === "RequestChannelSwitch") {
+      const channel = channelFromIndex(packet, "channelIndex");
+      this.requestedChannel = channel === undefined
+        ? undefined
+        : { channel, ...(bossRegionOf(this.currentInstanceId) === undefined ? {} : { region: bossRegionOf(this.currentInstanceId)! }), atMs: this.clock.now() };
+      return;
+    }
+    // A refused switch stays on the channel; an automatic one goes wherever the server picks.
+    if (packet.rpcName === "ChannelSwitchRejected_T" || packet.rpcName === "RequestAutoChannelSwitch") {
+      this.requestedChannel = undefined;
+      return;
+    }
     if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
       this.currentChannel = undefined;
       this.setServerInstance(undefined);
+      if (packet.packetName === "authenticated") this.applyRequestedChannel();
       return;
     }
     if (packet.rpcName !== "ChannelList_T") return;
@@ -1514,6 +1533,16 @@ export class CaptureCoordinator {
     const instanceId = packet.decodedFields?.find((field) => field.name === "instanceId")?.value;
     this.setServerInstance(typeof instanceId === "string" && instanceId.length > 0 ? instanceId : undefined);
     for (const [objectId, gravestone] of this.standingGravestones) this.reportGravestone(objectId, gravestone);
+  }
+
+  /** Lands a channel switch the player asked for on the re-authentication that completes it. */
+  private applyRequestedChannel(): void {
+    const requested = this.requestedChannel;
+    this.requestedChannel = undefined;
+    if (!requested || this.clock.now() - requested.atMs > CHANNEL_SWITCH_MS) return;
+    this.currentChannel = requested.channel;
+    // The switch keeps the server region, which is all a boss timer reads from the instance.
+    if (requested.region !== undefined) this.setServerInstance(requested.region);
   }
 
   private setServerInstance(instanceId: string | undefined): void {
@@ -1801,6 +1830,8 @@ export class CaptureCoordinator {
         this.lastAuthenticated = { connectionId, tick: packet.tick };
         this.diagnostics.logPacketAdmission(packet, "rejected", "same-connection-reauthenticated", activeBefore);
         this.forgetGroundLoot();
+        // A channel switch re-authenticates on the same socket, so this is where it lands.
+        this.applyRequestedChannel();
         return { accepted: false, suppressBeforeAdmission: true };
       }
       this.lastAuthenticated = { connectionId, tick: packet.tick };
@@ -1988,6 +2019,9 @@ function directWorldTransition(packet: CapturedFishNetPacket): (SpiritValeLocati
     ? { kind: "map", mapId }
     : undefined;
 }
+
+/** How long after asking for a channel the reconnection that lands on it may come. */
+const CHANNEL_SWITCH_MS = 60_000;
 
 function channelFromIndex(packet: CapturedFishNetPacket, fieldName: string): number | undefined {
   const index = packet.decodedFields?.find((field) => field.name === fieldName)?.value;
