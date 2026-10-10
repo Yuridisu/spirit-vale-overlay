@@ -50,6 +50,28 @@ describe("boss timer coordinator", () => {
     });
   });
 
+  test("a channel with no region takes the region last seen, which survives a restart", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "spiritvale-boss-timers-region-"));
+    const storagePath = path.join(directory, "boss-timers.json");
+    try {
+      const first = await createBossTimerCoordinator({ storagePath });
+      first.setCurrentInstance("na3-12");
+      await first.shutdown();
+
+      const second = await createBossTimerCoordinator({ storagePath });
+      expect(second.getState().currentRegion).toBe("na");
+      second.recordGravestone({ mobId: "Wraith", bossName: "Wraith King", channel: 2, diedAtMs: Date.now() });
+      // No channel, no place: a sighting of nowhere in particular stays without a region.
+      second.recordGravestone({ mobId: "Snake Naga", bossName: "Naga", diedAtMs: Date.now() });
+      const byBoss = Object.fromEntries(second.getState().timers.map((timer) => [timer.mobId, timer]));
+      expect(byBoss.Wraith).toMatchObject({ region: "na", channel: 2, id: bossTimerKey("Wraith", "na", 2) });
+      expect(byBoss["Snake Naga"]!.region).toBeUndefined();
+      await second.shutdown();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("a repeat sighting re-anchors the existing timer", async () => {
     const nowMs = 10_000_000;
     await withCoordinator({ now: () => nowMs }, async ({ coordinator }) => {
@@ -325,8 +347,9 @@ describe("boss timer coordinator", () => {
       coordinator.setCurrentInstance("sun1-4");
       expect(notified).toBe(1);
 
+      // Losing the instance (a reconnection) keeps the region last seen: it does not change with the channel.
       coordinator.setCurrentInstance(undefined);
-      expect(coordinator.getState().currentRegion).toBeUndefined();
+      expect(coordinator.getState().currentRegion).toBe("na");
       expect(notified).toBe(2);
       unsubscribe();
     });

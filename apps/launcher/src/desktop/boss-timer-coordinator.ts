@@ -38,6 +38,17 @@ export interface BossTimerCoordinatorOptions {
 interface PersistedBossTimers {
   cacheVersion: 1;
   timers: BossTimer[];
+  /**
+   * The server region last seen. The region comes with the channel list sent when a character
+   * enters the world; opened mid-session, or after a channel switch, the overlay knows the channel
+   * but not the region, and a timer then takes this one rather than none.
+   */
+  lastRegion?: string;
+}
+
+interface BossTimerSave {
+  timers: BossTimer[];
+  lastRegion?: string;
 }
 
 export interface BossTimerCoordinator {
@@ -68,8 +79,9 @@ export async function createBossTimerCoordinator(
   let currentInstanceId: string | undefined;
   let playerName: string | undefined;
   let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastRegion: string | undefined;
 
-  const persistence = new SafeSaveQueue<BossTimer[]>({
+  const persistence = new SafeSaveQueue<BossTimerSave>({
     label: "boss timers",
     // `snapshotTimers` builds a fresh array per schedule that nothing mutates afterwards.
     clone: false,
@@ -77,7 +89,10 @@ export async function createBossTimerCoordinator(
     onWarning: (warning) => options.onWarning?.(warning),
   });
 
-  for (const timer of await loadBossTimers(options.storagePath)) {
+  const loaded = await loadBossTimers(options.storagePath);
+  lastRegion = loaded.lastRegion
+    ?? [...loaded.timers].sort((left, right) => right.diedAtMs - left.diedAtMs).find((timer) => timer.region !== undefined)?.region;
+  for (const timer of loaded.timers) {
     // Legacy region keys can normalize to one timer, so keep the newest.
     const existing = timers.get(timer.id);
     if (existing !== undefined && existing.diedAtMs >= timer.diedAtMs) continue;
@@ -111,7 +126,7 @@ export async function createBossTimerCoordinator(
   function getState(): BossTimerState {
     // Soonest boundary first, so every consumer lists the most imminent timer on top.
     const sorted = [...timers.values()].sort((left, right) => left.diedAtMs - right.diedAtMs);
-    const currentRegion = bossRegionOf(currentInstanceId);
+    const currentRegion = bossRegionOf(currentInstanceId) ?? lastRegion;
     return {
       timers: sorted.map((timer) => ({ ...timer })),
       ...(currentRegion === undefined ? {} : { currentRegion }),
@@ -122,6 +137,7 @@ export async function createBossTimerCoordinator(
   function setCurrentInstance(instanceId: string | undefined): void {
     if (shuttingDown || instanceId === currentInstanceId) return;
     currentInstanceId = instanceId;
+    noteRegion(bossRegionOf(instanceId));
     for (const listener of listeners) listener();
   }
 
@@ -137,7 +153,10 @@ export async function createBossTimerCoordinator(
     if (shuttingDown) return;
     if (!gravestone.mobId || !gravestone.bossName || !Number.isFinite(gravestone.diedAtMs)) return;
     if (gravestone.channel !== undefined && !isBossChannel(gravestone.channel)) return;
-    const region = bossRegionOf(gravestone.instanceId);
+    const seen = bossRegionOf(gravestone.instanceId);
+    noteRegion(seen);
+    // A channel without a region is the overlay opened mid-session or a switch: the region is the last one seen.
+    const region = seen ?? (gravestone.channel === undefined ? undefined : lastRegion);
     const diedAtMs = Math.min(gravestone.diedAtMs, now());
     if (region === undefined && gravestone.channel === undefined
       && isDeathAlreadyPlaced(gravestone.mobId, diedAtMs)) return;
@@ -151,6 +170,12 @@ export async function createBossTimerCoordinator(
       diedAtMs,
       source: "gravestone",
     });
+  }
+
+  function noteRegion(region: string | undefined): void {
+    if (region === undefined || region === lastRegion) return;
+    lastRegion = region;
+    persistence.schedule(snapshotTimers());
   }
 
   function isDeathAlreadyPlaced(mobId: string, diedAtMs: number): boolean {
@@ -238,26 +263,33 @@ export async function createBossTimerCoordinator(
     cleanupTimer.unref?.();
   }
 
-  function snapshotTimers(): BossTimer[] {
-    return [...timers.values()].map((timer) => ({ ...timer }));
+  function snapshotTimers(): BossTimerSave {
+    return {
+      timers: [...timers.values()].map((timer) => ({ ...timer })),
+      ...(lastRegion === undefined ? {} : { lastRegion }),
+    };
   }
 }
 
-async function loadBossTimers(file: string): Promise<BossTimer[]> {
+async function loadBossTimers(file: string): Promise<BossTimerSave> {
   try {
     const value = JSON.parse(await readFile(file, "utf8")) as unknown;
-    if (!isPersistedBossTimers(value)) return [];
-    return value.timers.flatMap((candidate) => {
-      const timer = normalizeTimer(candidate);
-      return timer ? [timer] : [];
-    });
+    if (!isPersistedBossTimers(value)) return { timers: [] };
+    const lastRegion = bossRegionOf(typeof value.lastRegion === "string" ? value.lastRegion : undefined);
+    return {
+      timers: value.timers.flatMap((candidate) => {
+        const timer = normalizeTimer(candidate);
+        return timer ? [timer] : [];
+      }),
+      ...(lastRegion === undefined ? {} : { lastRegion }),
+    };
   } catch {
-    return [];
+    return { timers: [] };
   }
 }
 
-async function saveBossTimers(timers: BossTimer[], file: string): Promise<void> {
-  const safe: PersistedBossTimers = { cacheVersion: 1, timers };
+async function saveBossTimers(save: BossTimerSave, file: string): Promise<void> {
+  const safe: PersistedBossTimers = { cacheVersion: 1, timers: save.timers, ...(save.lastRegion === undefined ? {} : { lastRegion: save.lastRegion }) };
   await writeJsonFileAtomic(file, safe);
 }
 
