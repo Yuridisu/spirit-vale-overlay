@@ -3053,7 +3053,12 @@ export const playerControllerRpcs = [
       {
         "name": "instanceId",
         "typeName": "System.String",
-        "codec": "stringUtf8Packed",
+        "codec": "stringUtf8Packed"
+      },
+      {
+        "name": "pvpIndex",
+        "typeName": "System.Int32",
+        "codec": "packedInt32",
         "prefix": true
       }
     ]

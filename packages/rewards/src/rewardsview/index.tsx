@@ -29,6 +29,7 @@ import type { RewardsAppRpc, RewardsAppState, RewardsAppView, RewardsUiDrop } fr
 import { sortRewardKills, sortRewardSummaries } from "../table-sort.ts";
 import type { KillSortKey, SummarySortKey } from "../table-sort.ts";
 import { DisclosureIcon, PinIcon } from "@svoverlay/ui-kit/icons";
+import { farmPerHour } from "@svoverlay/contracts/farm";
 
 const STATUS_TONE: Record<RewardsAppState["status"], StatusTone> = {
   waiting: "is-warn",
@@ -143,6 +144,7 @@ function App() {
             <button class={next.view === "xpTracker" ? "active" : undefined} type="button" onClick={() => setView("xpTracker")}>{t("rewards.view.xpTracker")}</button>
             <button class={next.view === "itemCounter" ? "active" : undefined} type="button" onClick={() => setView("itemCounter")}>{t("rewards.view.itemCounter")}</button>
             <button class={next.view === "targetDrops" ? "active" : undefined} type="button" onClick={() => setView("targetDrops")}>{t("rewards.view.targetDrops")}</button>
+            <button class={next.view === "farm" ? "active" : undefined} type="button" onClick={() => setView("farm")}>{t("rewards.view.farm")}</button>
           </div>
           <StatusDot tone={STATUS_TONE[next.status]} detail={[next.statusDetail, ...next.statusDetailExtras ?? []].map((part) => t.text(part)).join(" · ")} />
           <div class="toolbar-actions">
@@ -268,6 +270,14 @@ function App() {
             <p>{t("rewards.targetDrops.hint")}</p>
           </div>
           <TargetDropsSection state={next.targetDrops} />
+        </section>
+
+        <section hidden={next.view !== "farm"}>
+          <div class="section-head">
+            <h1>{t("rewards.farm.heading")}</h1>
+            <p>{t("rewards.farm.hint")}</p>
+          </div>
+          <FarmSection farm={next.farm} />
         </section>
       </main>
     </>
@@ -410,6 +420,57 @@ function ItemCounterSection({ counter }: { counter: RewardsAppState["itemCounter
           );
         })}</div>}
     </div>
+  );
+}
+
+/** Farm effectiveness: each measured map, best experience per hour first, with its reset. */
+function FarmSection({ farm }: { farm: RewardsAppState["farm"] }) {
+  const t = useTranslator();
+  const reset = (key?: string) => void desktopView.rpc?.request.resetFarm(key === undefined ? {} : { key });
+  const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" });
+  return (
+    <>
+      {farm.running && (
+        <p class="farm-running">{t("rewards.farm.running", { map: farm.running.mapName })}</p>
+      )}
+      {farm.reports.length === 0 ? <div class="empty-state">{t("rewards.farm.empty")}</div> : (
+        <div class="table-scroll">
+          <table class="data-table summary-table farm-table" aria-label={t("rewards.farm.heading")}>
+            <thead>
+              <tr>
+                <th>{t("rewards.farm.map")}</th>
+                <th>{t("rewards.farm.xpPerHour")}</th>
+                <th>{t("rewards.farm.jobPerHour")}</th>
+                <th>{t("rewards.farm.goldPerHour")}</th>
+                <th>{t("rewards.farm.gained")}</th>
+                <th>{t("rewards.farm.character")}</th>
+                <th>{t("rewards.farm.when")}</th>
+                <th aria-label={t("rewards.farm.reset")} />
+              </tr>
+            </thead>
+            <tbody>
+              {farm.reports.map((report) => (
+                <tr key={report.key} class={farm.place?.key === report.key ? "is-current" : undefined}>
+                  <td>{report.mapName}</td>
+                  <td>{formatInteger(farmPerHour(report.experience, report.durationMs))}</td>
+                  <td>{formatInteger(farmPerHour(report.jobExperience, report.durationMs))}</td>
+                  <td>{formatInteger(farmPerHour(report.coins, report.durationMs))}</td>
+                  <td class="farm-gained">{t("rewards.farm.gainedValue", { xp: formatInteger(report.experience), job: formatInteger(report.jobExperience), gold: formatInteger(report.coins), minutes: Math.round(report.durationMs / 60_000) })}</td>
+                  <td>{report.character ? (report.level === undefined ? report.character : t("rewards.farm.characterLevel", { name: report.character, level: report.level })) : "—"}</td>
+                  <td>{dateFormat.format(new Date(report.startedAtMs))}</td>
+                  <td><button class="btn" type="button" onClick={() => reset(report.key)}>{t("rewards.farm.reset")}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {farm.reports.length > 0 && (
+        <div class="xp-tracker-actions">
+          <button class="btn" type="button" onClick={() => reset()}>{t("rewards.farm.resetAll")}</button>
+        </div>
+      )}
+    </>
   );
 }
 

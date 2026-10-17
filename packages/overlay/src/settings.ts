@@ -78,6 +78,7 @@ const DEFAULT_SHORTCUTS: Record<KeybindAction, string> = {
   resetTimer: "Ctrl+Shift+0",
   toggleGearRating: "Ctrl+Shift+G",
   cyclePreset: "Ctrl+Shift+P",
+  startFarm: "Ctrl+Shift+F",
 };
 
 const DEFAULT_LOCKED = true;
@@ -117,6 +118,9 @@ const DEFAULT_ELEMENTS: Record<OverlayElementId, Omit<OverlayElementSettings, "d
   summons: { enabled: false, opacity: 0.5, x: 1660, y: 200, width: 240, height: 330 },
   skillGuide: { enabled: false, opacity: 0.6, x: 1420, y: 560, width: 460, height: 300 },
   farmGuide: { enabled: false, opacity: 0.6, x: 20, y: 560, width: 320, height: 300 },
+  farmEffectiveness: { enabled: false, opacity: 0.6, x: 24, y: 630, width: 280, height: 120 },
+  dfBossFight: { enabled: false, opacity: 0.6, x: 320, y: 630, width: 270, height: 250 },
+  echoingSpire: { enabled: false, opacity: 0.6, x: 600, y: 520, width: 300, height: 360 },
 };
 
 // DEFAULT_ELEMENTS is authored for a 1920x1080 display; default positions are scaled relative
@@ -340,6 +344,7 @@ export function normalizeShortcuts(source: Record<string, unknown>): Record<Keyb
     resetTimer: shortcutsSource.resetTimer,
     toggleGearRating: shortcutsSource.toggleGearRating,
     cyclePreset: shortcutsSource.cyclePreset,
+    startFarm: shortcutsSource.startFarm,
   };
   const shortcuts = {} as Record<KeybindAction, string>;
   for (const action of KEYBIND_ACTIONS) {

@@ -42,6 +42,8 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendTimer: () => {},
     sendKills: () => {},
     sendBossFight: () => {},
+    sendDarkFortress: () => {},
+    sendEchoingSpire: () => {},
     sendGearRating: () => {},
     sendDamageTaken: () => {},
     sendItemCounter: () => {},
@@ -49,6 +51,7 @@ function recordingSurface(display: string): OverlaySurfaceSink & { control?: Ove
     sendLootAlert: () => {},
     sendSummons: () => {},
     sendBuildGuide: () => {},
+    sendFarm: () => {},
   };
 }
 

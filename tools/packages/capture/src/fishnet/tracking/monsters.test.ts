@@ -70,6 +70,56 @@ describe("FishNetMonsterDirectory", () => {
     expect(directory.get(52)).toBeUndefined();
   });
 
+  test("keeps a monster sent again without its identity, while it has not despawned", () => {
+    const directory = new FishNetMonsterDirectory(LEVELS);
+    directory.consume(monsterSync(1, 52));
+
+    expect(directory.consume({
+      tick: 2, packetId: 4, packetName: "objectSpawn",
+      raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52,
+    })).toBeUndefined();
+    expect(directory.get(52)).toMatchObject({ mobId: "training-mob" });
+  });
+
+  test("keeps a monster that despawns and comes straight back without its identity", () => {
+    const directory = new FishNetMonsterDirectory(LEVELS);
+    directory.consume(monsterSync(1, 52));
+    const despawn = (tick: number): DecodedFishNetPacket => ({
+      tick, packetId: 3, packetName: "objectDespawn", raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52,
+    });
+    const bareSpawn = (tick: number): DecodedFishNetPacket => ({
+      tick, packetId: 4, packetName: "objectSpawn", raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52,
+    });
+
+    directory.consume(despawn(10));
+    expect(directory.consume(bareSpawn(12))).toMatchObject({ operation: "upsert", objectId: 52, spawn: { mobId: "training-mob" } });
+    expect(directory.get(52)).toMatchObject({ mobId: "training-mob" });
+
+    // Long gone, the id may belong to something else now.
+    directory.consume(despawn(20));
+    expect(directory.consume(bareSpawn(20 + 301))).toBeUndefined();
+    expect(directory.get(52)).toBeUndefined();
+  });
+
+  test("keeps a despawned monster that is still being hit, and forgets it once its id is spawned again", () => {
+    const directory = new FishNetMonsterDirectory(LEVELS);
+    directory.consume(monsterSync(1, 52));
+    directory.consume({ tick: 2, packetId: 3, packetName: "objectDespawn", raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52 });
+    expect(directory.get(52)).toBeUndefined();
+
+    const hit: DecodedFishNetPacket = {
+      tick: 900, packetId: 5, packetName: "rpcLink", rpcName: "ApplyDamage_C", networkBehaviourType: "HealthComponent",
+      raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52,
+    };
+    expect(directory.consume(hit)).toMatchObject({ operation: "upsert", objectId: 52, spawn: { mobId: "training-mob" } });
+    expect(directory.get(52)).toMatchObject({ mobId: "training-mob" });
+
+    directory.consume({ tick: 901, packetId: 3, packetName: "objectDespawn", raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52 });
+    directory.consume({ tick: 1_300, packetId: 4, packetName: "objectSpawn", raw: Buffer.alloc(0), payload: Buffer.alloc(0), objectId: 52, networkBehaviourType: "PlayerController" });
+    expect(directory.consume({ ...hit, tick: 1_301 })).toBeUndefined();
+    expect(directory.get(52)).toBeUndefined();
+  });
+
   test("clears everything when the connection restarts", () => {
     const directory = new FishNetMonsterDirectory(LEVELS);
     directory.consume(monsterSync(1, 52));

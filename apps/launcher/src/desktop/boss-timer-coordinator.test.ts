@@ -146,6 +146,18 @@ describe("boss timer coordinator", () => {
     });
   });
 
+  test("keeps a boss killed on the PvP channel, apart from the same boss on channel 3", async () => {
+    const nowMs = 10_000_000;
+    await withCoordinator({ now: () => nowMs }, async ({ coordinator }) => {
+      coordinator.recordGravestone({ mobId: "Wraith", bossName: "Wraith King", channel: 3, instanceId: "nova-10", diedAtMs: nowMs - 30 * 60_000 });
+      coordinator.recordGravestone({ mobId: "Wraith", bossName: "Wraith King", channel: 5, pvp: true, instanceId: "nova-10", diedAtMs: nowMs - 5 * 60_000 });
+
+      const { timers } = coordinator.getState();
+      expect(timers.map((timer) => [timer.channel, timer.pvp])).toEqual(expect.arrayContaining([[3, undefined], [5, true]]));
+      expect(timers).toHaveLength(2);
+    });
+  });
+
   test("manual entries reject channels no world boss spawns on", async () => {
     const nowMs = 10_000_000;
     await withCoordinator({ now: () => nowMs }, async ({ coordinator }) => {

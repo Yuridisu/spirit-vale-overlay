@@ -1,3 +1,4 @@
+import { useEffect, useState } from "preact/hooks";
 import { useTranslator } from "@svoverlay/i18n/browser";
 import { formatCompact, formatDps, formatDuration, formatInteger } from "@svoverlay/ui-kit/format";
 import type { OverlayBossFightState } from "../../app-types.ts";
@@ -36,7 +37,9 @@ export function BossMeterElement() {
         <strong class="boss-meter-total">{formatInteger(Math.round(fight.totalDamage))}</strong>
         <span>{t("overlay.bossMeter.rate", { dps: formatDps(fight.totalDamage / seconds) })}</span>
         <span>{t("overlay.bossMeter.time", { time: formatDuration(fight.durationMs) })}</span>
+        {fight.closesInMs !== undefined && <ClosingIn closesInMs={fight.closesInMs} />}
       </div>
+      {fight.health && !(fight.bosses && fight.bosses.length > 1) && <BossHealthBar health={fight.health} />}
       {fight.bosses && fight.bosses.length > 1
         ? fight.bosses.map((boss) => {
             const bossSeconds = Math.max(1, boss.durationMs / 1_000);
@@ -49,6 +52,7 @@ export function BossMeterElement() {
                     <span class="boss-meter-row-rate">{t("overlay.bossMeter.rate", { dps: formatDps(boss.totalDamage / bossSeconds) })}</span>
                   </span>
                 </div>
+                {boss.health && <BossHealthBar health={boss.health} />}
                 <BossMeterRows rows={boss.rows.slice(0, ROWS_PER_BOSS)} seconds={bossSeconds} colorOf={colorOf} />
               </section>
             );
@@ -56,6 +60,38 @@ export function BossMeterElement() {
         : <BossMeterRows rows={fight.rows} seconds={seconds} colorOf={colorOf} />}
     </div>
   );
+}
+
+/** The boss's health as the game sends it, draining as the party hits it; full until it is sent. */
+export function BossHealthBar({ health }: { health?: { current: number; max: number } }) {
+  const t = useTranslator();
+  const share = !health ? 1 : health.max > 0 ? Math.max(0, Math.min(1, health.current / health.max)) : 0;
+  return (
+    <div class="boss-meter-hp" style={`--hp:${share}`} role="meter" aria-valuemin={0} aria-valuemax={health?.max ?? 1} aria-valuenow={health?.current ?? 1}>
+      <div class="boss-meter-hp-fill" />
+      <div class="boss-meter-hp-text">
+        <span>{t("overlay.bossMeter.hp", { percent: (share * 100).toFixed(share < 0.1 ? 1 : 0) })}</span>
+        {health && <span>{formatCompact(health.current)} / {formatCompact(health.max)}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Counts down, second by second, the time a finished fight has left on the overlay. */
+function ClosingIn({ closesInMs }: { closesInMs: number }) {
+  const t = useTranslator();
+  const [closesAtMs, setClosesAtMs] = useState(() => Date.now() + closesInMs);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    setClosesAtMs(Date.now() + closesInMs);
+    setNow(Date.now());
+  }, [closesInMs]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, []);
+  const seconds = Math.max(0, Math.ceil((closesAtMs - now) / 1_000));
+  return <span class="boss-meter-closing">{t("overlay.bossMeter.closing", { seconds })}</span>;
 }
 
 function BossMeterRows({ rows, seconds, colorOf }: { rows: readonly BossMeterRow[]; seconds: number; colorOf: (name: string) => string }) {

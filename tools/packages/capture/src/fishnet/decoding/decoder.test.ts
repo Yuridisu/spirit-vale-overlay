@@ -1666,7 +1666,7 @@ describe("hits on the local player's own object", () => {
     const channelList = Buffer.concat([
       packed(3), packed(12), packed(40), packed(7), // playerCounts
       packed(2), // currentIndex
-      packed(Buffer.byteLength(instance)), Buffer.from(instance),
+      packed(Buffer.byteLength(instance)), Buffer.from(instance), packed(-1),
     ]);
     const packet = decode(3, channelList);
     expect(packet).toMatchObject({ linkResolved: true, objectId: 500, networkBehaviourType: "PlayerController", rpcName: "ChannelList_T", rpcResolution: "recovered" });
@@ -1683,23 +1683,24 @@ describe("hits on the local player's own object", () => {
     ]));
     decoder.decode(tick(2, ownSpawn), context);
     const instance = "fictional-instance";
-    const channelList = Buffer.concat([packed(2), packed(12), packed(40), packed(1), packed(Buffer.byteLength(instance)), Buffer.from(instance)]);
+    const channelList = Buffer.concat([packed(2), packed(12), packed(40), packed(1), packed(Buffer.byteLength(instance)), Buffer.from(instance), packed(-1)]);
     const [packet] = decoder.decode(tick(3, linked(902, channelList)), context);
     expect(packet).toMatchObject({ linkResolved: true, objectId: 501, rpcName: "ChannelList_T" });
     expect(packet?.decodedFields?.find((field) => field.name === "instanceId")?.value).toBe(instance);
   });
 
-  test("reads the channel and server from a channel list carrying a field the map does not know", () => {
+  test("reads the channel, the server and the PvP channel from the channel list as the game sends it", () => {
     const decoder = new FishNetSessionDecoder(map);
     const context = { reliable: true, connectionId: "channel-list-extra" };
     decoder.decode(tick(1, spawnWithoutLinks(502, 4, 0)), context);
-    // As the game sends it: five channels, index 1, "nova-10", then one more byte the map has no field for.
+    // Five channels, index 1, "nova-10", and the PvP channel at index 4.
     const payload = Buffer.from("0a0002000000020e6e6f76612d313008", "hex");
     const [packet] = decoder.decode(tick(2, targetRpc(502, 0, 38, payload)), context);
     expect(packet).toMatchObject({ rpcName: "ChannelList_T", networkBehaviourType: "PlayerController" });
     const value = (name: string) => packet?.decodedFields?.find((field) => field.name === name)?.value;
     expect(value("currentIndex")).toBe(1);
     expect(value("instanceId")).toBe("nova-10");
+    expect(value("pvpIndex")).toBe(4);
   });
 
   test("hits far from the player, or dealt by the player's side, are not taken as theirs", () => {

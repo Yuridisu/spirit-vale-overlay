@@ -3,11 +3,12 @@ import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { RewardLogStatus } from "@kar-mi/spirit-vale-tools-rewards";
 import type { RateSnapshot } from "@kar-mi/spirit-vale-tools-metrics";
 import type { MaximizableWindowChromeRequests } from "@svoverlay/contracts/window-rpc";
+import type { FarmState } from "@svoverlay/contracts/farm";
 
 export type RateTotals = Omit<RateSnapshot, "timeline">;
 
 export type RewardsAppMode = "live" | "replay";
-export type RewardsAppView = "summary" | "recent" | "trends" | "xpTracker" | "itemCounter" | "targetDrops";
+export type RewardsAppView = "summary" | "recent" | "trends" | "xpTracker" | "itemCounter" | "targetDrops" | "farm";
 export type RewardsAppStatus = RewardLogStatus;
 
 export interface RewardsUiDrop { category: string; itemId: string; itemName: string; count: number; chance?: number }
@@ -108,6 +109,8 @@ export interface RewardsAppState {
   gold: RateTotals;
   itemCounter: RewardsItemCounterState;
   targetDrops: RewardsTargetDropState;
+  /** Farm effectiveness: one report per map measured. */
+  farm: FarmState;
 }
 
 export type RewardsAppRpc = {
@@ -127,6 +130,8 @@ export type RewardsAppRpc = {
       setTargetDropSound: { params: { enabled: boolean }; response: RewardsAppState };
       setTargetDropVolume: { params: { volume: number }; response: RewardsAppState };
       previewTargetDropSound: { params: { sound: string }; response: { played: boolean } };
+      /** Forgets one map's farm report (by its key), or every report, so it can be measured again. */
+      resetFarm: { params: { key?: string }; response: RewardsAppState };
     };
   }>;
   webview: RPCSchema<{ messages: { stateChanged: RewardsAppState } }>;

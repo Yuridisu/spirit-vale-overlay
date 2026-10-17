@@ -1,6 +1,7 @@
-import type { BossFightBoss, BossFightPlayer, BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { BossFightPlayer, BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { BossHealth } from "@svoverlay/contracts/dark-fortress";
 
-/** One player's damage to the bosses of the current fight. */
+/** One player's damage to the bosses on show. */
 export interface BossFightRow {
   name: string;
   archetype?: number;
@@ -8,16 +9,20 @@ export interface BossFightRow {
 }
 
 export interface BossFightState {
-  /** Every boss hit during the fight, in the order they were first hit. */
+  /** Every boss on show, in the order they were first hit. */
   bossNames: string[];
   totalDamage: number;
   /** From the first hit on a boss to the latest one. */
   durationMs: number;
-  /** False once every boss is dead or the fight has gone quiet. */
+  /** False once the boss on show is dead or its fight has gone quiet. */
   active: boolean;
   rows: BossFightRow[];
-  /** Each boss on its own, when the fight has more than one. */
-  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: BossFightRow[] }>;
+  /** For a finished fight still on show: how long until it leaves the overlay. */
+  closesInMs?: number;
+  /** The boss's health, for a single boss in sight. */
+  health?: BossHealth;
+  /** Each boss on its own, when more than one is being fought at once. */
+  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: BossFightRow[]; health?: BossHealth }>;
 }
 
 /** Boss damage this long apart belongs to two different fights. */
@@ -25,35 +30,26 @@ const IDLE_GAP_MS = 30_000;
 const MAX_ROWS = 12;
 /** Loot spawning this soon after a boss dies is taken to be that boss's. */
 const DROP_WINDOW_MS = 5_000;
-const MAX_KEPT_FIGHTS = 30;
+/** An Echo gauntlet alone is seven bosses, so this keeps a good few runs. */
+const MAX_KEPT_FIGHTS = 100;
+/** A finished fight stays on the overlay this long, counting down, then leaves it. */
+const SHOW_FINISHED_MS = 30_000;
 
 interface PlayerTally extends Omit<BossFightPlayer, "skills"> {
   skills: Map<string, { label: string; damage: number; hits: number; crits: number }>;
 }
 
-/** One boss's share of a fight: when it was hit, and by whom. */
-interface BossTally {
+/** One boss, from its first hit to its death or a long quiet spell. */
+interface Fight {
+  id: string;
+  objectId: number;
   name: string;
   startedAtMs: number;
   lastDamageAtMs: number;
-  totalDamage: number;
-  dead: boolean;
-  players: Map<string, PlayerTally>;
-}
-
-interface Fight {
-  id: string;
-  /** Boss object id -> its own tally, in the order first hit. */
-  bosses: Map<number, BossTally>;
-  startedAtMs: number;
-  lastDamageAtMs: number;
-  /** Boss object id -> name, for the bosses still standing. */
-  alive: Map<number, string>;
-  bossNames: string[];
   mapName?: string;
   totalDamage: number;
   players: Map<string, PlayerTally>;
-  lastBossDeathAtMs?: number;
+  diedAtMs?: number;
   drops: Map<string, { name: string; rarity?: number; count: number }>;
   countedDrops: Set<number>;
 }
@@ -61,12 +57,17 @@ interface Fight {
 /**
  * Follows the damage players deal to bosses, apart from everything else they hit.
  *
- * A fight opens with the first hit on a boss and takes in every boss hit while it runs, so a
- * double-boss encounter is one fight. It closes when every boss hit has died or no boss has been
- * hit for a while. Finished fights are kept, newest last, for the Combat window to look back on.
+ * Every boss is a fight of its own, from its first hit to its death or a long quiet spell, even
+ * when several are fought at once (an Echo gauntlet brings them in one after another). The overlay
+ * shows the bosses still standing; a dead one leaves it, and only the last to fall stays on show,
+ * counting down for a while, unless another boss is hit first. Finished fights are kept, newest
+ * last, for the Combat window.
  */
 export class BossFightTracker {
-  private fight: Fight | undefined;
+  /** Boss object id -> its fight, until the fight is put away. */
+  private readonly open = new Map<number, Fight>();
+  /** The fight most recently put away, still on show while no other boss is. */
+  private latest: Fight | undefined;
   private readonly finished: BossFightReport[] = [];
 
   /** Seeds the fights of earlier sessions, oldest first. */
@@ -82,118 +83,80 @@ export class BossFightTracker {
   ): void {
     const { damage, label = "Unknown", critical = false } = typeof hit === "number" ? { damage: hit } : hit;
     if (!Number.isFinite(damage) || damage <= 0) return;
-    let fight = this.fight;
-    if (!fight || this.ended(fight, nowMs)) {
-      this.archive(nowMs);
+    this.putAwayFinished(nowMs);
+    let fight = this.open.get(boss.objectId);
+    if (fight && this.ended(fight, nowMs)) {
+      this.archive(fight, nowMs);
+      fight = undefined;
+    }
+    if (!fight) {
       fight = {
         id: `${nowMs}-${boss.objectId}`,
+        objectId: boss.objectId,
+        name: boss.name,
         startedAtMs: nowMs,
         lastDamageAtMs: nowMs,
-        alive: new Map(),
-        bosses: new Map(),
-        bossNames: [],
         totalDamage: 0,
         players: new Map(),
         drops: new Map(),
         countedDrops: new Set(),
       };
-      this.fight = fight;
+      this.open.set(boss.objectId, fight);
     }
     fight.lastDamageAtMs = nowMs;
-    fight.alive.set(boss.objectId, boss.name);
-    if (!fight.bossNames.includes(boss.name)) fight.bossNames.push(boss.name);
     fight.totalDamage += damage;
 
-    let bossTally = fight.bosses.get(boss.objectId);
-    if (!bossTally) {
-      const sameName = [...fight.bosses.values()].filter((other) => other.name === boss.name || other.name.startsWith(`${boss.name} `)).length;
-      bossTally = {
-        name: sameName === 0 ? boss.name : `${boss.name} ${sameName + 1}`,
-        startedAtMs: nowMs,
-        lastDamageAtMs: nowMs,
-        totalDamage: 0,
-        dead: false,
-        players: new Map(),
-      };
-      fight.bosses.set(boss.objectId, bossTally);
-    }
-    bossTally.lastDamageAtMs = nowMs;
-    bossTally.totalDamage += damage;
-
-    for (const tally of [this.player(fight.players, player.name), this.player(bossTally.players, player.name)]) {
-      if (player.archetype !== undefined) tally.archetype = player.archetype;
-      tally.damage += damage;
-      tally.hits += 1;
-      if (critical) tally.crits += 1;
-      const skill = tally.skills.get(label) ?? { label, damage: 0, hits: 0, crits: 0 };
-      skill.damage += damage;
-      skill.hits += 1;
-      if (critical) skill.crits += 1;
-      tally.skills.set(label, skill);
-    }
+    const tally = this.player(fight.players, player.name);
+    if (player.archetype !== undefined) tally.archetype = player.archetype;
+    tally.damage += damage;
+    tally.hits += 1;
+    if (critical) tally.crits += 1;
+    const skill = tally.skills.get(label) ?? { label, damage: 0, hits: 0, crits: 0 };
+    skill.damage += damage;
+    skill.hits += 1;
+    if (critical) skill.crits += 1;
+    tally.skills.set(label, skill);
   }
 
   /**
-   * Takes a "boss" out of the fight in progress, with every hit counted on it: one that turned out
-   * to fight on the players' side (a necromancer's Reanimation keeps the boss it raised). A fight
-   * left with no boss is dropped, not kept. Returns whether anything changed.
+   * Drops the fight on a "boss" that turned out to fight on the players' side (a necromancer's
+   * Reanimation keeps the boss it raised), with every hit counted on it. Returns whether anything
+   * changed.
    */
   forgetBoss(bossObjectId: number): boolean {
-    const fight = this.fight;
-    const boss = fight?.bosses.get(bossObjectId);
-    if (!fight || !boss) return false;
-    fight.bosses.delete(bossObjectId);
-    fight.alive.delete(bossObjectId);
-    fight.totalDamage -= boss.totalDamage;
-    for (const [name, taken] of boss.players) {
-      const tally = fight.players.get(name);
-      if (!tally) continue;
-      tally.damage -= taken.damage;
-      tally.hits -= taken.hits;
-      tally.crits -= taken.crits;
-      for (const [label, skill] of taken.skills) {
-        const total = tally.skills.get(label);
-        if (!total) continue;
-        total.damage -= skill.damage;
-        total.hits -= skill.hits;
-        total.crits -= skill.crits;
-        if (total.hits <= 0) tally.skills.delete(label);
-      }
-      if (tally.hits <= 0 && tally.deaths === 0) fight.players.delete(name);
-    }
-    fight.bossNames = [...new Set([...fight.bosses.values()].map((other) => other.name.replace(/ \d+$/, "")))];
-    if (fight.bosses.size === 0) this.fight = undefined;
-    return true;
+    return this.open.delete(bossObjectId);
   }
 
-  /** Names the map the fight in progress is on; the first name given stands. */
+  /** Names the map of the fights in progress; the first name given to each stands. */
   observeMap(mapName: string | undefined): void {
-    if (this.fight && this.fight.mapName === undefined && mapName !== undefined) this.fight.mapName = mapName;
+    if (mapName === undefined) return;
+    for (const fight of this.open.values()) if (fight.mapName === undefined) fight.mapName = mapName;
   }
 
-  /** Drops every finished fight. One in progress carries on. */
+  /** Drops every finished fight. The ones in progress carry on. */
   clearHistory(): void {
     this.finished.length = 0;
   }
 
   observeDeath(bossObjectId: number, nowMs = 0): void {
-    const boss = this.fight?.bosses.get(bossObjectId);
-    if (boss) boss.dead = true;
-    if (this.fight?.alive.delete(bossObjectId)) this.fight.lastBossDeathAtMs = nowMs;
+    const fight = this.open.get(bossObjectId);
+    if (fight && fight.diedAtMs === undefined) fight.diedAtMs = nowMs;
   }
 
-  /** A player who dies while a fight is running; one who never hit the boss is listed all the same. */
+  /** A player who dies while bosses are being fought counts in each; one who never hit is listed all the same. */
   observePlayerDeath(name: string, nowMs: number): void {
-    const fight = this.fight;
-    if (!fight || this.ended(fight, nowMs)) return;
-    this.player(fight.players, name).deaths += 1;
+    for (const fight of this.live(nowMs)) this.player(fight.players, name).deaths += 1;
   }
 
   /** Loot appearing right after a boss dies. Returns whether it was counted as that boss's. */
   observeDrop(drop: { objectId: number; name: string; rarity?: number }, nowMs: number): boolean {
-    const fight = this.fight;
-    if (!fight || fight.lastBossDeathAtMs === undefined) return false;
-    if (nowMs - fight.lastBossDeathAtMs > DROP_WINDOW_MS || fight.countedDrops.has(drop.objectId)) return false;
+    // The boss that fell last is the one whose loot this is.
+    let fight: Fight | undefined;
+    for (const candidate of this.open.values()) {
+      if (candidate.diedAtMs === undefined || nowMs - candidate.diedAtMs > DROP_WINDOW_MS) continue;
+      if (!fight || candidate.diedAtMs >= fight.diedAtMs!) fight = candidate;
+    }
+    if (!fight || fight.countedDrops.has(drop.objectId)) return false;
     fight.countedDrops.add(drop.objectId);
     const key = `${drop.name}\u0000${drop.rarity ?? ""}`;
     const entry = fight.drops.get(key) ?? { name: drop.name, ...(drop.rarity === undefined ? {} : { rarity: drop.rarity }), count: 0 };
@@ -202,37 +165,89 @@ export class BossFightTracker {
     return true;
   }
 
-  /** Forgets the fight in progress, as on a map change; finished fights are kept. */
+  /** Forgets the fights in progress, as on a map change; finished fights are kept. */
   reset(nowMs = 0): void {
-    this.archive(nowMs);
-    this.fight = undefined;
+    for (const fight of [...this.open.values()]) this.archive(fight, nowMs);
+    this.latest = undefined;
   }
 
-  state(nowMs: number): BossFightState | undefined {
-    const fight = this.fight;
-    if (!fight) return undefined;
+  /** Whether this boss is being fought, so a change in its health is worth showing. */
+  isFighting(bossObjectId: number): boolean {
+    return this.open.has(bossObjectId);
+  }
+
+  state(nowMs: number, healthOf: (bossObjectId: number) => BossHealth | undefined = () => undefined): BossFightState | undefined {
+    const live = this.live(nowMs);
+    if (live.length === 0) {
+      // With no boss standing, the one that fell last stays on show for a while.
+      const shown = this.lastFinished();
+      if (!shown) return undefined;
+      const closesInMs = finishedAt(shown) + SHOW_FINISHED_MS - nowMs;
+      return closesInMs > 0 ? { ...fightState(shown, false), closesInMs } : undefined;
+    }
+    if (live.length === 1) {
+      const health = healthOf(live[0]!.objectId);
+      return { ...fightState(live[0]!, true), ...(health ? { health } : {}) };
+    }
+    const players = new Map<string, PlayerTally>();
+    for (const fight of live) {
+      for (const tally of fight.players.values()) {
+        const whole = this.player(players, tally.name);
+        if (tally.archetype !== undefined) whole.archetype = tally.archetype;
+        whole.damage += tally.damage;
+      }
+    }
+    const names = numberedNames(live);
     return {
-      bossNames: [...fight.bossNames],
-      totalDamage: fight.totalDamage,
-      durationMs: fight.lastDamageAtMs - fight.startedAtMs,
-      active: !this.ended(fight, nowMs),
-      rows: meterRows(fight.players),
-      ...(fight.bosses.size < 2 ? {} : {
-        bosses: [...fight.bosses.values()].map((boss) => ({
-          name: boss.name,
-          totalDamage: boss.totalDamage,
-          durationMs: boss.lastDamageAtMs - boss.startedAtMs,
-          alive: !boss.dead,
-          rows: meterRows(boss.players),
-        })),
+      bossNames: [...new Set(live.map((fight) => fight.name))],
+      totalDamage: live.reduce((sum, fight) => sum + fight.totalDamage, 0),
+      durationMs: Math.max(...live.map((fight) => fight.lastDamageAtMs)) - Math.min(...live.map((fight) => fight.startedAtMs)),
+      active: true,
+      rows: meterRows(players),
+      bosses: live.map((fight, index) => {
+        const health = healthOf(fight.objectId);
+        return {
+          name: names[index]!,
+          totalDamage: fight.totalDamage,
+          durationMs: fight.lastDamageAtMs - fight.startedAtMs,
+          alive: true,
+          rows: meterRows(fight.players),
+          ...(health ? { health } : {}),
+        };
       }),
     };
   }
 
-  /** Every fight on record, newest first, the one in progress included. */
+  /**
+   * When what state() shows next changes with no new event: a boss fight going quiet, or a
+   * finished one leaving the overlay. Undefined when nothing is due.
+   */
+  nextChangeAtMs(nowMs: number): number | undefined {
+    const live = this.live(nowMs);
+    if (live.length > 0) return Math.min(...live.map((fight) => fight.lastDamageAtMs + IDLE_GAP_MS));
+    const shown = this.lastFinished();
+    if (!shown) return undefined;
+    const closesAtMs = finishedAt(shown) + SHOW_FINISHED_MS;
+    return closesAtMs > nowMs ? closesAtMs : undefined;
+  }
+
+  /** Every fight on record, newest first, the ones in progress included. */
   reports(nowMs: number): BossFightReport[] {
-    const current = this.fight ? [this.report(this.fight, nowMs)] : [];
-    return [...current, ...[...this.finished].reverse()];
+    const current = [...this.open.values()].map((fight) => this.report(fight, nowMs));
+    return [...current, ...this.finished].sort((left, right) => right.startedAtMs - left.startedAtMs);
+  }
+
+  /** The bosses being fought: hit lately and not yet dead, in the order first hit. */
+  private live(nowMs: number): Fight[] {
+    return [...this.open.values()]
+      .filter((fight) => !this.ended(fight, nowMs))
+      .sort((left, right) => left.startedAtMs - right.startedAtMs);
+  }
+
+  /** The fight that ended last, put away or not. */
+  private lastFinished(): Fight | undefined {
+    return [...this.open.values(), ...(this.latest ? [this.latest] : [])]
+      .sort((left, right) => finishedAt(right) - finishedAt(left))[0];
   }
 
   private player(players: Map<string, PlayerTally>, name: string): PlayerTally {
@@ -244,33 +259,34 @@ export class BossFightTracker {
     return tally;
   }
 
-  private archive(nowMs: number): void {
-    if (!this.fight) return;
-    this.finished.push({ ...this.report(this.fight, nowMs), active: false });
+  /** Puts away fights that are over, once a dead boss's loot has had time to land. */
+  private putAwayFinished(nowMs: number): void {
+    for (const fight of [...this.open.values()]) {
+      if (!this.ended(fight, nowMs)) continue;
+      if (fight.diedAtMs !== undefined && nowMs - fight.diedAtMs <= DROP_WINDOW_MS) continue;
+      this.archive(fight, nowMs);
+    }
+  }
+
+  private archive(fight: Fight, nowMs: number): void {
+    this.open.delete(fight.objectId);
+    this.finished.push({ ...this.report(fight, nowMs), active: false });
+    this.finished.sort((left, right) => left.startedAtMs - right.startedAtMs);
     if (this.finished.length > MAX_KEPT_FIGHTS) this.finished.splice(0, this.finished.length - MAX_KEPT_FIGHTS);
-    this.fight = undefined;
+    if (!this.latest || fight.lastDamageAtMs >= this.latest.lastDamageAtMs) this.latest = fight;
   }
 
   private report(fight: Fight, nowMs: number): BossFightReport {
     return {
       id: fight.id,
-      bossNames: [...fight.bossNames],
+      bossNames: [fight.name],
       ...(fight.mapName === undefined ? {} : { mapName: fight.mapName }),
       startedAtMs: fight.startedAtMs,
       durationMs: fight.lastDamageAtMs - fight.startedAtMs,
       totalDamage: fight.totalDamage,
       active: !this.ended(fight, nowMs),
-      defeated: fight.alive.size === 0,
+      defeated: fight.diedAtMs !== undefined,
       players: reportPlayers(fight.players),
-      ...(fight.bosses.size < 2 ? {} : {
-        bosses: [...fight.bosses.values()].map((boss): BossFightBoss => ({
-          name: boss.name,
-          durationMs: boss.lastDamageAtMs - boss.startedAtMs,
-          totalDamage: boss.totalDamage,
-          defeated: boss.dead,
-          players: reportPlayers(boss.players, fight.players),
-        })),
-      }),
       drops: [...fight.drops.values()]
         .sort((left, right) => (right.rarity ?? 0) - (left.rarity ?? 0) || left.name.localeCompare(right.name))
         .map((drop) => ({ ...drop })),
@@ -278,8 +294,33 @@ export class BossFightTracker {
   }
 
   private ended(fight: Fight, nowMs: number): boolean {
-    return fight.alive.size === 0 || nowMs - fight.lastDamageAtMs >= IDLE_GAP_MS;
+    return fight.diedAtMs !== undefined || nowMs - fight.lastDamageAtMs >= IDLE_GAP_MS;
   }
+}
+
+/** When a fight ended: its boss's death, or the moment it went quiet. */
+function finishedAt(fight: Fight): number {
+  return fight.diedAtMs ?? fight.lastDamageAtMs + IDLE_GAP_MS;
+}
+
+function fightState(fight: Fight, active: boolean): BossFightState {
+  return {
+    bossNames: [fight.name],
+    totalDamage: fight.totalDamage,
+    durationMs: fight.lastDamageAtMs - fight.startedAtMs,
+    active,
+    rows: meterRows(fight.players),
+  };
+}
+
+/** Two bosses of one name fought at once are told apart as "Kraken" and "Kraken 2". */
+function numberedNames(fights: readonly Fight[]): string[] {
+  const seen = new Map<string, number>();
+  return fights.map((fight) => {
+    const count = (seen.get(fight.name) ?? 0) + 1;
+    seen.set(fight.name, count);
+    return count === 1 ? fight.name : `${fight.name} ${count}`;
+  });
 }
 
 function meterRows(players: Map<string, PlayerTally>): BossFightRow[] {
@@ -294,8 +335,8 @@ function meterRows(players: Map<string, PlayerTally>): BossFightRow[] {
     }));
 }
 
-/** Players ranked by damage; deaths come from the whole fight, as a death is not one boss's. */
-function reportPlayers(players: Map<string, PlayerTally>, whole: Map<string, PlayerTally> = players): BossFightPlayer[] {
+/** Players ranked by damage. */
+function reportPlayers(players: Map<string, PlayerTally>): BossFightPlayer[] {
   return [...players.values()]
     .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name))
     .map((player) => ({
@@ -304,7 +345,7 @@ function reportPlayers(players: Map<string, PlayerTally>, whole: Map<string, Pla
       damage: player.damage,
       hits: player.hits,
       crits: player.crits,
-      deaths: whole.get(player.name)?.deaths ?? player.deaths,
+      deaths: player.deaths,
       skills: [...player.skills.values()].sort((left, right) => right.damage - left.damage).map((skill) => ({ ...skill })),
     }));
 }

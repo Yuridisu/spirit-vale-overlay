@@ -1,7 +1,7 @@
 import { useTranslator } from "@svoverlay/i18n/browser";
 import type { Translator } from "@svoverlay/i18n/translate";
 import {
-  bossDueAtMs, bossEligibleAtMs, bossRegionLabel, bossRegionsPresent,
+  bossChannelName, bossDueAtMs, bossEligibleAtMs, bossRegionLabel, bossRegionsPresent,
   bossTimerPhase, bossTimerRegion, formatBossClock, formatBossCountdown, isOwnBossKill,
 } from "@svoverlay/contracts/boss-timers";
 import type { BossTimerPhase } from "@svoverlay/contracts/boss-timers";
@@ -117,7 +117,7 @@ function BossTimerRow(
   const phase = bossTimerPhase(timer, nowMs);
   const placeLabel = region === undefined
     ? bossPlaceLabel(timer)
-    : t("overlay.bossTimers.channel", { channel: timer.channel ?? UNKNOWN_BOSS_CHANNEL });
+    : timer.pvp ? bossChannelName(timer) : t("overlay.bossTimers.channel", { channel: timer.channel ?? UNKNOWN_BOSS_CHANNEL });
   const { status, description } = bossTimerStatus(t, timer, phase, nowMs);
   // The tile is compact, so the machine only appears in the tooltip; the Bosses settings tab lists it in full.
   const place = timer.instanceId === undefined ? placeLabel : `${placeLabel} (${timer.instanceId})`;
@@ -144,7 +144,7 @@ function bossTimeLeft(timer: BossTimer, phase: BossTimerPhase, nowMs: number): n
 }
 
 function bossPlaceLabel(timer: BossTimer): string {
-  return `${bossRegionLabel(bossTimerRegion(timer))} ${timer.channel ?? UNKNOWN_BOSS_CHANNEL}`;
+  return `${bossRegionLabel(bossTimerRegion(timer))} ${timer.pvp ? bossChannelName(timer) : timer.channel ?? UNKNOWN_BOSS_CHANNEL}`;
 }
 
 function bossTimerStatus(

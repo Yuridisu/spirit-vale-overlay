@@ -55,7 +55,9 @@ import { createBossTimerWindow } from "./boss-timer-window.ts";
 import { describeArtifactPickup, describeGearPickup, pickupStatLabels } from "./gear-pickup.ts";
 import { rateGear } from "./gear-rating.ts";
 import { loadBossFights, saveBossFights } from "./boss-fight-store.ts";
+import { loadSpireRuns, saveSpireRuns, spireRunsSignature } from "./spire-run-store.ts";
 import { createXpTrackerCoordinator } from "./xp-tracker-coordinator.ts";
+import { createFarmCoordinator } from "./farm-effectiveness.ts";
 import { createReadModelService } from "./read-model-service.ts";
 import { measureLogStorage } from "./log-storage.ts";
 import { createCharacterWindow } from "./character-window.ts";
@@ -184,6 +186,17 @@ function withCaptureContext(report: CaptureErrorReport): CaptureErrorReport {
 
 const readModel = await createReadModelService({ logDirectory });
 const xpTracker = createXpTrackerCoordinator({ logDirectory });
+/** Where the player is and who they play, once the capture (set up further down) is running. */
+let farmPlace: () => { key: string; name: string } | undefined = () => undefined;
+let farmCharacter: () => { name?: string; level?: number } | undefined = () => undefined;
+/** Farm effectiveness: ten minutes of gains on one map, one report per map, kept beside the boss timers. */
+const farm = await createFarmCoordinator({
+  storagePath: path.join(path.dirname(storagePaths.bossTimersPath), "farm-reports.json"),
+  place: () => farmPlace(),
+  character: () => farmCharacter(),
+  subscribeGains: (listener) => xpTracker.subscribeGains(listener),
+  onWarning: (warning) => reportStorageWarning("farm reports", saveFailure(warning)),
+});
 const bossTimers = await createBossTimerCoordinator({
   storagePath: storagePaths.bossTimersPath,
   onWarning: (warning) => reportStorageWarning("boss timers", saveFailure(warning)),
@@ -288,6 +301,8 @@ const combatWindow = new WindowSlot((onClosed) => createDpsWindow({
   getBossFights: () => capture.bossFightReports(),
   subscribeBossFights: (listener) => capture.subscribeBossFightReports(listener),
   onClearBossFights: () => capture.clearBossFights(),
+  getSpireRuns: () => capture.echoingSpireRuns(),
+  subscribeSpireRuns: (listener) => capture.subscribeEchoingSpireRuns(listener),
 }));
 /** Items that matched a Companion loot rule, on their way to the overlay's Loot filter alerts. */
 const lootAlertListeners = new Set<(event: OverlayGearPickupEvent) => void>();
@@ -303,6 +318,8 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
   subscribeGearPickup: (listener) => capture.subscribeGearPickup((equipment) => listener(describeGearPickup(equipment))),
   subscribeKills: (listener) => capture.subscribeKills(listener),
   subscribeBossFight: (listener) => capture.subscribeBossFight(listener),
+  subscribeDarkFortress: (listener) => capture.subscribeDarkFortress(listener),
+  subscribeEchoingSpire: (listener) => capture.subscribeEchoingSpire(listener),
   subscribeDamageTaken: (listener) => capture.subscribeDamageTaken(listener),
   subscribeInventory: (listener) => capture.subscribeInventory(listener),
   subscribeStackPickup: (listener) => capture.subscribeStackPickup(listener),
@@ -311,6 +328,12 @@ const overlayWindow = new WindowSlot((onClosed) => createOverlayWindow({
     return () => lootAlertListeners.delete(listener);
   },
   subscribeSummons: (listener) => capture.subscribeSummons(listener),
+  subscribeFarm: (listener) => {
+    listener(farm.getState());
+    return farm.subscribe(() => listener(farm.getState()));
+  },
+  startFarm: () => farm.start(),
+  stopFarm: () => farm.stop(),
   subscribeBuildGuide: (listener) => {
     // Sent only when what the overlay draws changes, not on every character update.
     let last = JSON.stringify(buildGuide?.overlayState() ?? null);
@@ -417,6 +440,11 @@ const rewardsWindow = new WindowSlot((onClosed) => createRewardsWindow({
     },
     previewSound: (sound) => companion.playNamedSound(sound, targetDropState.volume),
   },
+  farm: {
+    getState: () => farm.getState(),
+    reset: (key) => { farm.reset(key); },
+    subscribe: (listener) => farm.subscribe(listener),
+  },
   itemCounter: {
     getState: () => ({ slots: itemCounterSlots, ...capture.inventoryState() }),
     setItems: async (items) => {
@@ -455,7 +483,10 @@ const capture = new CaptureCoordinator({
   onError: (report) => errorLog.write(withCaptureContext(report)),
   onWarning: (report) => warningLog.write(withCaptureContext(report)),
   resetOnMapChange: () => settings.resetMeterOnMapChange,
-  onGoldMapChange: () => { if (settings.resetGoldOnMapChange) xpTracker.resetCoins(); },
+  onGoldMapChange: () => {
+    if (settings.resetGoldOnMapChange) xpTracker.resetCoins();
+    farm.noteMapChange();
+  },
   minimapEnabled: () => {
     const state = overlayWindow.current?.getSettingsState();
     return state === undefined ? true : state.minimapEnabled && state.elements.minimap.enabled;
@@ -549,6 +580,11 @@ buildGuide = createBuildGuideService({
   onWarning: (warning) => { console.warn(`[build-guide] ${warning}`); },
 });
 void buildGuide.start();
+farmPlace = () => capture.currentPlace();
+farmCharacter = () => {
+  const snapshot = capture.characterState().snapshot;
+  return snapshot ? { name: snapshot.name, level: snapshot.level } : undefined;
+};
 const buildGuideWindow = new WindowSlot((onClosed) => createBuildGuideWindow({
   service: buildGuide!,
   placements,
@@ -796,6 +832,16 @@ capture.subscribeBossFightReports((reports) => {
   savedBossFightsJson = json;
   void saveBossFights(oldestFirst, storagePaths.bossFightsPath)
     .catch((error) => console.warn(`[spiritvale] could not save boss fights: ${error instanceof Error ? error.message : String(error)}`));
+});
+capture.restoreEchoingSpireRuns(await loadSpireRuns(storagePaths.spireRunsPath));
+let savedSpireRuns = "";
+capture.subscribeEchoingSpireRuns((runs) => {
+  // Saved as each floor, boss and run is done, not on every kill.
+  const signature = spireRunsSignature(runs);
+  if (signature === savedSpireRuns) return;
+  savedSpireRuns = signature;
+  void saveSpireRuns(runs, storagePaths.spireRunsPath)
+    .catch((error) => console.warn(`[spiritvale] could not save Spire runs: ${error instanceof Error ? error.message : String(error)}`));
 });
 void initializeCapture();
 void checkForUpdate();
@@ -1294,9 +1340,11 @@ async function closeAllWindowsAndFlush(): Promise<void> {
   await placements.flush();
   inspectedCharacterRoster.close();
   xpTracker.shutdown();
+  await farm.shutdown();
   await bossTimers.shutdown();
   // A fight that simply went quiet is never announced as over, so it is written out here.
   await saveBossFights([...capture.bossFightReports()].reverse(), storagePaths.bossFightsPath).catch(() => {});
+  await saveSpireRuns(capture.echoingSpireRuns(), storagePaths.spireRunsPath).catch(() => {});
   await readModel.close();
 }
 

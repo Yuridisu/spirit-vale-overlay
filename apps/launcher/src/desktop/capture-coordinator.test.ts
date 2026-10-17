@@ -1429,6 +1429,189 @@ describe("central capture coordinator", () => {
     });
   });
 
+  test("a boss seen on the PvP channel is marked as such, after a switch to it too", async () => {
+    const kills: Array<{ mobId: string; channel?: number; pvp?: boolean }> = [];
+    await withCoordinator({ options: {
+        onBossGravestone: (gravestone) => kills.push(gravestone),
+      } }, async ({ capture, coordinator }) => {
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      // Five channels; the fifth (index 4) is the PvP one.
+      capture.packet(channelListPacket(2, 1, "nova-10", "test-connection", 4));
+      const diedAtMs = Math.floor((Date.now() - 40 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(3, 700, diedAtMs, "Testerson", "Vespa", "Sting", "test-connection"));
+      capture.packet(channelSwitchPacket(4, 4, "test-connection"));
+      capture.connection("conn-b", "opened");
+      capture.packet(authenticatedPacket(5, "conn-b"));
+      capture.packet(gravestonePacket(6, 701, diedAtMs, "Testerson", "Vespa", "Sting", "conn-b"));
+      expect(kills.map(({ mobId, channel, pvp }) => ({ mobId, channel, pvp }))).toEqual([
+        { mobId: "Sting", channel: 2, pvp: undefined },
+        { mobId: "Sting", channel: 5, pvp: true },
+      ]);
+      await coordinator.stop();
+    });
+  });
+
+  test("DF Boss Fight takes a Dark Fortress boss's gravestone, and starts over on another channel", async () => {
+    await withCoordinator({}, async ({ capture, coordinator, clock }) => {
+      let df: { channel?: number; bosses: Array<{ mobId: string; status: string; diedAtMs?: number }> } | undefined;
+      coordinator.subscribeDarkFortress((state) => { df = state; });
+      capture.packet(authenticatedPacket(1, "test-connection"));
+      capture.packet(channelListPacket(2, 1, "nova-10", "test-connection", 4));
+      const diedAtMs = Math.floor((Date.now() - 20 * 60_000) / 1_000) * 1_000;
+      capture.packet(gravestonePacket(3, 700, diedAtMs, "Testerson", "Echo Wizard Master", "NightmareWizardBoss", "test-connection"));
+      capture.packet({ ...monsterIdentityPacket(4, 800), connectionId: "test-connection", decodedFields: [
+        { name: "Data.Id", codec: "stringUtf8Packed", value: "NightmarePaladinBoss" },
+        { name: "Data.Level", codec: "packedInt32", value: 155 },
+      ] });
+      await clock.advanceBy(300);
+      expect(df?.channel).toBe(2);
+      expect(df?.bosses.find((boss) => boss.mobId === "NightmareWizardBoss")).toMatchObject({ status: "dead", diedAtMs });
+      expect(df?.bosses.find((boss) => boss.mobId === "NightmarePaladinBoss")?.status).toBe("alive");
+
+      capture.packet(channelSwitchPacket(4, 2, "test-connection"));
+      capture.connection("conn-b", "opened");
+      capture.packet(authenticatedPacket(5, "conn-b"));
+      await clock.advanceBy(300);
+      expect(df?.channel).toBe(3);
+      expect(df?.bosses.every((boss) => boss.status === "unknown")).toBe(true);
+      await coordinator.stop();
+    });
+  });
+
+  test("Echoing Spire follows the floor banner, a boss floor's boss and the Curse Manifestations in sight", async () => {
+    await withCoordinator({ options: { resetOnMapChange: () => false } }, async ({ capture, coordinator, clock }) => {
+      let spire: { inSpire: boolean; floor?: number; run?: { floors: Array<{ floor: number }> }; bosses: Array<{ name: string; status: string }>; curse: { manifestations: number } } | undefined;
+      coordinator.subscribeEchoingSpire((state) => { spire = state; });
+      capture.packet(authenticatedPacket(1, "tower-connection"));
+      capture.packet(towerFloorPacket(2, 4, "tower-connection"));
+      await clock.advanceBy(500);
+      capture.packet(towerFloorPacket(3, 5, "tower-connection"));
+      await clock.advanceBy(500);
+      const monster = (tick: number, objectId: number, mobId: string, level: number) => ({
+        ...monsterIdentityPacket(tick, objectId),
+        connectionId: "tower-connection",
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed" as const, value: mobId },
+          { name: "Data.Level", codec: "packedInt32" as const, value: level },
+        ],
+      });
+      capture.packet(monster(4, 800, "NightmareWizardBoss", 155));
+      capture.packet(monster(5, 801, "NightmareShadow", 150));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(true);
+      expect(spire?.floor).toBe(5);
+      expect(spire?.run?.floors.map((floor) => floor.floor)).toEqual([4, 5]);
+      expect(spire?.bosses).toEqual([{ name: "Echo Wizard Master", status: "alive" }]);
+      expect(spire?.curse.manifestations).toBe(1);
+
+      capture.packet(towerExitPacket(6, "tower-connection"));
+      await clock.advanceBy(500);
+      expect(spire?.inSpire).toBe(false);
+      expect(spire?.curse.manifestations).toBe(0);
+      await coordinator.stop();
+    });
+  });
+
+  test("Echoing Spire on its own maps takes the floor from each advance, and ends on another map", async () => {
+    await withCoordinator({ options: { resetOnMapChange: () => false } }, async ({ capture, coordinator, clock }) => {
+      let spire: { inSpire: boolean; floor?: number; run?: { floors: Array<{ floor: number }> } } | undefined;
+      coordinator.subscribeEchoingSpire((state) => { spire = state; });
+      const advance = (tick: number, floor: number) => ({
+        tick,
+        packetId: 904,
+        packetName: "targetRpc" as const,
+        rpcName: "ETAdvanceFloor",
+        networkBehaviourType: "PlayerController",
+        decodedFields: [
+          { name: "floor", codec: "packedInt32" as const, value: floor },
+          { name: "finished", codec: "boolean" as const, value: false },
+        ],
+        raw: Buffer.alloc(0),
+        payload: Buffer.alloc(0),
+        connectionId: "spire-connection",
+      });
+      capture.packet(authenticatedPacket(1, "spire-connection"));
+      capture.packet(mapPacket(2, 51, "spire-connection"));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(false);
+      capture.packet(mapPacket(3, 49, "spire-connection"));
+      capture.packet(advance(4, 1));
+      await clock.advanceBy(300);
+      capture.packet(advance(5, 2));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(true);
+      expect(spire?.floor).toBe(2);
+      expect(spire?.run?.floors.map((floor) => floor.floor)).toEqual([1, 2]);
+
+      capture.packet(mapPacket(6, 1, "spire-connection"));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(false);
+      await coordinator.stop();
+    });
+  });
+
+  test("Echoing Spire is known from anyone's map when the overlay opens mid-climb", async () => {
+    await withCoordinator({ options: { resetOnMapChange: () => false } }, async ({ capture, coordinator, clock }) => {
+      let spire: { inSpire: boolean } | undefined;
+      coordinator.subscribeEchoingSpire((state) => { spire = state; });
+      const observed = (tick: number, mapId: number) => ({
+        tick,
+        packetId: 905,
+        packetName: "rpcLink" as const,
+        objectId: 777,
+        rpcName: "TraverseObservers",
+        decodedFields: [{ name: "mapId", codec: "packedInt32" as const, value: mapId }],
+        raw: Buffer.alloc(0),
+        payload: Buffer.alloc(0),
+        connectionId: "late-connection",
+      });
+      capture.packet(authenticatedPacket(1, "late-connection"));
+      capture.packet(observed(2, 50));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(true);
+      capture.packet(observed(3, 1));
+      await clock.advanceBy(300);
+      expect(spire?.inSpire).toBe(false);
+      await coordinator.stop();
+    });
+  });
+
+  test("Echoing Spire floors follow the monsters' level, and the Combat window gets the runs", async () => {
+    await withCoordinator({ options: { resetOnMapChange: () => false } }, async ({ capture, coordinator, clock }) => {
+      let spire: { floor?: number; bosses: Array<{ name: string }> } | undefined;
+      let runs: Array<{ floors: Array<{ floor: number }> }> = [];
+      coordinator.subscribeEchoingSpire((state) => { spire = state; });
+      coordinator.subscribeEchoingSpireRuns((next) => { runs = next; });
+      const monster = (tick: number, objectId: number, mobId: string, level: number) => ({
+        ...monsterIdentityPacket(tick, objectId),
+        connectionId: "spire-connection",
+        decodedFields: [
+          { name: "Data.Id", codec: "stringUtf8Packed" as const, value: mobId },
+          { name: "Data.Level", codec: "packedInt32" as const, value: level },
+        ],
+      });
+      capture.packet(authenticatedPacket(1, "spire-connection"));
+      capture.packet({
+        tick: 2, packetId: 905, packetName: "rpcLink", objectId: 777, rpcName: "TraverseObservers",
+        decodedFields: [{ name: "mapId", codec: "packedInt32", value: 49 }],
+        raw: Buffer.alloc(0), payload: Buffer.alloc(0), connectionId: "spire-connection",
+      });
+      capture.packet(monster(3, 801, "Abomination", 186));
+      capture.packet(monster(4, 802, "Abomination", 186));
+      capture.packet(monster(5, 803, "Abomination", 186));
+      await clock.advanceBy(300);
+      expect(spire?.floor).toBe(86);
+      capture.packet(monster(6, 900, "NightmareWizardBoss", 187));
+      await clock.advanceBy(300);
+      expect(spire?.floor).toBe(87);
+      expect(spire?.bosses.map((boss) => boss.name)).toEqual(["Echo Wizard Master"]);
+      await clock.advanceBy(2_100);
+      expect(runs[0]?.floors.map((floor) => floor.floor)).toEqual([86, 87]);
+      expect(coordinator.echoingSpireRuns()[0]?.floors.length).toBe(2);
+      await coordinator.stop();
+    });
+  });
+
   test("a channel switch lands when the game re-authenticates on the same socket", async () => {
     const kills: Array<{ mobId: string; bossName: string; killedBy?: string; channel?: number; instanceId?: string; diedAtMs: number }> = [];
     await withCoordinator({ options: {
@@ -1920,6 +2103,7 @@ function channelListPacket(
   currentIndex: number,
   instanceId = "na3-12",
   connectionId?: string,
+  pvpIndex?: number,
 ): TestPacket {
   return {
     tick,
@@ -1931,6 +2115,7 @@ function channelListPacket(
       { name: "playerCounts", codec: "packedInt32Array", value: [39, 16, 17, 37, 15, 17, 17, 17, 16, 18] },
       { name: "currentIndex", codec: "packedInt32", value: currentIndex },
       { name: "instanceId", codec: "stringUtf8Packed", value: instanceId },
+      ...(pvpIndex === undefined ? [] : [{ name: "pvpIndex", codec: "packedInt32" as const, value: pvpIndex }]),
     ],
     raw: Buffer.alloc(0),
     payload: Buffer.alloc(0),

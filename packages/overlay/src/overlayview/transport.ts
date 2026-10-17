@@ -24,11 +24,14 @@ import {
   pushLootAlert,
   pushGearPickup,
   bossFightState,
+  darkFortressState,
+  echoingSpireState,
   damageTakenState,
   gearRatingState,
   itemCounter,
   applySummons,
   buildGuideState,
+  farmState,
   killState,
   pushLootToast,
   timerState,
@@ -56,7 +59,10 @@ const rpc = DesktopView.defineRPC<OverlayRpc>({
     itemCounterChanged: (next) => { itemCounter.value = repairRendererPayload(next); },
     summonsChanged: (next) => { applySummons(repairRendererPayload(next)); },
     buildGuideChanged: (next) => { buildGuideState.value = next === null ? null : repairRendererPayload(next); },
+    farmChanged: (next) => { farmState.value = repairRendererPayload(next); },
     bossFightChanged: (next) => { bossFightState.value = next === undefined ? undefined : repairRendererPayload(next); },
+    darkFortressChanged: (next) => { darkFortressState.value = repairRendererPayload(next); },
+    echoingSpireChanged: (next) => { echoingSpireState.value = repairRendererPayload(next); },
     artifactPickedUp: (next) => { pushArtifactPickup(repairRendererPayload(next)); },
     targetDropFound: (next) => { pushTargetDrop(repairRendererPayload(next)); },
     lootAlertFound: (next) => { pushLootAlert(repairRendererPayload(next)); },
@@ -83,7 +89,10 @@ export function startOverlayTransport(): void {
       itemCounter.value = repaired.itemCounter;
       applySummons(repaired.summons);
       buildGuideState.value = repaired.buildGuide ?? null;
+      farmState.value = repaired.farm;
       bossFightState.value = repaired.bossFight;
+      darkFortressState.value = repaired.darkFortress;
+      echoingSpireState.value = repaired.echoingSpire;
     });
   });
 }

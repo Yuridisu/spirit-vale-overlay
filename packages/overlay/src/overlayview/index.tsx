@@ -3,7 +3,9 @@ import { useTranslator } from "@svoverlay/i18n/browser";
 import { DragGhost, OverlayElement } from "./element-frame.tsx";
 import { ElementInspectorPanel } from "./inspector-panel.tsx";
 import {
+  bossFightState,
   chromeState,
+  echoingSpireState,
   gridEnabled,
   selectedElementId,
 } from "./store.ts";
@@ -14,7 +16,10 @@ import { TimerElement } from "./tiles/timer.tsx";
 import { DamageTakenElement, DpsDetailsElement, ItemCounterElement, KillCounterElement, SummonsElement } from "./tiles/details.tsx";
 import { GearRatingElement } from "./tiles/gear-rating.tsx";
 import { FarmGuideElement, SkillGuideElement } from "./tiles/build-guide.tsx";
+import { FarmElement } from "./tiles/farm.tsx";
 import { BossMeterElement } from "./tiles/boss-meter.tsx";
+import { DfBossFightElement } from "./tiles/df-boss-fight.tsx";
+import { EchoingSpireElement } from "./tiles/echoing-spire.tsx";
 import { ArtifactPickupElement, GearPickupElement, LootAlertElement, TargetDropElement } from "./tiles/gear-pickup.tsx";
 import {
   CharacterResourceElement,
@@ -110,9 +115,10 @@ function App() {
       <OverlayElement id="gearRating" locked={next.locked}>
         <GearRatingElement />
       </OverlayElement>
-      <OverlayElement id="bossMeter" locked={next.locked}>
+      {/* Locked, the boss meter is on screen only while it has a fight to show. */}
+      {(!next.locked || bossFightState.value !== undefined) && <OverlayElement id="bossMeter" locked={next.locked}>
         <BossMeterElement />
-      </OverlayElement>
+      </OverlayElement>}
       <OverlayElement id="summons" locked={next.locked}>
         <SummonsElement />
       </OverlayElement>
@@ -139,6 +145,16 @@ function App() {
       </OverlayElement>
       <OverlayElement id="farmGuide" locked={next.locked}>
         <FarmGuideElement />
+      </OverlayElement>
+      <OverlayElement id="dfBossFight" locked={next.locked}>
+        <DfBossFightElement />
+      </OverlayElement>
+      {/* Locked, the Spire is on screen only inside it. */}
+      {(!next.locked || echoingSpireState.value?.inSpire) && <OverlayElement id="echoingSpire" locked={next.locked}>
+        <EchoingSpireElement />
+      </OverlayElement>}
+      <OverlayElement id="farmEffectiveness" locked={next.locked}>
+        <FarmElement />
       </OverlayElement>
       <OverlayElement id="artifactPickup" locked={next.locked}>
         <ArtifactPickupElement />

@@ -190,10 +190,10 @@
 
 /* Every element speaks on one channel. */
 .overlay-element:is([data-element-id="bossMeter"], [data-element-id="damageTaken"], [data-element-id="debuffs"], [data-element-id="killCounter"]) { --channel: var(--flame); }
-.overlay-element:is([data-element-id="goldTracker"], [data-element-id="lootToast"], [data-element-id="itemCounter"], [data-element-id="targetDrop"], [data-element-id="gearRating"], [data-element-id="bossTimers"]) { --channel: var(--gold); }
+.overlay-element:is([data-element-id="goldTracker"], [data-element-id="farmEffectiveness"], [data-element-id="lootToast"], [data-element-id="itemCounter"], [data-element-id="targetDrop"], [data-element-id="gearRating"], [data-element-id="bossTimers"]) { --channel: var(--gold); }
 .overlay-element:is([data-element-id="xpTracker"], [data-element-id="xpChart"], [data-element-id="characterXp"], [data-element-id="jobXp"]) { --channel: var(--sky); }
 .overlay-element:is([data-element-id="gearPickup"]) { --channel: var(--paper); }
-.overlay-element:is([data-element-id="artifactPickup"], [data-element-id="toggles"]) { --channel: var(--violet); }
+.overlay-element:is([data-element-id="artifactPickup"], [data-element-id="toggles"], [data-element-id="echoingSpire"]) { --channel: var(--violet); }
 .overlay-element:is([data-element-id="summons"], [data-element-id="skillGuide"], [data-element-id="farmGuide"]) { --channel: var(--lime); }
 
 .overlay-root.editing .overlay-surface {
@@ -1248,3 +1248,86 @@
   .timer-finished { animation: none; background: color-mix(in srgb, var(--flame) 60%, transparent); }
   .gear-pickup-card, .target-drop-banner, .loot-toast-card { animation: none; }
 }
+
+/* ---- farm effectiveness: ten minutes on one map, per hour ---- */
+.farm-content { display: flex; flex-direction: column; gap: 5px; }
+.farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.farm-head .element-title { margin: 0; }
+.farm-map { overflow: hidden; color: var(--paper-2); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.farm-note { margin: 0; color: var(--paper-3); font-size: 12px; line-height: 1.4; }
+.farm-run { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.farm-clock { color: var(--paper); font-family: var(--font-num); font-size: 18px; font-weight: 800; line-height: 1; }
+.farm-bar { position: relative; height: 4px; background: var(--stripe); }
+.farm-bar::after { position: absolute; inset: 0 auto 0 0; width: calc(var(--progress, 0) * 100%); background: var(--channel); content: ""; }
+.farm-gains { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.farm-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 3px 6px; background: var(--stripe); }
+.farm-cell.is-xp { box-shadow: inset 2px 0 0 var(--sky); }
+.farm-cell.is-job { box-shadow: inset 2px 0 0 var(--violet); }
+.farm-cell.is-gold { box-shadow: inset 2px 0 0 var(--gold); }
+.farm-label { color: var(--paper-3); font-family: var(--font-num); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.farm-rate { overflow: hidden; color: var(--paper); font-family: var(--font-num); font-size: 15px; font-weight: 800; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.farm-label small { margin-left: 2px; color: var(--paper-3); font-size: 10px; font-weight: 700; }
+.farm-total { color: var(--paper-3); font-family: var(--font-num); font-size: 11px; font-weight: 700; }
+.farm-button { align-self: flex-start; padding: 2px 10px 1px; border: 0; background: color-mix(in srgb, var(--channel) 30%, transparent); box-shadow: inset 0 0 0 1px var(--channel); color: var(--paper); font-family: var(--font-num); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+
+/* The time a finished boss fight has left on the overlay */
+.boss-meter-closing { margin-left: auto; color: #f0b54a; font-weight: 700; }
+
+/* Boss meter: the boss's health, going down as it is hit */
+.boss-meter-hp { position: relative; height: 22px; margin: 0 0 8px; overflow: hidden; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(244, 247, 250, .18); }
+.boss-meter-hp-fill { position: absolute; inset: 0; background: linear-gradient(90deg, #8f1d1d, #e0453a); transform: scaleX(var(--hp, 1)); transform-origin: left center; transition: transform .25s ease-out; }
+.boss-meter-hp-text { position: relative; display: flex; justify-content: space-between; padding: 0 6px; color: #fff; font-family: var(--font-num); font-size: 13px; font-weight: 800; line-height: 22px; letter-spacing: .04em; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
+.boss-meter-boss .boss-meter-hp { height: 10px; margin: 2px 0 4px; }
+.boss-meter-boss .boss-meter-hp-text { display: none; }
+
+/* DF Boss Fight: the seven Echo Masters on this channel */
+.df-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.df-head .element-title { margin: 0; }
+.df-channel { color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+.boss-timer-row.df-alive::after { background: #e0453a; }
+.boss-timer-row.df-alive .boss-timer-status { color: var(--lime); }
+.boss-timer-row.df-unknown .boss-timer-status { color: var(--paper-3); }
+@media (prefers-reduced-motion: reduce) { .boss-meter-hp-fill { transition: none; } }
+
+/* Echoing Spire: the climb, its bosses and the Umbral curse */
+.spire { display: flex; flex-direction: column; gap: 6px; }
+/* Nothing gives way but the floor list, which is cut short when the plate runs out of room. */
+.spire > * { flex: none; }
+.spire > .spire-floors { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+.spire .element-title { align-self: flex-start; margin: 0; }
+.spire-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spire-floor { color: var(--paper); font-family: var(--font-num); font-size: 15px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+.spire-floor strong { font-size: 26px; font-weight: 800; line-height: 1; }
+.spire-floor small { color: var(--paper-3); font-size: 14px; }
+.spire-progress { position: relative; height: 6px; overflow: hidden; background: rgba(244, 247, 250, .1); }
+.spire-progress-fill { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--violet) 55%, transparent), var(--violet)); transform: scaleX(var(--climb, 0)); transform-origin: left center; transition: transform .4s var(--ease-out); }
+/* A notch at every boss floor. */
+.spire-progress::after { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--notch) - 2px), rgb(var(--ink-rgb) / .85) calc(var(--notch) - 2px) var(--notch)); content: ""; }
+.spire-clocks, .spire-gains { display: flex; flex-wrap: wrap; gap: 2px 14px; font-family: var(--font-num); font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.spire-clocks { color: var(--paper); }
+.spire-gains { color: var(--paper-2); font-size: 13px; }
+.spire-next { color: var(--violet); }
+.spire-away { color: var(--gold); }
+.spire-boss { padding: 6px 8px 2px; background: rgba(229, 72, 77, .1); box-shadow: inset 2px 0 0 var(--hp); }
+.spire-boss-heading { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.spire-boss-tag { color: var(--hp); font-family: var(--font-num); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.spire-boss-wait { color: var(--paper-3); font-size: 12px; }
+.spire-boss-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.spire-boss-name { min-width: 0; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.spire-boss-time { color: var(--paper-2); font-family: var(--font-num); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.spire-boss-row.is-dead { padding-bottom: 4px; }
+.spire-boss-row.is-dead .spire-boss-name { color: var(--paper-3); text-decoration: line-through; }
+.spire-boss-row.is-dead .spire-boss-time { color: var(--lime); }
+.spire-curse { display: flex; flex-direction: column; gap: 3px; }
+.spire-alert { padding: 3px 8px; font-family: var(--font-num); font-size: 14px; font-weight: 800; letter-spacing: .04em; }
+.spire-alert.is-danger { background: color-mix(in srgb, var(--flame) 22%, transparent); box-shadow: inset 2px 0 0 var(--flame); color: var(--paper); }
+.spire-alert.is-curse { background: color-mix(in srgb, var(--violet) 18%, transparent); box-shadow: inset 2px 0 0 var(--violet); color: var(--paper-2); }
+.spire-floors { display: flex; flex-direction: column; }
+.spire-floor-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 2px 6px; background: var(--stripe); font-size: 12px; }
+.spire-floor-row:nth-child(even) { background: rgba(244, 247, 250, .075); }
+.spire-floor-number { color: var(--paper-3); font-family: var(--font-num); font-size: 13px; font-weight: 800; letter-spacing: .06em; }
+.spire-floor-row.is-boss .spire-floor-number { color: var(--hp); }
+.spire-floor-detail { overflow: hidden; color: var(--paper-2); text-overflow: ellipsis; white-space: nowrap; }
+.spire-floor-time { color: var(--paper); font-family: var(--font-num); font-size: 14px; font-weight: 700; }
+.spire-last { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; color: var(--paper-3); font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+@media (prefers-reduced-motion: reduce) { .spire-progress-fill { transition: none; } }

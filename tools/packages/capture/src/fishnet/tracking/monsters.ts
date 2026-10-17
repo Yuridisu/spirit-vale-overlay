@@ -23,8 +23,14 @@ export interface FishNetMonsterLevels {
   get(mobId: string): { readonly level: number } | undefined;
 }
 
+/** How long a despawned monster's identity waits for its object to come straight back (~10 s at 30 ticks a second). */
+const RESPAWN_GRACE_TICKS = 300;
+const MAX_DEPARTED = 2_048;
+
 export class FishNetMonsterDirectory {
   private readonly objects = new Map<number, FishNetMonsterSpawn>();
+  /** Monsters just despawned, kept for the same object being sent again without its identity. */
+  private readonly departed = new Map<number, { spawn: FishNetMonsterSpawn; tick: number }>();
 
   constructor(private readonly levels: FishNetMonsterLevels) {}
 
@@ -32,20 +38,31 @@ export class FishNetMonsterDirectory {
   consume(packet: DecodedFishNetPacket): FishNetMonsterDirectoryChange | undefined {
     if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
       this.objects.clear();
+      this.departed.clear();
       return { operation: "reset" };
     }
     if (packet.packetName === "objectDespawn" && packet.objectId !== undefined) {
-      return this.objects.delete(packet.objectId)
-        ? { operation: "remove", objectId: packet.objectId }
-        : undefined;
+      const spawn = this.objects.get(packet.objectId);
+      if (!spawn) return undefined;
+      this.objects.delete(packet.objectId);
+      this.rememberDeparted(packet.objectId, spawn, packet.tick);
+      return { operation: "remove", objectId: packet.objectId };
     }
     if (packet.packetName === "objectSpawn" && packet.objectId !== undefined) {
-      const removed = this.objects.delete(packet.objectId);
       const spawned = decodeMonsterSpawn(packet, this.levels);
-      return spawned
-        ? this.set(packet.objectId, spawned)
-        : removed ? { operation: "remove", objectId: packet.objectId } : undefined;
+      const departed = this.departed.get(packet.objectId);
+      this.departed.delete(packet.objectId);
+      if (spawned) return this.set(packet.objectId, spawned);
+      // A spawn naming no monster is the same monster sent again (the Echoing Spire does this to
+      // monsters mid-fight, its bosses too): still in sight, or back straight after a despawn, the
+      // id has not been reused, so the monster keeps its identity.
+      if (!this.objects.has(packet.objectId) && departed && packet.tick - departed.tick <= RESPAWN_GRACE_TICKS) {
+        return this.set(packet.objectId, departed.spawn);
+      }
+      return undefined;
     }
+    const back = this.backInSight(packet);
+    if (back) return back;
     if (packet.packetName !== "syncType" || packet.objectId === undefined
       || (packet.networkBehaviourType !== undefined && packet.networkBehaviourType !== "MonsterController")) {
       return undefined;
@@ -70,6 +87,29 @@ export class FishNetMonsterDirectory {
 
   reset(): void {
     this.objects.clear();
+    this.departed.clear();
+  }
+
+  /**
+   * A despawned monster still being hit or still sending its health was never really gone (the
+   * Echoing Spire despawns its bosses mid-fight and sends no spawn back): it keeps its identity.
+   * A reused id always comes with a spawn first, which clears what was remembered.
+   */
+  private backInSight(packet: DecodedFishNetPacket): FishNetMonsterDirectoryChange | undefined {
+    if (packet.objectId === undefined || this.objects.has(packet.objectId)) return undefined;
+    if (packet.networkBehaviourType !== "HealthComponent" && packet.networkBehaviourType !== "MonsterController") return undefined;
+    const departed = this.departed.get(packet.objectId);
+    if (!departed) return undefined;
+    this.departed.delete(packet.objectId);
+    return this.set(packet.objectId, departed.spawn);
+  }
+
+  private rememberDeparted(objectId: number, spawn: FishNetMonsterSpawn, tick: number): void {
+    if (this.departed.size >= MAX_DEPARTED) {
+      for (const [id, entry] of this.departed) if (tick - entry.tick > RESPAWN_GRACE_TICKS) this.departed.delete(id);
+      if (this.departed.size >= MAX_DEPARTED) this.departed.delete(this.departed.keys().next().value!);
+    }
+    this.departed.set(objectId, { spawn, tick });
   }
 
   private set(objectId: number, spawn: FishNetMonsterSpawn): FishNetMonsterDirectoryChange | undefined {

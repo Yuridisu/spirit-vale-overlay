@@ -1,4 +1,5 @@
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { EchoingSpireRun } from "@svoverlay/contracts/echoing-spire";
 import type { BattleAnalysisView } from "./battle-analysis.ts";
 import type { LocalizedText } from "@svoverlay/i18n/messages";
 import type { RPCSchema } from "@svoverlay/contracts/rpc";
@@ -26,7 +27,7 @@ export type {
 } from "@svoverlay/contracts/meter";
 
 export type DpsAppTab = "all" | "personal";
-export type CombatLogScreen = "live" | "past" | "boss" | "battle";
+export type CombatLogScreen = "live" | "past" | "boss" | "battle" | "spire";
 export type DpsAppStatus = "waiting" | "capturing" | "loading" | "ready" | "stopped" | "error";
 
 export interface DpsEncounterOption {
@@ -51,6 +52,8 @@ export interface DpsAppState {
   liveDeathLogAvailable: boolean;
   /** Boss fights on record, newest first. */
   bossFights: BossFightReport[];
+  /** Echoing Spire runs on record, newest first; sent only while their screen is open. */
+  spireRuns?: EchoingSpireRun[];
   /** Battle Analysis, sent only while its screen is open. */
   battle?: BattleAnalysisView;
   past:

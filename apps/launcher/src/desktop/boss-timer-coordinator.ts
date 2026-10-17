@@ -17,6 +17,8 @@ export interface BossGravestoneObservation {
   mobId: string;
   bossName: string;
   channel?: number;
+  /** Seen on the PvP channel. */
+  pvp?: boolean;
   instanceId?: string;
   killedBy?: string;
   diedAtMs: number;
@@ -152,7 +154,7 @@ export async function createBossTimerCoordinator(
   function recordGravestone(gravestone: BossGravestoneObservation): void {
     if (shuttingDown) return;
     if (!gravestone.mobId || !gravestone.bossName || !Number.isFinite(gravestone.diedAtMs)) return;
-    if (gravestone.channel !== undefined && !isBossChannel(gravestone.channel)) return;
+    if (gravestone.channel !== undefined && !isBossChannel(gravestone.channel, gravestone.pvp === true)) return;
     const seen = bossRegionOf(gravestone.instanceId);
     noteRegion(seen);
     // A channel without a region is the overlay opened mid-session or a switch: the region is the last one seen.
@@ -166,6 +168,7 @@ export async function createBossTimerCoordinator(
       ...(region === undefined ? {} : { region }),
       ...(gravestone.instanceId === undefined ? {} : { instanceId: gravestone.instanceId }),
       ...(gravestone.channel === undefined ? {} : { channel: gravestone.channel }),
+      ...(gravestone.channel !== undefined && gravestone.pvp === true ? { pvp: true } : {}),
       ...(gravestone.killedBy === undefined ? {} : { killedBy: gravestone.killedBy }),
       diedAtMs,
       source: "gravestone",
@@ -302,7 +305,7 @@ function normalizeTimer(value: unknown): BossTimer | undefined {
   if (candidate.source !== "manual" && candidate.source !== "gravestone") {
     return undefined;
   }
-  if (candidate.channel !== undefined && !isBossChannel(candidate.channel)) return undefined;
+  if (candidate.channel !== undefined && !isBossChannel(candidate.channel, candidate.pvp === true)) return undefined;
   const region = bossRegionOf(typeof candidate.region === "string" ? candidate.region : candidate.instanceId);
   const instanceId = typeof candidate.instanceId === "string" && candidate.instanceId.length > 0
     ? candidate.instanceId
@@ -314,6 +317,7 @@ function normalizeTimer(value: unknown): BossTimer | undefined {
     ...(region === undefined ? {} : { region }),
     ...(instanceId === undefined ? {} : { instanceId }),
     ...(candidate.channel === undefined ? {} : { channel: candidate.channel }),
+    ...(candidate.channel !== undefined && candidate.pvp === true ? { pvp: true } : {}),
     ...(typeof candidate.killedBy === "string" && candidate.killedBy.length > 0
       ? { killedBy: candidate.killedBy }
       : {}),

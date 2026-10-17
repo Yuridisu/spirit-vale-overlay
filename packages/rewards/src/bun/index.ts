@@ -16,6 +16,7 @@ import type {
   RewardLogStatus,
 } from "@kar-mi/spirit-vale-tools-rewards";
 import type { RateSnapshot } from "@kar-mi/spirit-vale-tools-metrics";
+import type { FarmState } from "@svoverlay/contracts/farm";
 import type { ReadModel } from "@kar-mi/spirit-vale-tools-sqlite";
 import type {
   RateTotals,
@@ -82,6 +83,14 @@ export interface RewardsWindowOptions {
     /** Plays a sound at the chosen volume, so it can be heard before it is picked. */
     previewSound(sound: string): boolean;
   };
+  farm?: FarmReportsSource;
+}
+
+/** Farm effectiveness' reports; changes reach the window through its subscription. */
+export interface FarmReportsSource {
+  getState(): FarmState;
+  reset(key?: string): void;
+  subscribe(listener: () => void): () => void;
 }
 
 export interface ItemCounterSource {
@@ -188,6 +197,7 @@ const rpc = BrowserView.defineRPC<RewardsAppRpc>({
         return appState();
       },
       previewTargetDropSound: ({ sound }) => ({ played: options.targetDrops?.previewSound(sound) ?? false }),
+      resetFarm: ({ key }) => { options.farm?.reset(key); return appState(); },
       setPinned: ({ pinned }) => {
         settings.pinned = pinned;
         window.setAlwaysOnTop(pinned);
@@ -231,6 +241,7 @@ void followRewards();
 const unsubscribeXp = options.xp.subscribe(() => publish());
 const unsubscribeCharacter = options.subscribeCharacter(() => publish());
 const unsubscribeItemCounter = options.itemCounter?.subscribe(() => publish());
+const unsubscribeFarm = options.farm?.subscribe(() => publish());
 return {
   show: () => window.show(),
   activate: () => window.activate(),
@@ -296,6 +307,7 @@ function appState(): RewardsAppState {
     gold: options.xp.getCoinsSnapshot(),
     itemCounter: options.itemCounter?.getState() ?? { slots: [], known: false, items: [] },
     targetDrops: options.targetDrops?.getState() ?? { targets: [], sound: true, volume: 80, statChoices: [], typeChoices: [], soundChoices: [] },
+    farm: options.farm?.getState() ?? { reports: [] },
   };
 }
 
@@ -422,6 +434,7 @@ async function shutdown(): Promise<void> {
   unsubscribeXp();
   unsubscribeCharacter();
   unsubscribeItemCounter?.();
+  unsubscribeFarm?.();
   liveSnapshot = emptyAggregate();
   replaySnapshot = emptyAggregate();
   if (!window.isMaximized()) settings.frame = mainFrameClamp.unscale(window.getFrame());

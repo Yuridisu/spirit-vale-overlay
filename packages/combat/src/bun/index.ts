@@ -1,4 +1,5 @@
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
+import type { EchoingSpireRun } from "@svoverlay/contracts/echoing-spire";
 import { localized, localizedCount } from "@svoverlay/i18n/messages";
 import path from "node:path";
 
@@ -42,6 +43,8 @@ export interface DpsWindowOptions {
   getBossFights?: () => BossFightReport[];
   subscribeBossFights?: (listener: (fights: BossFightReport[]) => void) => () => void;
   onClearBossFights?: () => void;
+  getSpireRuns?: () => EchoingSpireRun[];
+  subscribeSpireRuns?: (listener: (runs: EchoingSpireRun[]) => void) => () => void;
   /** Skill damage formulas by game skill id, from spiritvalers.com, for Battle Analysis. */
   loadSkillFormulas?: () => Promise<Record<string, SkillFormula>>;
 }
@@ -59,6 +62,7 @@ let shuttingDown = false;
 let closedCallbackSent = false;
 let storageWarning: string | undefined;
 let bossFights: BossFightReport[] = options.getBossFights?.() ?? [];
+let spireRuns: EchoingSpireRun[] = options.getSpireRuns?.() ?? [];
 let resetting = false;
 let screen: CombatLogScreen = "live";
 let pastDateRange: SessionDateRange = {};
@@ -236,6 +240,10 @@ const unsubscribeBossFights = options.subscribeBossFights?.((fights) => {
   // The other screens do not show it, and a fight in progress reports several times a second.
   if (screen === "boss") publish();
 });
+const unsubscribeSpireRuns = options.subscribeSpireRuns?.((runs) => {
+  spireRuns = runs;
+  if (screen === "spire") publish();
+});
 live.start();
 return {
   show: () => window.show(),
@@ -271,6 +279,7 @@ function appState(): DpsAppState {
     bossFights,
     past,
     ...(screen === "battle" ? { battle: live.battle.view() } : {}),
+    ...(screen === "spire" ? { spireRuns } : {}),
   };
 }
 
@@ -309,6 +318,7 @@ function setScreen(nextScreen: CombatLogScreen): void {
   screen = nextScreen;
   analysis.closeDetails();
   if (nextScreen === "boss") bossFights = options.getBossFights?.() ?? bossFights;
+  if (nextScreen === "spire") spireRuns = options.getSpireRuns?.() ?? spireRuns;
   if (nextScreen !== "past") {
     pastRefreshSequence += 1;
     analysis.close();
@@ -498,6 +508,7 @@ async function shutdown(): Promise<void> {
   analysis.close();
   unsubscribeCharacter();
   unsubscribeBossFights?.();
+  unsubscribeSpireRuns?.();
   clearInterval(battleSetsTimer);
   await saveBattleSets();
   if (!window.isMaximized()) settings.frame = mainFrame.unscale(window.getFrame());

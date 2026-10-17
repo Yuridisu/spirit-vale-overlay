@@ -183,7 +183,9 @@ function TimerRow(
         {own && <span class="own-kill" title={t("bossTimers.ownKill.title")} aria-label={t("bossTimers.ownKill.aria")}><CheckIcon /></span>}
       </td>
       <td class="timer-where">
-        <span class="timer-place">{t("bossTimers.place", { region: regionLabel(t, bossTimerRegion(timer)), channel: timer.channel ?? "?" })}</span>
+        <span class="timer-place">{timer.pvp
+          ? t("bossTimers.placePvp", { region: regionLabel(t, bossTimerRegion(timer)) })
+          : t("bossTimers.place", { region: regionLabel(t, bossTimerRegion(timer)), channel: timer.channel ?? "?" })}</span>
         {/* The machine is diagnostic context, not part of the timer identity. */}
         {timer.instanceId !== undefined && <span class="timer-instance">{timer.instanceId}</span>}
       </td>
@@ -287,6 +289,7 @@ function searchTextOf(timer: BossTimer): string {
     timer.mobId,
     bossTimerRegion(timer),
     timer.channel === undefined ? "" : `ch${timer.channel}`,
+    timer.pvp ? "pvp" : "",
     timer.instanceId ?? "",
     timer.killedBy ?? "",
   ].join(" ");

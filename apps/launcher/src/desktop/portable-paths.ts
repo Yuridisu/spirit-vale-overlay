@@ -13,6 +13,7 @@ export interface DesktopStoragePaths {
   readonly actorIdentitiesPath: string;
   readonly bossTimersPath: string;
   readonly bossFightsPath: string;
+  readonly spireRunsPath: string;
   /** Loot rules, gold sessions, the market cache and custom alert sounds. */
   readonly companionDirectory: string;
 }
@@ -41,6 +42,7 @@ export function resolveDesktopStoragePaths(options: DesktopStoragePathOptions): 
     actorIdentitiesPath: path.join(dataDirectory, "actor-identities.json"),
     bossTimersPath: path.join(dataDirectory, "boss-timers.json"),
     bossFightsPath: path.join(dataDirectory, "boss-fights.json"),
+    spireRunsPath: path.join(dataDirectory, "spire-runs.json"),
     companionDirectory: path.join(dataDirectory, "companion"),
   };
 }

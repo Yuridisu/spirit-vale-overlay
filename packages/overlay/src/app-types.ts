@@ -6,6 +6,12 @@ import type { StatType } from "@svoverlay/ui-kit/stat-type-select";
 import type { BossTimerState } from "@svoverlay/contracts/boss-timers";
 import type { OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
 export type { OverlayBuildGuideState } from "@svoverlay/contracts/build-guide";
+import type { FarmState } from "@svoverlay/contracts/farm";
+import type { BossHealth, DarkFortressState } from "@svoverlay/contracts/dark-fortress";
+export type { DarkFortressState } from "@svoverlay/contracts/dark-fortress";
+import type { EchoingSpireState } from "@svoverlay/contracts/echoing-spire";
+export type { EchoingSpireState } from "@svoverlay/contracts/echoing-spire";
+export type { FarmState } from "@svoverlay/contracts/farm";
 import type { RequiredStatusCategory } from "./required-statuses.ts";
 
 export type { StatType, RequiredStatusCategory };
@@ -17,10 +23,10 @@ import type { TargetDrop } from "./target-drop.ts";
 export type { TargetDrop, TargetDropStat } from "./target-drop.ts";
 export type { OverlayTimerState, TimerMode } from "./timer.ts";
 
-export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons", "lootAlert", "skillGuide", "farmGuide"] as const;
+export const OVERLAY_ELEMENT_IDS = ["dpsChart", "personalDps", "partyRanking", "health", "mana", "characterXp", "jobXp", "weight", "xpTracker", "goldTracker", "xpChart", "buffs", "debuffs", "toggles", "lootToast", "minimap", "bossTimers", "clock", "gearPickup", "artifactPickup", "timer", "killCounter", "dpsDetails", "bossMeter", "damageTaken", "gearRating", "itemCounter", "targetDrop", "summons", "lootAlert", "skillGuide", "farmGuide", "farmEffectiveness", "dfBossFight", "echoingSpire"] as const;
 export type OverlayElementId = (typeof OVERLAY_ELEMENT_IDS)[number];
 
-export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset"] as const;
+export const KEYBIND_ACTIONS = ["toggleLock", "resetSession", "openLiveDeathLog", "toggleOverlayVisible", "cycleMeterStatType", "resetXpTracker", "resetGoldTracker", "toggleMinimap", "cycleBossRegion", "toggleTimer", "resetTimer", "toggleGearRating", "cyclePreset", "startFarm"] as const;
 export type KeybindAction = (typeof KEYBIND_ACTIONS)[number];
 
 export const METER_STAT_TYPE_CYCLE: readonly StatType[] = ["damage", "heal", "tanked"];
@@ -234,8 +240,12 @@ export interface OverlayBossFightState {
   durationMs: number;
   active: boolean;
   rows: Array<{ name: string; archetype?: number; damage: number }>;
+  /** For a finished fight still on show: how long until it leaves the overlay. */
+  closesInMs?: number;
+  /** The boss's health, for a single boss in sight. */
+  health?: BossHealth;
   /** Each boss on its own, when the fight has more than one. */
-  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: Array<{ name: string; archetype?: number; damage: number }> }>;
+  bosses?: Array<{ name: string; totalDamage: number; durationMs: number; alive: boolean; rows: Array<{ name: string; archetype?: number; damage: number }>; health?: BossHealth }>;
 }
 
 /** Monsters the local player has killed since the last map change, most killed first. */
@@ -261,12 +271,15 @@ export interface OverlayViewState {
   timer: OverlayTimerState;
   kills: OverlayKillState;
   bossFight?: OverlayBossFightState;
+  darkFortress?: DarkFortressState;
+  echoingSpire?: EchoingSpireState;
   gearRating: OverlayGearRatingState;
   damageTaken: OverlayDamageTakenState;
   itemCounter: OverlayItemCounterState;
   summons: OverlaySummonsState;
   /** Null unless the player asked the overlay to follow a build. */
   buildGuide: OverlayBuildGuideState | null;
+  farm: FarmState;
 }
 
 export interface OverlayLootToastEvent {
@@ -388,6 +401,8 @@ type OverlaySharedRequests = {
   setMinimapLootChanceFilter: { params: { chance: number }; response: OverlayMinimapState };
   setMinimapRange: { params: { range: number }; response: OverlayMinimapState };
   setTimerConfig: { params: { mode: TimerMode; durationSeconds: number }; response: OverlayTimerState };
+  startFarm: { params: Record<string, never>; response: FarmState };
+  stopFarm: { params: Record<string, never>; response: FarmState };
 };
 
 export type OverlayRpc = {
@@ -428,6 +443,8 @@ export type OverlayRpc = {
     timerChanged: OverlayTimerState;
     killsChanged: OverlayKillState;
     bossFightChanged: OverlayBossFightState | undefined;
+    darkFortressChanged: DarkFortressState;
+    echoingSpireChanged: EchoingSpireState;
     gearRatingChanged: OverlayGearRatingState;
     damageTakenChanged: OverlayDamageTakenState;
     itemCounterChanged: OverlayItemCounterState;
@@ -435,6 +452,7 @@ export type OverlayRpc = {
     lootAlertFound: OverlayGearPickupEvent;
     summonsChanged: OverlaySummonsState;
     buildGuideChanged: OverlayBuildGuideState | null;
+    farmChanged: FarmState;
     artifactPickedUp: OverlayGearPickupEvent;
   } }>;
 };

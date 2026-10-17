@@ -20,6 +20,7 @@ import { PastAnalysisPanel } from "./past-analysis-panel.tsx";
 import { formatZone } from "../zone-label.ts";
 import { CombatClassCell } from "../combat-class.tsx";
 import { BossFightPanel } from "./boss-fight-panel.tsx";
+import { SpirePanel } from "./spire-panel.tsx";
 import { BattlePanel } from "./battle-panel.tsx";
 import { nextTableSort, SortableHeader, sortTableRows, type TableSort } from "@svoverlay/ui-kit/sortable-table";
 import {
@@ -145,9 +146,10 @@ function App() {
         <button type="button" role="tab" aria-selected={next.screen === "past"} class={next.screen === "past" ? "active" : undefined} onClick={() => setScreen("past")}>{t("combat.logSource.past")}</button>
         <button type="button" role="tab" aria-selected={next.screen === "boss"} class={next.screen === "boss" ? "active" : undefined} onClick={() => setScreen("boss")}>{t("combat.logSource.boss")}</button>
         <button type="button" role="tab" aria-selected={next.screen === "battle"} class={next.screen === "battle" ? "active" : undefined} onClick={() => setScreen("battle")}>{t("combat.logSource.battle")}</button>
+        <button type="button" role="tab" aria-selected={next.screen === "spire"} class={next.screen === "spire" ? "active" : undefined} onClick={() => setScreen("spire")}>{t("combat.logSource.spire")}</button>
       </nav>
 
-      {next.screen === "battle" ? <BattlePanel view={next.battle} onReset={(what) => void desktopView.rpc?.request.resetBattle({ what }).then((result) => { state.value = repairRendererPayload(result); })} /> : next.screen === "boss" ? <BossFightPanel fights={next.bossFights} onClear={() => void desktopView.rpc?.request.clearBossFights({}).then((result) => { state.value = repairRendererPayload(result); })} /> : next.screen === "live" ? <section class="live-screen">
+      {next.screen === "spire" ? <SpirePanel runs={next.spireRuns ?? []} /> : next.screen === "battle" ? <BattlePanel view={next.battle} onReset={(what) => void desktopView.rpc?.request.resetBattle({ what }).then((result) => { state.value = repairRendererPayload(result); })} /> : next.screen === "boss" ? <BossFightPanel fights={next.bossFights} onClear={() => void desktopView.rpc?.request.clearBossFights({}).then((result) => { state.value = repairRendererPayload(result); })} /> : next.screen === "live" ? <section class="live-screen">
       <section class="command-bar">
         <StatTypeSelect value={next.statType} onChange={setStatType} />
         <div class="command-bar-actions">

@@ -6,12 +6,15 @@ export const BOSS_SPAWN_WINDOW_MS = 30 * 60_000;
 export const BOSS_TIMER_EXPIRED_LINGER_MS = 15 * 60_000;
 
 export const MAX_BOSS_CHANNEL = 3;
+/** The PvP channel comes after the others (the fifth of five today); world bosses spawn there too. */
+const MAX_PVP_CHANNEL = 20;
 
-export function isBossChannel(channel: number | undefined): channel is number {
+/** World bosses spawn on channels 1-3 and on the PvP channel; elsewhere a boss is a summoned one. */
+export function isBossChannel(channel: number | undefined, pvp = false): channel is number {
   return typeof channel === "number"
     && Number.isInteger(channel)
     && channel >= 1
-    && channel <= MAX_BOSS_CHANNEL;
+    && channel <= (pvp ? MAX_PVP_CHANNEL : MAX_BOSS_CHANNEL);
 }
 
 export type BossTimerSource = "manual" | "gravestone";
@@ -93,9 +96,17 @@ export interface BossTimer {
   region?: string;
   instanceId?: string;
   channel?: number;
+  /** The channel is the PvP one, where world bosses also spawn. */
+  pvp?: boolean;
   killedBy?: string;
   diedAtMs: number;
   source: BossTimerSource;
+}
+
+/** How a timer's channel reads: "PvP" for the PvP channel, else its number ("?" when unknown). */
+export function bossChannelName(timer: Pick<BossTimer, "channel" | "pvp">): string {
+  if (timer.pvp) return "PvP";
+  return timer.channel === undefined ? "?" : String(timer.channel);
 }
 
 export function isOwnBossKill(

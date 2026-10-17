@@ -86,6 +86,8 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
         setMinimapLootChanceFilter: ({ chance }) => controller.setMinimapLootChanceFilter(chance),
         setMinimapRange: ({ range }) => controller.setMinimapRange(range),
         setTimerConfig: ({ mode, durationSeconds }) => controller.setTimerConfig(mode, durationSeconds),
+        startFarm: () => controller.startFarm(),
+        stopFarm: () => controller.stopFarm(),
       },
       messages: {
         dragPreview: (preview) => controller.relayDragPreview(preview),
@@ -137,6 +139,8 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendTimer: (state) => rpc.send.timerChanged(state),
     sendKills: (state) => rpc.send.killsChanged(state),
     sendBossFight: (state) => rpc.send.bossFightChanged(state),
+    sendDarkFortress: (state) => rpc.send.darkFortressChanged(state),
+    sendEchoingSpire: (state) => rpc.send.echoingSpireChanged(state),
     sendGearRating: (state) => rpc.send.gearRatingChanged(state),
     sendDamageTaken: (state) => rpc.send.damageTakenChanged(state),
     sendItemCounter: (state) => rpc.send.itemCounterChanged(state),
@@ -144,6 +148,7 @@ export function createOverlaySurface({ controller, display, onClosed }: OverlayS
     sendLootAlert: (event) => rpc.send.lootAlertFound(event),
     sendSummons: (state) => rpc.send.summonsChanged(state),
     sendBuildGuide: (state) => rpc.send.buildGuideChanged(state),
+    sendFarm: (state) => rpc.send.farmChanged(state),
   };
   controller.registerSurface(sink);
 

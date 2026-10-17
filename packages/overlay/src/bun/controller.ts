@@ -40,9 +40,12 @@ import type {
   OverlayDragPreview,
   OverlayElementId,
   OverlayBossFightState,
+  DarkFortressState,
+  EchoingSpireState,
   OverlayDamageTakenState,
   OverlaySummonsState,
   OverlayBuildGuideState,
+  FarmState,
   OverlayGearPickupEvent,
   OverlayGearRatingState,
   OverlayKillState,
@@ -114,6 +117,7 @@ const KEYBIND_LABELS: Record<KeybindAction, string> = {
   resetTimer: "reset timer",
   toggleGearRating: "show/hide gear ratings",
   cyclePreset: "switch to the next preset",
+  startFarm: "start farm effectiveness",
 };
 
 export interface OverlayMinimapSourceState {
@@ -148,6 +152,10 @@ export interface OverlayControllerOptions {
   subscribeKills: (listener: (state: OverlayKillState) => void) => () => void;
   /** Calls the listener at once with the current fight, then on every change. */
   subscribeBossFight: (listener: (state: OverlayBossFightState | undefined) => void) => () => void;
+  /** Calls the listener at once with the Dark Fortress bosses on this channel, then on every change. */
+  subscribeDarkFortress?: (listener: (state: DarkFortressState) => void) => () => void;
+  /** Calls the listener at once with the Echoing Spire run, then on every change. */
+  subscribeEchoingSpire?: (listener: (state: EchoingSpireState) => void) => () => void;
   /** Calls the listener at once with the current ratings, then whenever the equipment changes. */
   subscribeGearRating: (listener: (state: OverlayGearRatingState) => void) => () => void;
   /** Calls the listener at once with the current tally, then on every change. */
@@ -158,6 +166,11 @@ export interface OverlayControllerOptions {
   subscribeStackPickup: (listener: (event: { displayName: string; count: number }) => void) => () => void;
   /** Calls the listener at once with the build the player follows (or null), then on every change. */
   subscribeBuildGuide?: (listener: (state: OverlayBuildGuideState | null) => void) => () => void;
+  /** Calls the listener at once with Farm effectiveness' state, then on every change. */
+  subscribeFarm?: (listener: (state: FarmState) => void) => () => void;
+  /** Starts measuring the current map (its keybind and the overlay's Play), and stops a run. */
+  startFarm?: () => FarmState;
+  stopFarm?: () => FarmState;
   /** Items that just entered the bag and matched one of the Companion's loot rules. */
   subscribeLootAlerts?: (listener: (event: OverlayGearPickupEvent) => void) => () => void;
   /** A watched-for drop was just picked up, and the player asked to hear about it: its sound, at 0-100 volume. */
@@ -194,6 +207,8 @@ export interface OverlaySurfaceSink {
   sendArtifactPickup(event: OverlayGearPickupEvent): void;
   sendKills(state: OverlayKillState): void;
   sendBossFight(state: OverlayBossFightState | undefined): void;
+  sendDarkFortress(state: DarkFortressState): void;
+  sendEchoingSpire(state: EchoingSpireState): void;
   sendGearRating(state: OverlayGearRatingState): void;
   sendDamageTaken(state: OverlayDamageTakenState): void;
   sendItemCounter(state: OverlayItemCounterState): void;
@@ -201,6 +216,7 @@ export interface OverlaySurfaceSink {
   sendLootAlert(event: OverlayGearPickupEvent): void;
   sendSummons(state: OverlaySummonsState): void;
   sendBuildGuide(state: OverlayBuildGuideState | null): void;
+  sendFarm(state: FarmState): void;
 }
 
 export type OverlayController = Awaited<ReturnType<typeof createOverlayController>>;
@@ -353,6 +369,12 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendBuildGuide(next));
   }) ?? (() => {});
+  let farm: FarmState = { reports: [] };
+  const unsubscribeFarm = options.subscribeFarm?.((next) => {
+    farm = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendFarm(next));
+  }) ?? (() => {});
   let gearRating: OverlayGearRatingState = { slots: [] };
   let lastGearRatingJson = "";
   const unsubscribeGearRating = options.subscribeGearRating((next) => {
@@ -369,6 +391,18 @@ export async function createOverlayController(options: OverlayControllerOptions)
     if (shuttingDown) return;
     for (const surface of surfaces.values()) publishSafely(() => surface.sendBossFight(next));
   });
+  let darkFortress: DarkFortressState | undefined;
+  const unsubscribeDarkFortress = options.subscribeDarkFortress?.((next) => {
+    darkFortress = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendDarkFortress(next));
+  }) ?? (() => {});
+  let echoingSpire: EchoingSpireState | undefined;
+  const unsubscribeEchoingSpire = options.subscribeEchoingSpire?.((next) => {
+    echoingSpire = next;
+    if (shuttingDown) return;
+    for (const surface of surfaces.values()) publishSafely(() => surface.sendEchoingSpire(next));
+  }) ?? (() => {});
   let killState: OverlayKillState = { kills: [] };
   const unsubscribeKills = options.subscribeKills((next) => {
     killState = next;
@@ -454,6 +488,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
     toggleTimer: toggleTimerNow,
     resetTimer: resetTimerNow,
     timerState: (): OverlayTimerState => timer,
+    startFarm: (): FarmState => options.startFarm?.() ?? farm,
+    stopFarm: (): FarmState => options.stopFarm?.() ?? farm,
     resetXpTracker: () => {
       options.xp.reset();
       publishCharacter();
@@ -486,8 +522,11 @@ export async function createOverlayController(options: OverlayControllerOptions)
       unsubscribeLootAlerts();
       unsubscribeSummons();
       unsubscribeBuildGuide();
+      unsubscribeFarm();
       unsubscribeKills();
       unsubscribeBossFight();
+      unsubscribeDarkFortress();
+      unsubscribeEchoingSpire();
       unsubscribeGearRating();
       unsubscribeDamageTaken();
       unsubscribeInventory();
@@ -767,11 +806,14 @@ export async function createOverlayController(options: OverlayControllerOptions)
       timer,
       kills: killState,
       ...(bossFight === undefined ? {} : { bossFight }),
+      ...(darkFortress === undefined ? {} : { darkFortress }),
+      ...(echoingSpire === undefined ? {} : { echoingSpire }),
       gearRating,
       damageTaken,
       itemCounter: itemCounterState(settings.itemCounterItems, inventorySource),
       summons,
       buildGuide,
+      farm,
     };
   }
 
@@ -1132,6 +1174,8 @@ export async function createOverlayController(options: OverlayControllerOptions)
       toggleTimerNow();
     } else if (action === "resetTimer") {
       resetTimerNow();
+    } else if (action === "startFarm") {
+      options.startFarm?.();
     }
   }
 

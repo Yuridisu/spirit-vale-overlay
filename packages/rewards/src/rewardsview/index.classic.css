@@ -139,3 +139,10 @@ main {
 .target-drop-sound-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 .target-drop-stats .input.is-unknown { border-color: var(--error); }
 .target-drop-warning { margin: 0; color: var(--error); font-size: 12px; }
+
+/* Farm effectiveness */
+.farm-table td:first-child { font-weight: 700; }
+.farm-table .farm-gained { min-width: 160px; color: var(--muted, inherit); font-size: 12px; line-height: 1.35; white-space: normal; }
+.farm-table td:last-child { width: 1%; white-space: nowrap; }
+.farm-table tr.is-current td:first-child { box-shadow: inset 3px 0 0 currentColor; }
+.farm-running { margin: 0 0 10px; font-weight: 700; }

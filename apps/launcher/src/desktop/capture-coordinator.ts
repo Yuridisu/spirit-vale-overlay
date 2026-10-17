@@ -15,13 +15,25 @@ import type {
 import { FishNetInspectRoster, resolveCharacterHealingTraits } from "@kar-mi/spirit-vale-tools-character";
 import type { CharacterSnapshot, CharacterViewState, InspectedCharacter } from "@kar-mi/spirit-vale-tools-character";
 import { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
-import { decodeBossGravestone, FishNetEternalTowerTracker, resolveBundledMapName } from "@kar-mi/spirit-vale-tools-capture";
+import { decodeBossGravestone, FishNetEternalTowerTracker, FishNetMonsterDirectory, resolveBundledMapName } from "@kar-mi/spirit-vale-tools-capture";
 import type { BossGravestone } from "@kar-mi/spirit-vale-tools-capture";
 import { isAlwaysShownLoot } from "@svoverlay/contracts/loot";
 import { PickedUpDrops } from "./picked-up-drops.ts";
 import { bossRegionOf } from "@svoverlay/contracts/boss-timers";
 import { LootOwnership } from "./loot-ownership.ts";
 import { BossFightTracker, type BossFightState } from "./boss-fight.ts";
+import { DarkFortressTracker } from "./dark-fortress.ts";
+import { MobHealthTracker } from "./mob-health.ts";
+import { isDarkFortressBoss, type DarkFortressState } from "@svoverlay/contracts/dark-fortress";
+import { EchoingSpireTracker } from "./echoing-spire.ts";
+import {
+  CURSE_MANIFESTATION_MOB_ID,
+  UMBRAL_CURSE_STATUS_ID,
+  UMBRAL_MARK_STATUS_ID,
+  ECHOING_SPIRE_MAP_IDS,
+  type EchoingSpireRun,
+  type EchoingSpireState,
+} from "@svoverlay/contracts/echoing-spire";
 import type { BossFightReport } from "@svoverlay/contracts/boss-fight";
 import { DamageTakenTracker, type DamageTakenState } from "./damage-taken.ts";
 import type {
@@ -48,7 +60,7 @@ import { resolveFishNetItemDisplayName } from "@kar-mi/spirit-vale-tools-items";
 import { decodeFishNetRewardPacket, FishNetLootDropTracker, FishNetMobDirectory, FishNetMobRewardTracker, mobIdentityDefinitionsById } from "@kar-mi/spirit-vale-tools-rewards";
 import type { FishNetConfirmedMobKill, FishNetLootDrop, FishNetLootDropEvent, PickedUpArtifact, PickedUpEquipment } from "@kar-mi/spirit-vale-tools-rewards";
 import { TOWER_FLOOR_EVENT_SOURCE_PREFIX, TOWER_FLOOR_UNKNOWN_SUFFIX, ZONE_EVENT_SOURCE_PREFIX } from "@svoverlay/combat/zone-log";
-import { sameSpiritValeLocation, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
+import { sameSpiritValeLocation, spiritValeLocationKey, type SpiritValeLocation } from "@svoverlay/desktop-platform/location";
 import { getCurrentExecutableNames } from "@svoverlay/desktop-platform/executable-names";
 
 import { sameLocalizedText, type LocalizedText } from "@svoverlay/i18n/messages";
@@ -74,6 +86,8 @@ const UNRESOLVED_REPORT_ENTRIES = 5;
 const TOWER_LOCATION_SETTLE_MS = 500;
 const MINIMAP_PUBLISH_MS = 60;
 const BOSS_FIGHT_PUBLISH_MS = 250;
+/** The Combat window's Spire runs: a floor changes every half minute or so. */
+const SPIRE_RUNS_PUBLISH_MS = 2_000;
 const TOWER_LOCATION_MAX_SETTLE_MS = 2_000;
 const STATUS_RPC_NAMES = new Set([
   "ApplyEffect_T",
@@ -207,6 +221,27 @@ export class CaptureCoordinator {
   private readonly killListeners = new Set<(state: CaptureKillState) => void>();
   private readonly bossFightListeners = new Set<(state: BossFightState | undefined) => void>();
   private bossFight = new BossFightTracker();
+  /** Every monster's health in sight: the boss meter's bar and DF Boss Fight read it. */
+  private readonly mobHealth = new MobHealthTracker();
+  private readonly darkFortress = new DarkFortressTracker();
+  private readonly darkFortressListeners = new Set<(state: DarkFortressState) => void>();
+  private darkFortressTimer?: ClockTimer;
+  /** The climb through the Echoing Spire: floors, its bosses and the Umbral curse in sight. */
+  private readonly spire = new EchoingSpireTracker();
+  private readonly spireListeners = new Set<(state: EchoingSpireState) => void>();
+  private spireTimer?: ClockTimer;
+  private readonly spireRunsListeners = new Set<(runs: EchoingSpireRun[]) => void>();
+  private spireRunsTimer?: ClockTimer;
+  private spireRunsRevision = -1;
+  /** The floor the game last sent (ETAdvanceFloor), while on the Spire's maps. */
+  private spireFloor: number | undefined;
+  /** The map any object in sight last moved to: the player's own is not known when the overlay opens mid-game. */
+  private lastSeenMapId: number | undefined;
+  /** The player's own map, from their own traverse; their object is the one target RPCs come to. */
+  private spireOwnMapId: number | undefined;
+  private spireOwnObjectId: number | undefined;
+  /** Curse Manifestations in sight: they give no reward, so the reward catalog does not know them. */
+  private readonly manifestations = new FishNetMonsterDirectory(new Map([[CURSE_MANIFESTATION_MOB_ID, { level: 0 }]]));
   private readonly bossFightReportListeners = new Set<(reports: BossFightReport[]) => void>();
   private readonly damageTakenListeners = new Set<(state: DamageTakenState) => void>();
   private readonly damageTaken = new DamageTakenTracker();
@@ -222,6 +257,7 @@ export class CaptureCoordinator {
   /** The bag report the counter was last filled from, so the same one is not applied over later pickups. */
   private inventoryRevision: number | undefined;
   private bossFightTimer?: ClockTimer;
+  private bossFightExpiryTimer?: ClockTimer;
   /** Local kills by monster name since the last map change. */
   private readonly killCounts = new Map<string, number>();
   /** Experience and coins the reward tracker pinned to kills of each monster, over the same span. */
@@ -273,6 +309,8 @@ export class CaptureCoordinator {
    * reconnects, and the server sends no channel list after it, so this is how the new channel is known.
    */
   private requestedChannel: { channel: number; region?: string; atMs: number } | undefined;
+  /** The PvP channel's number, from the channel list sent at login; world bosses spawn there too. */
+  private pvpChannel: number | undefined;
   private currentInstanceId: string | undefined;
   private readonly reportedGravestones = new Map<number, string>();
   /** Where each live object spawned; a fresh gravestone only names itself in a later SyncType. */
@@ -372,6 +410,8 @@ export class CaptureCoordinator {
     this.pickedUpDrops.reset();
     this.tower.reset();
     this.mobs.reset();
+    this.manifestations.reset();
+    this.mobHealth.reset();
     this.alliedMonsters.clear();
 
     if (character) {
@@ -421,6 +461,8 @@ export class CaptureCoordinator {
 
   /** Reports a gravestone once per place, so one seen before the channel list is reported again after it. */
   private reportGravestone(objectId: number, gravestone: BossGravestone): void {
+    // The Spire's floor bosses (Dark Fortress Masters past floor 101) keep no world or channel timer.
+    if (this.spire.active) return;
     const fingerprint = [
       gravestone.mobId,
       gravestone.diedAtMs,
@@ -434,9 +476,195 @@ export class CaptureCoordinator {
       bossName: gravestone.bossName,
       killedBy: gravestone.killedBy,
       ...(this.currentChannel === undefined ? {} : { channel: this.currentChannel }),
+      ...(this.currentChannel !== undefined && this.currentChannel === this.pvpChannel ? { pvp: true } : {}),
       ...(this.currentInstanceId === undefined ? {} : { instanceId: this.currentInstanceId }),
       diedAtMs: gravestone.diedAtMs,
     });
+    if (this.currentChannel !== undefined && this.darkFortress.noteDeath(gravestone.mobId, gravestone.diedAtMs, gravestone.killedBy)) {
+      this.scheduleDarkFortressPublish();
+    }
+  }
+
+  /** Calls the listener at once with the Dark Fortress bosses on this channel, then on every change. */
+  subscribeDarkFortress(listener: (state: DarkFortressState) => void): () => void {
+    this.darkFortressListeners.add(listener);
+    listener(this.darkFortressState());
+    return () => this.darkFortressListeners.delete(listener);
+  }
+
+  private darkFortressState(): DarkFortressState {
+    return this.darkFortress.state((objectId) => this.mobHealth.get(objectId));
+  }
+
+  /** Health comes many times a second in a fight; the overlay only needs it a few times a second. */
+  private scheduleDarkFortressPublish(): void {
+    if (this.darkFortressTimer !== undefined) return;
+    this.darkFortressTimer = this.clock.setTimeout(() => {
+      this.darkFortressTimer = undefined;
+      const state = this.darkFortressState();
+      for (const listener of this.darkFortressListeners) listener(state);
+    }, BOSS_FIGHT_PUBLISH_MS);
+    this.darkFortressTimer.unref?.();
+  }
+
+  /** Calls the listener at once with the Echoing Spire run, then on every change. */
+  subscribeEchoingSpire(listener: (state: EchoingSpireState) => void): () => void {
+    this.spireListeners.add(listener);
+    listener(this.echoingSpireState());
+    return () => this.spireListeners.delete(listener);
+  }
+
+  private echoingSpireState(): EchoingSpireState {
+    const statuses = this.spire.active ? this.activeStatuses() : [];
+    const mark = statuses.find((status) => status.statusId === UMBRAL_MARK_STATUS_ID);
+    const nowMs = this.clock.now();
+    return this.spire.state((objectId) => this.mobHealth.get(objectId), {
+      selfCursed: statuses.some((status) => status.statusId === UMBRAL_CURSE_STATUS_ID),
+      marked: mark !== undefined,
+      ...(mark?.expiresAtMs === undefined ? {} : { markExpiresAtMs: mark.expiresAtMs }),
+    }, (actorId) => this.statusTracker.getActiveStatuses(actorId, nowMs).some((status) => status.statusId === UMBRAL_CURSE_STATUS_ID));
+  }
+
+  private scheduleSpirePublish(): void {
+    if (this.spireTimer !== undefined) return;
+    this.spireTimer = this.clock.setTimeout(() => {
+      this.spireTimer = undefined;
+      const state = this.echoingSpireState();
+      for (const listener of this.spireListeners) listener(state);
+      this.scheduleSpireRunsPublish();
+    }, BOSS_FIGHT_PUBLISH_MS);
+    this.spireTimer.unref?.();
+  }
+
+  /** Every Spire run on record, newest first. */
+  echoingSpireRuns(): EchoingSpireRun[] {
+    return this.spire.runs();
+  }
+
+  /** Finished Spire runs of earlier sessions, newest first. */
+  restoreEchoingSpireRuns(runs: readonly EchoingSpireRun[]): void {
+    this.spire.restore(runs);
+  }
+
+  /** Calls the listener with the Spire runs whenever they change, at most every two seconds. */
+  subscribeEchoingSpireRuns(listener: (runs: EchoingSpireRun[]) => void): () => void {
+    this.spireRunsListeners.add(listener);
+    return () => this.spireRunsListeners.delete(listener);
+  }
+
+  private scheduleSpireRunsPublish(): void {
+    if (this.spireRunsTimer !== undefined || this.spire.revision === this.spireRunsRevision) return;
+    this.spireRunsTimer = this.clock.setTimeout(() => {
+      this.spireRunsTimer = undefined;
+      this.spireRunsRevision = this.spire.revision;
+      const runs = this.spire.runs();
+      for (const listener of this.spireRunsListeners) listener(runs);
+    }, SPIRE_RUNS_PUBLISH_MS);
+    this.spireRunsTimer.unref?.();
+  }
+
+  /**
+   * The Spire is its own maps now (49 and 50), with the floor sent on each advance; the older
+   * instanced tower, known by its floor banner, still counts.
+   */
+  private syncSpire(packet?: CapturedFishNetPacket): void {
+    if (packet?.rpcName === "ETAdvanceFloor") {
+      const floor = packet.decodedFields?.find((field) => field.name === "floor")?.value;
+      if (typeof floor === "number" && Number.isInteger(floor) && floor > 0) this.spireFloor = floor;
+    }
+    // Target RPCs come to the player's own object alone.
+    if (packet?.packetName === "targetRpc" && packet.networkBehaviourType === "PlayerController" && packet.objectId !== undefined) {
+      this.spireOwnObjectId = packet.objectId;
+    }
+    if (packet?.rpcName !== undefined && (packet.rpcName === LOCAL_TARGET_MAP_RPC || OBJECT_MAP_RPC_NAMES.has(packet.rpcName))
+      && packet.rpcResolution !== "recovered" && packet.rpcResolution !== "ambiguous") {
+      const seen = packet.decodedFields?.find((field) => field.name === "mapId")?.value;
+      if (typeof seen === "number" && Number.isSafeInteger(seen) && seen >= 0) {
+        this.lastSeenMapId = seen;
+        const own = this.character.physicalObjectId() ?? this.spireOwnObjectId;
+        if (packet.rpcName === LOCAL_TARGET_MAP_RPC || (own !== undefined && packet.objectId === own)) this.spireOwnMapId = seen;
+      }
+    }
+    const tower = this.tower.current();
+    // The player's own map first; someone else's only while the player's is not known.
+    const mapId = this.lastObservedMapId ?? this.spireOwnMapId ?? this.lastSeenMapId;
+    // A floor advance before the map is known (just after a reconnect) is the Spire too.
+    const onSpireMap = mapId === undefined ? this.spireFloor !== undefined : ECHOING_SPIRE_MAP_IDS.has(mapId);
+    if (mapId !== undefined && !onSpireMap) this.spireFloor = undefined;
+    const inSpire = tower.inTower || onSpireMap;
+    let changed = this.spire.noteTower(inSpire, tower.floor ?? this.spireFloor, this.clock.now());
+    if (onSpireMap) changed = this.spire.noteArea(mapId) || changed;
+    if (changed) this.scheduleSpirePublish();
+  }
+
+  /** Monsters dying in the Spire, and the Umbral Curse and Mark coming and going. */
+  private trackSpire(events: readonly FishNetCombatEvent[]): void {
+    if (!this.spire.active) return;
+    const nowMs = this.clock.now();
+    const localId = this.character.physicalObjectId();
+    let changed = false;
+    for (const event of events) {
+      if (event.kind === "death" && event.team === 0
+        && (this.isEnemyMonster(event.targetId) || this.spire.isBoss(event.targetId) || this.manifestations.get(event.targetId) !== undefined)) {
+        changed = this.spire.noteKill(event.targetId, nowMs) || changed;
+      } else if (event.kind === "status" && (event.statusId === UMBRAL_CURSE_STATUS_ID || event.statusId === UMBRAL_MARK_STATUS_ID)) {
+        if (event.actorId === localId) changed = true;
+        // The curse is put on players: the others in sight are counted.
+        else if (event.statusId === UMBRAL_CURSE_STATUS_ID && !this.isEnemyMonster(event.actorId)) {
+          changed = this.spire.noteCursed(event.actorId, event.action === "applied") || changed;
+        }
+      }
+    }
+    if (changed) this.scheduleSpirePublish();
+  }
+
+  /** A boss's health for the meters, and a Dark Fortress boss coming into sight. */
+  private noteBossHealthAndSightings(packet: CapturedFishNetPacket): void {
+    const changed = this.mobHealth.consume(packet);
+    let darkFortress = false;
+    // The boss is known once its MonsterController names it, in its spawn or a later update.
+    if ((packet.packetName === "objectSpawn" || (packet.packetName === "syncType" && packet.networkBehaviourType === "MonsterController"))
+      && packet.objectId !== undefined && this.currentChannel !== undefined) {
+      const mob = this.mobs.get(packet.objectId);
+      if (mob && isDarkFortressBoss(mob.mobId) && !this.isAlliedMonster(packet.objectId) && !this.spire.active) {
+        darkFortress = this.darkFortress.noteAlive(mob.mobId, packet.objectId, this.clock.now());
+      }
+    }
+    const manifestation = this.manifestations.consume(packet);
+    if (this.spire.active && packet.objectId !== undefined) {
+      let spire = false;
+      if (packet.packetName === "objectDespawn") {
+        spire = this.spire.forget(packet.objectId);
+      } else if (manifestation?.operation === "upsert" && manifestation.spawn.team !== 0) {
+        spire = this.spire.noteManifestation(manifestation.objectId, true);
+      } else if (packet.packetName === "objectSpawn" || (packet.packetName === "syncType" && packet.networkBehaviourType === "MonsterController")) {
+        const mob = this.mobs.get(packet.objectId);
+        if (mob && mob.team !== 0 && !this.isAlliedMonster(packet.objectId)) {
+          // The floor first (its monsters' level gives it), so a boss floor's boss lands on its floor.
+          spire = this.spire.noteMonsterLevel(mob.level, mob.boss, this.clock.now());
+          // A boss on this floor, in sight before anyone hits it.
+          if (mob.boss) spire = this.spire.noteBoss(packet.objectId, mob.displayName, this.clock.now(), false) || spire;
+        }
+      }
+      if (spire) this.scheduleSpirePublish();
+    }
+    if (changed !== undefined) {
+      if (this.bossFight.isFighting(changed)) this.scheduleBossFightPublish();
+      if (this.spire.isBoss(changed)) this.scheduleSpirePublish();
+      if (this.darkFortress.isTracked(changed)) {
+        darkFortress = true;
+        // A boss whose health reaches zero is dead, whether or not its death reached us.
+        const mob = this.mobs.get(changed);
+        if (this.mobHealth.get(changed)?.current === 0 && mob) this.darkFortress.noteDeath(mob.mobId, this.clock.now(), undefined, changed);
+      }
+    }
+    if (darkFortress) this.scheduleDarkFortressPublish();
+  }
+
+  /** DF Boss Fight follows the channel the player is on, and starts over on another one. */
+  private syncDarkFortressChannel(): void {
+    if (this.currentChannel === undefined) return;
+    if (this.darkFortress.setChannel(this.currentChannel, bossRegionOf(this.currentInstanceId))) this.scheduleDarkFortressPublish();
   }
 
   setCachedCharacter(snapshot: CharacterSnapshot | undefined): void {
@@ -592,6 +820,13 @@ export class CaptureCoordinator {
     this.publishBossFight();
   }
 
+  /** Where the player is, by a key for the place ("map:12") and the name the game gives it, once known. */
+  currentPlace(): { key: string; name: string } | undefined {
+    const location = this.effectiveLocation();
+    const name = this.currentMapName();
+    return location === undefined || name === undefined ? undefined : { key: spiritValeLocationKey(location), name };
+  }
+
   private currentMapName(): string | undefined {
     const location = this.effectiveLocation();
     if (location === undefined) return undefined;
@@ -651,6 +886,13 @@ export class CaptureCoordinator {
       );
       this.bossFight.observeMap(this.currentMapName());
       if (event.kind === "death") this.bossFight.observeDeath(mob.objectId, nowMs);
+      if (event.kind === "damage" && this.spire.noteBoss(mob.objectId, mob.displayName, nowMs, true, event.value)) this.scheduleSpirePublish();
+      const darkFortress = this.currentChannel !== undefined && !this.spire.active;
+      if (event.kind === "death" && darkFortress && this.darkFortress.noteDeath(mob.mobId, nowMs, name, mob.objectId)) {
+        this.scheduleDarkFortressPublish();
+      } else if (event.kind === "damage" && darkFortress && this.darkFortress.noteAlive(mob.mobId, mob.objectId, nowMs)) {
+        this.scheduleDarkFortressPublish();
+      }
       changed = true;
     }
     if (changed) this.scheduleBossFightPublish();
@@ -667,8 +909,20 @@ export class CaptureCoordinator {
   }
 
   private publishBossFight(): void {
-    const state = this.bossFight.state(this.clock.now());
+    const nowMs = this.clock.now();
+    const state = this.bossFight.state(nowMs, (objectId) => this.mobHealth.get(objectId));
     for (const listener of this.bossFightListeners) listener(state);
+    // A fight going quiet or a finished one leaving the overlay comes with no event to publish it.
+    if (this.bossFightExpiryTimer !== undefined) this.clock.clearTimeout(this.bossFightExpiryTimer);
+    this.bossFightExpiryTimer = undefined;
+    const dueAtMs = this.bossFight.nextChangeAtMs(nowMs);
+    if (dueAtMs !== undefined) {
+      this.bossFightExpiryTimer = this.clock.setTimeout(() => {
+        this.bossFightExpiryTimer = undefined;
+        this.publishBossFight();
+      }, Math.max(0, dueAtMs - nowMs) + 1);
+      this.bossFightExpiryTimer.unref?.();
+    }
     if (this.bossFightReportListeners.size === 0) return;
     const reports = this.bossFightReports();
     for (const listener of this.bossFightReportListeners) listener(reports);
@@ -735,6 +989,7 @@ export class CaptureCoordinator {
       rewards.experience += event.experience;
       rewards.coins += Number(event.coins);
       this.killRewards.set(name, rewards);
+      if (this.spire.noteRewards(event.experience, Number(event.coins))) this.scheduleSpirePublish();
       changed = true;
     }
     if (changed && this.killCounts.size > 0) this.publishKills();
@@ -871,6 +1126,14 @@ export class CaptureCoordinator {
     this.minimapTimer = undefined;
     if (this.bossFightTimer !== undefined) this.clock.clearTimeout(this.bossFightTimer);
     this.bossFightTimer = undefined;
+    if (this.bossFightExpiryTimer !== undefined) this.clock.clearTimeout(this.bossFightExpiryTimer);
+    this.bossFightExpiryTimer = undefined;
+    if (this.darkFortressTimer !== undefined) this.clock.clearTimeout(this.darkFortressTimer);
+    this.darkFortressTimer = undefined;
+    if (this.spireTimer !== undefined) this.clock.clearTimeout(this.spireTimer);
+    this.spireTimer = undefined;
+    if (this.spireRunsTimer !== undefined) this.clock.clearTimeout(this.spireRunsTimer);
+    this.spireRunsTimer = undefined;
     if (this.damageTakenTimer !== undefined) this.clock.clearTimeout(this.damageTakenTimer);
     if (this.summonTimer !== undefined) this.clock.clearTimeout(this.summonTimer);
     this.summonTimer = undefined;
@@ -1158,6 +1421,7 @@ export class CaptureCoordinator {
     this.logSplitDrop(packet);
 
     const loggedZone = this.logZone(packet);
+    this.syncSpire(packet);
     const directWorldLocation = directWorldTransition(packet);
     const characterBoundary = packet.rpcName === "QuitCharacter_Rpc";
     const transitionSeed = packet.packetName === "authenticated" && !admission.completedDirectTransition
@@ -1183,6 +1447,7 @@ export class CaptureCoordinator {
     if (this.towerLocationTimer !== undefined) {
       if (packet.connectionId === this.activeConnectionId && isTowerStatePacket(packet)) {
         if (this.tower.consume(packet)) {
+          this.syncSpire();
           this.pendingTowerLocationTick = packet.tick;
           this.scheduleTowerLocationCommit();
         }
@@ -1250,6 +1515,7 @@ export class CaptureCoordinator {
       if (this.minimapEnabled()) this.publishMinimap(true);
     }
     const towerChanged = this.tower.consume(packet) || towerReset;
+    if (towerChanged) this.syncSpire();
     if (towerChanged && isTowerStatePacket(packet)) {
       const location = this.effectiveLocation();
       if (!sameSpiritValeLocation(location, this.lastLoggedLocation)) {
@@ -1275,8 +1541,10 @@ export class CaptureCoordinator {
   } {
     try {
       this.mobs.consume(packet);
+      this.noteBossHealthAndSightings(packet);
       let handled = this.consumeGravestone(packet);
       if (packet.packetName === "authenticated" || packet.packetName === "disconnect") {
+        this.mobHealth.reset();
         this.loggedMobIdentities.clear();
         this.reportedGravestones.clear();
         this.spawnPositions.clear();
@@ -1318,6 +1586,7 @@ export class CaptureCoordinator {
       for (const event of events) this.statusTracker.consume(event, observedAtMs);
       this.countLocalKills(events);
       this.trackBossFight(events);
+      this.trackSpire(events);
       this.trackDamageTaken(events);
       this.scheduleActiveStatusExpiry();
       handled ||= identities.length > 0 || events.length > 0;
@@ -1527,11 +1796,14 @@ export class CaptureCoordinator {
       return;
     }
     if (packet.rpcName !== "ChannelList_T") return;
+    // Before the PvP channel came, the list had no pvpIndex: then there is none.
+    this.pvpChannel = channelFromIndex(packet, "pvpIndex");
     const channel = channelFromIndex(packet, "currentIndex");
     if (channel === undefined) return;
     this.currentChannel = channel;
     const instanceId = packet.decodedFields?.find((field) => field.name === "instanceId")?.value;
     this.setServerInstance(typeof instanceId === "string" && instanceId.length > 0 ? instanceId : undefined);
+    this.syncDarkFortressChannel();
     for (const [objectId, gravestone] of this.standingGravestones) this.reportGravestone(objectId, gravestone);
   }
 
@@ -1543,6 +1815,7 @@ export class CaptureCoordinator {
     this.currentChannel = requested.channel;
     // The switch keeps the server region, which is all a boss timer reads from the instance.
     if (requested.region !== undefined) this.setServerInstance(requested.region);
+    this.syncDarkFortressChannel();
   }
 
   private setServerInstance(instanceId: string | undefined): void {

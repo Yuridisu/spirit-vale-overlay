@@ -316,3 +316,7 @@ body {
 .battle-section { margin-top: 6px; color: var(--on-surface-variant); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .battle-reflect { box-shadow: inset 3px 0 0 var(--sky); }
 .battle-lead { box-shadow: inset 3px 0 0 var(--primary); }
+
+/* Echoing Spire: a boss floor stands out from the climb around it */
+.spire-floor-table tr.spire-boss-floor td { background: color-mix(in srgb, var(--flame) 12%, transparent); }
+.spire-floor-table tr.spire-boss-floor td:first-child { box-shadow: inset 3px 0 0 var(--flame); font-weight: 700; }
