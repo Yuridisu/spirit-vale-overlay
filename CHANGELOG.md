@@ -3,6 +3,63 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.16
+
+An update made because many of you asked for the bugs to be fixed: the Echoing Spire, the Dark
+Fortress, boss fights told apart, and Battle Analysis. Crowley's Spiritvale Companion is still the
+official app to follow, on
+[its Discord channel](https://discord.com/channels/1257586742865956875/1558170737297203361).
+
+### Added
+
+- **Echoing Spire.** A new overlay element for the climb:
+  - the floor you are on out of 105, on a bar with a notch at every boss floor, read from the
+    floor's monsters (they are the floor plus 100 in level);
+  - the run's time, the floor's time, its kills, XP and gold, and the next boss floor;
+  - on a boss floor, each boss with its health draining and its fight time, then how long it took
+    to fall;
+  - Umbral curse alerts: Curse Manifestations in sight, allies carrying the Umbral Curse, and the
+    Umbral Mark on you with its time left;
+  - the last floors' times and the last run.
+- **An Echoing Spire tab in Combat.** Every run on record, with each floor's time and kills, and
+  on a boss floor each boss, how long it took to fall from its first hit, and the party's damage
+  per second on it. Runs are kept between sessions (the last twenty).
+- **DF Boss Fight.** A new overlay element for the seven Echo Masters of the Dark Fortress on your
+  channel: alive with their health, or counting down the hour to their respawn from their death or
+  their gravestone. It starts over when you change channel.
+- **Farm effectiveness.** A new overlay element with the last ten minutes of gains on the map you
+  are farming.
+- **Battle Analysis** in the Combat window: your damage by skill and autocast, by item (its
+  autocasts, refine, cards and rolled lines) and per gear set; each skill's damage formula and the
+  stat worth most next; and Tank and Support views (hits taken, blocked and dodged, shields,
+  healing given and received).
+
+### Changed
+
+- **Boss DPS shows each boss as a fight of its own**, with its health draining under its name.
+  A boss that dies leaves the meter while another is still being fought; the last one stays on
+  show for 30 seconds, counting down, and then the meter clears.
+- **Boss timers on the PvP channel.** Bosses there get timers too, marked PvP.
+
+### Fixed
+
+- **Bosses that went missing from Boss DPS.** When the game sends a monster again, or despawns it
+  and keeps it fighting (the Echoing Spire does both, the screen flashes when it does), the monster
+  now keeps who it is, so every boss on a floor is counted.
+- **Boss timers know the channel and the server** after a channel switch, when the overlay is
+  opened mid-session, and with the channel list the game now sends.
+- **Damage taken, the tank meter and the experience and coin updates** read the hits and messages
+  the game sends to your own character alone.
+- **A necromancer's Reanimation of a boss** no longer shows as a second boss.
+- **Build Export lists inspected players** again.
+- **The minimap takes off loot your pet picked up**, artifacts included.
+
+### Credits
+
+- Skill formulas, drops and maps come from [spiritvalers.com](https://spiritvalers.com) by **Buh
+  ([bjb2](https://github.com/bjb2))**. Thank you, Buh.
+- Spirit Vale Overlay was started by **[kar-mi](https://github.com/kar-mi)**.
+
 ## 0.10.15
 
 A single fix on top of 0.10.14. Everything in the 0.10.14 notes still applies, and Crowley's
