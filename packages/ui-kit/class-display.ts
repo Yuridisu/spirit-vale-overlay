@@ -1,6 +1,7 @@
 interface GameClass {
   name: string;
-  slug: string;
+  /** The icon file's name; a class with none yet (Dragon Knight) shows its name alone. */
+  slug?: string;
 }
 
 interface ClassDisplay {
@@ -17,6 +18,7 @@ const CLASSES: readonly (GameClass & { archetype: number })[] = [
   { archetype: 5, name: "Acolyte", slug: "acolyte" },
   { archetype: 6, name: "Scout", slug: "scout" },
   { archetype: 10, name: "Paladin", slug: "paladin" },
+  { archetype: 11, name: "Dragon Knight" },
   { archetype: 12, name: "Berserker", slug: "berserker" },
   { archetype: 14, name: "Priest", slug: "priest" },
   { archetype: 16, name: "Wizard", slug: "wizard" },
@@ -31,17 +33,18 @@ const CLASS_BY_NAME = new Map(CLASSES.map((entry) => [entry.name, entry]));
 
 export function classDisplayForArchetype(archetype: number | undefined): ClassDisplay {
   const known = archetype === undefined ? undefined : CLASS_BY_ARCHETYPE.get(archetype);
-  return known ? { name: known.name, iconUrl: classIconUrl(known.slug) } : { name: "Unknown" };
+  if (!known) return { name: "Unknown" };
+  return known.slug ? { name: known.name, iconUrl: classIconUrl(known.slug) } : { name: known.name };
 }
 
 export function classIconUrlForArchetype(archetype: number | undefined): string | undefined {
   const known = CLASS_BY_ARCHETYPE.get(archetype ?? -1);
-  return known ? classIconUrl(known.slug) : undefined;
+  return known?.slug ? classIconUrl(known.slug) : undefined;
 }
 
 export function classIconUrlForName(name: string): string | undefined {
   const known = CLASS_BY_NAME.get(name);
-  return known ? classIconUrl(known.slug) : undefined;
+  return known?.slug ? classIconUrl(known.slug) : undefined;
 }
 
 function classIconUrl(slug: string): string {

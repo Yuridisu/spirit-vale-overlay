@@ -332,11 +332,21 @@ export const skillsComponentRpcs = [
   },
   {
     "wireHash": 8,
+    "packetKind": "serverRpc",
+    "methodName": "UpdateCastAim_S"
+  },
+  {
+    "wireHash": 9,
+    "packetKind": "observersRpc",
+    "methodName": "UpdateCastAim_C"
+  },
+  {
+    "wireHash": 10,
     "packetKind": "observersRpc",
     "methodName": "CastComplete_C"
   },
   {
-    "wireHash": 9,
+    "wireHash": 11,
     "packetKind": "observersRpc",
     "methodName": "ScatterEffect_C",
     "parameters": [
@@ -353,7 +363,7 @@ export const skillsComponentRpcs = [
     ]
   },
   {
-    "wireHash": 10,
+    "wireHash": 12,
     "packetKind": "observersRpc",
     "methodName": "ToggleBegin_C",
     "parameters": [
