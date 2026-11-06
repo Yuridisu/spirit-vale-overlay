@@ -1,5 +1,5 @@
 /**
- * DF Boss Fight: the seven Echo Masters of the Dark Fortress, on the channel the player is on.
+ * DF Boss Fight: the eight Echo Masters of the Dark Fortress, on the channel the player is on.
  * Each is alive (with its health, when the game sends it), dead with its respawn countdown, or not
  * seen yet. It starts over on another channel.
  */
@@ -7,6 +7,7 @@
 /** The Dark Fortress bosses, by their game id, in the order the overlay lists them. */
 export const DARK_FORTRESS_BOSSES: ReadonlyArray<{ mobId: string; name: string }> = [
   { mobId: "NightmareBerserkerBoss", name: "Berserker" },
+  { mobId: "NightmareDragonKnightBoss", name: "Dragon Knight" },
   { mobId: "NightmareGunslingerBoss", name: "Gunslinger" },
   { mobId: "NightmareNecromancerBoss", name: "Necromancer" },
   { mobId: "NightmarePaladinBoss", name: "Paladin" },

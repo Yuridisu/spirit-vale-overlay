@@ -9,11 +9,11 @@ const PALADIN = "NightmarePaladinBoss";
 const row = (tracker: DarkFortressTracker, mobId: string, healthOf?: (id: number) => { current: number; max: number } | undefined) =>
   tracker.state(healthOf).bosses.find((boss) => boss.mobId === mobId);
 
-test("lists the seven bosses, alive with health, dead with the time, or not seen yet", () => {
+test("lists the eight bosses, alive with health, dead with the time, or not seen yet", () => {
   const tracker = new DarkFortressTracker();
   tracker.setChannel(2, "sa");
   expect(tracker.state().bosses.map((boss) => [boss.name, boss.status])).toEqual([
-    ["Berserker", "unknown"], ["Gunslinger", "unknown"], ["Necromancer", "unknown"], ["Paladin", "unknown"],
+    ["Berserker", "unknown"], ["Dragon Knight", "unknown"], ["Gunslinger", "unknown"], ["Necromancer", "unknown"], ["Paladin", "unknown"],
     ["Priest", "unknown"], ["Shinobi", "unknown"], ["Wizard", "unknown"],
   ]);
   expect(tracker.noteAlive(WIZARD, 900, 1_000)).toBe(true);

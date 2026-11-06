@@ -18,7 +18,7 @@ const CLASSES: readonly (GameClass & { archetype: number })[] = [
   { archetype: 5, name: "Acolyte", slug: "acolyte" },
   { archetype: 6, name: "Scout", slug: "scout" },
   { archetype: 10, name: "Paladin", slug: "paladin" },
-  { archetype: 11, name: "Dragon Knight" },
+  { archetype: 11, name: "Dragon Knight", slug: "dragon-knight" },
   { archetype: 12, name: "Berserker", slug: "berserker" },
   { archetype: 14, name: "Priest", slug: "priest" },
   { archetype: 16, name: "Wizard", slug: "wizard" },

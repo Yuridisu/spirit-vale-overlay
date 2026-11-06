@@ -16944,6 +16944,24 @@ export class MobDefinitions {
     ]
   },
   {
+    "id": "NightmareDragonKnight",
+    "displayName": "Echo Dragon Knight",
+    "level": 150,
+    "boss": false,
+    "baseExperience": 48750,
+    "baseCoins": 450,
+    "drops": []
+  },
+  {
+    "id": "NightmareDragonKnightBoss",
+    "displayName": "Echo Dragon Knight Master",
+    "level": 155,
+    "boss": true,
+    "baseExperience": 51925,
+    "baseCoins": 465,
+    "drops": []
+  },
+  {
     "id": "NightmareGunslinger",
     "displayName": "Echo Gunslinger",
     "level": 150,

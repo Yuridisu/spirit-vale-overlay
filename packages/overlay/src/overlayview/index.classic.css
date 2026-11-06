@@ -1064,7 +1064,7 @@
 .boss-meter-boss .boss-meter-hp { height: 8px; margin: 2px 0 4px; }
 .boss-meter-boss .boss-meter-hp-text { display: none; }
 
-/* DF Boss Fight: the seven Echo Masters on this channel */
+/* DF Boss Fight: the eight Echo Masters on this channel */
 .df-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
 .df-head .element-title { margin: 0; }
 .df-channel { color: rgba(255,255,255,.55); font-size: 11px; font-weight: 600; }

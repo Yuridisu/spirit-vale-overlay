@@ -5,7 +5,7 @@ import { DARK_FORTRESS_RESPAWN_MS, type DarkFortressBoss } from "@svoverlay/cont
 import { darkFortressState } from "../store.ts";
 
 /**
- * DF Boss Fight: the seven Echo Masters on the channel the player is on, each alive with its
+ * DF Boss Fight: the eight Echo Masters on the channel the player is on, each alive with its
  * health draining, or counting down to its respawn. Another channel starts it over.
  */
 export function DfBossFightElement() {
