@@ -3,6 +3,23 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.17
+
+Up to date with the November game update (0.34.2), which added the Dragon Knight.
+
+### Fixed
+
+- **Capture after the game update.** The update renumbered the game's messages, so damage, skills
+  and other events could be read wrong or missed. The overlay now reads the new build.
+
+### Added
+
+- **Dragon Knight.** The new class shows by name, with its own icon, in the DPS meter and
+  everywhere a class is shown.
+- **DF Boss Fight: the Dragon Knight Echo Master.** The Dark Fortress now has eight Echo Masters,
+  and the Dragon Knight is tracked like the others. You may need to make the element a little
+  taller to fit the eighth row.
+
 ## 0.10.16
 
 An update made because many of you asked for the bugs to be fixed: the Echoing Spire, the Dark
