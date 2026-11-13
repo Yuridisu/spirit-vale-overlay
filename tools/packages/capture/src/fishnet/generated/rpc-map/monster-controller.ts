@@ -116,6 +116,36 @@ export const monsterControllerRpcs = [
   {
     "wireHash": 7,
     "packetKind": "observersRpc",
+    "methodName": "BossHazard_C"
+  },
+  {
+    "wireHash": 8,
+    "packetKind": "observersRpc",
+    "methodName": "BossHazardEnd_C"
+  },
+  {
+    "wireHash": 9,
+    "packetKind": "observersRpc",
+    "methodName": "BossSoak_C"
+  },
+  {
+    "wireHash": 10,
+    "packetKind": "observersRpc",
+    "methodName": "BossMarker_C"
+  },
+  {
+    "wireHash": 11,
+    "packetKind": "observersRpc",
+    "methodName": "BossName_C"
+  },
+  {
+    "wireHash": 12,
+    "packetKind": "observersRpc",
+    "methodName": "BossCast_C"
+  },
+  {
+    "wireHash": 13,
+    "packetKind": "observersRpc",
     "methodName": "TrainingDummyBeginHealTimer",
     "parameters": [
       {

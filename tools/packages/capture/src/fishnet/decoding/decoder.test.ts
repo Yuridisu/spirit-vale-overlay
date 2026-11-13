@@ -1085,16 +1085,16 @@ describe("FishNet bundles and sessions", () => {
   });
 
   describe("refusing a match the payload contradicts", () => {
-    // PlayerController.FullHeal_C takes no arguments and sits at 8-bit hash 37.
+    // PlayerController.FullHeal_C takes no arguments and sits at 8-bit hash 39.
     const COLLIDING_HASH_TAIL = Buffer.from([0x66]);
 
     test("does not claim a parameterless method for a packet carrying bytes", () => {
       const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
       const [packet] = decoder.decode(
-        tick(1, observersRpc(4801, 1, 37, COLLIDING_HASH_TAIL)),
+        tick(1, observersRpc(4801, 1, 39, COLLIDING_HASH_TAIL)),
         { reliable: true, connectionId: "hash-collision" },
       );
-      expect(packet).toMatchObject({ rpcHash16Candidate: 0x6625, rpcResolution: "unresolved" });
+      expect(packet).toMatchObject({ rpcHash16Candidate: 0x6627, rpcResolution: "unresolved" });
       expect(packet?.rpcName).toBeUndefined();
     });
 
@@ -1102,7 +1102,7 @@ describe("FishNet bundles and sessions", () => {
       // A genuine FullHeal_C carries nothing at all, which is exactly what distinguishes it.
       const decoder = new FishNetSessionDecoder(loadBundledFishNetRpcMap());
       const [packet] = decoder.decode(
-        tick(1, observersRpc(4801, 0, 37)),
+        tick(1, observersRpc(4801, 0, 39)),
         { reliable: true, connectionId: "hash-collision-genuine" },
       );
       expect(packet).toMatchObject({ rpcName: "FullHeal_C", rpcResolution: "verified" });
@@ -1249,7 +1249,7 @@ describe("FishNet bundles and sessions", () => {
       );
       expect(damage).toMatchObject({ networkBehaviourType: "HealthComponent", rpcName: "ApplyDamage_C" });
 
-      const [death] = decoder.decode(tick(2, observersRpc(4803, 3, 2, struct)), context);
+      const [death] = decoder.decode(tick(2, observersRpc(4803, 3, 3, struct)), context);
       expect(death).toMatchObject({ networkBehaviourType: "HealthComponent", rpcName: "Death_C" });
     });
 
@@ -1695,7 +1695,7 @@ describe("hits on the local player's own object", () => {
     decoder.decode(tick(1, spawnWithoutLinks(502, 4, 0)), context);
     // Five channels, index 1, "nova-10", and the PvP channel at index 4.
     const payload = Buffer.from("0a0002000000020e6e6f76612d313008", "hex");
-    const [packet] = decoder.decode(tick(2, targetRpc(502, 0, 38, payload)), context);
+    const [packet] = decoder.decode(tick(2, targetRpc(502, 0, 40, payload)), context);
     expect(packet).toMatchObject({ rpcName: "ChannelList_T", networkBehaviourType: "PlayerController" });
     const value = (name: string) => packet?.decodedFields?.find((field) => field.name === name)?.value;
     expect(value("currentIndex")).toBe(1);

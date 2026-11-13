@@ -90,6 +90,11 @@ export const healthComponentRpcs = [
   },
   {
     "wireHash": 1,
+    "packetKind": "targetRpc",
+    "methodName": "DeathRecap_T"
+  },
+  {
+    "wireHash": 2,
     "packetKind": "observersRpc",
     "methodName": "Recover_C",
     "parameters": [
@@ -127,7 +132,7 @@ export const healthComponentRpcs = [
     ]
   },
   {
-    "wireHash": 2,
+    "wireHash": 3,
     "packetKind": "observersRpc",
     "methodName": "Death_C",
     "parameters": [
