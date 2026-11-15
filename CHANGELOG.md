@@ -3,6 +3,16 @@
 Each released version has a section headed `## <version>`. The release workflow publishes that
 section as the GitHub Release notes, so write it for the people who use the app.
 
+## 0.10.18
+
+Up to date with the 13 November game update.
+
+### Fixed
+
+- **Capture after the game update.** The update renumbered the game's messages again, so damage,
+  deaths, healing, the channel list, the Echoing Spire and the market could be read wrong or
+  missed. The overlay now reads the new build.
+
 ## 0.10.17
 
 Up to date with the November game update (0.34.2), which added the Dragon Knight.
